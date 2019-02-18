@@ -19,14 +19,6 @@
 (define extend-env
   (lambda (var val env)
     (list 'extend-env var val env)))
-(define extend-env-list
-  (lambda (vars vals env)
-    (if (null? vars)
-        env
-        (extend-env-list
-         (cdr vars)
-         (cdr vals)
-         (list 'extend-env (car vars) (car vals) env)))))
 (define apply-env
   (lambda (env search-var)
     (cond
@@ -50,16 +42,16 @@
 
 ;;; ---------------------- Expval ----------------------
 (define identifier? symbol?)
-(define-datatype proc proc?
-  (procedure
-   (var identifier?)
-   (body expression?)))
+(define proc?
+  (lambda (val)
+    (procedure? val)))
+(define procedure
+  (lambda (var body env)
+    (lambda (val)
+      (value-of body (extend-env var val env)))))
 (define apply-procedure
-  (lambda (proc1 val env)
-    (cases proc proc1
-           (procedure
-            (var body)
-            (value-of body (extend-env var val env))))))
+  (lambda (proc1 val)
+    (proc1 val)))
 (define-datatype exp-val exp-val?
   (num-val
    (val number?))
@@ -110,7 +102,7 @@
 ;;;                if-exp (exp1 exp2 exp3)
 ;;; Expression ::= Identifier
 ;;;                var-exp (var)
-;;; Expression ::= let {Identifier = Expression}* in Expression
+;;; Expression ::= let Identifier = Expression in Expression
 ;;;                let-exp (var exp1 body)
 ;;; Expression ::= proc (Identifier) Expression
 ;;;                proc-exp (var body)
@@ -138,7 +130,7 @@
                 if-exp)
     (expression (identifier)
                 var-exp)
-    (expression ("let" (arbno identifier "=" expression) "in" expression)
+    (expression ("let" identifier "=" expression "in" expression)
                 let-exp)
     (expression ("proc" "(" identifier ")" expression)
                 proc-exp)
@@ -169,21 +161,15 @@
                 (value-of exp3 env)))
            (let-exp
             (var exp1 body)
-            (value-of-let-exp var exp1 body env))
+            (value-of body (extend-env var (value-of exp1 env) env)))
            (proc-exp
             (var body)
-            (proc-val (procedure var body)))
+            (proc-val (procedure var body env)))
            (call-exp
             (rator rand)
             (let ((proc (expval->proc (value-of rator env)))
                   (arg (value-of rand env)))
-              (apply-procedure proc arg env))))))
-(define value-of-let-exp
-  (lambda (var exp body env)
-    (value-of
-     body
-     (let ((values (map (lambda (val) (value-of val env)) exp)))
-       (extend-env-list var values env)))))
+              (apply-procedure proc arg))))))
 (define value-of--program
   (lambda (prog)
     (cases program prog
@@ -220,7 +206,8 @@
     (value-of--program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-(run "let a = 3
-      in let p = proc (x) -(x,a)
-             a = 5
-      in -(a, (p 2))")
+(run "let x = 200 in
+        let f = proc (z) -(z,x) in
+          let x = 100 in
+            let g = proc (z) -(z,x) in
+              -((f 1), (g 1))")
