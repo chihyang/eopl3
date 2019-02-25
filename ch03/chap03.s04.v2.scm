@@ -1,20 +1,5 @@
 #lang eopl
 ;;; ---------------------- Environment(from section 3.2) ----------------------
-(define empty-env?
-  (lambda (env)
-    (and (list? env)
-         (not (null? env))
-         (eqv? (car env) 'empty-env))))
-(define extended-env?
-  (lambda (env)
-    (and (list? env)
-         (not (null? env))
-         (or (eqv? (car env) 'extend-env)
-             (eqv? (car env) 'extend-env-rec)))))
-(define environment?
-  (lambda (env)
-    (or (empty-env? env)
-        (extended-env? env))))
 (define empty-env
   (lambda () (list 'empty-env)))
 (define extend-env
