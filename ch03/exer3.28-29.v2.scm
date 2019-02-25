@@ -209,20 +209,27 @@
     (value-of--program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-(run "let a = 3
-      in let p = proc (x) -(x,a)
-             a = 5
-      in -(a, (p 2))")
+;; exer 3.28
+(eqv?
+ (run "let a = 3
+       in let p = proc (x) -(x,a)
+              a = 5
+       in -(a, (p 2))")
+ 8)
 
-;;; exer 3.29
-(run "let a = 3
-      in let p = proc (z) a
-         in let f = proc (x) (p 0)
-            in let a = 5
-               in (f 2)")
+;; exer 3.29
+(eqv?
+ (run "let a = 3
+       in let p = proc (z) a
+          in let f = proc (x) (p 0)
+             in let a = 5
+                in (f 2)")
+ 5)
 
-(run "let a = 3
-      in let p = proc (a) a
-         in let f = proc (x) (p 0)
-            in let a = 5
-               in (f 2)")
+(eqv?
+ (run "let a = 3
+       in let p = proc (a) a
+          in let f = proc (x) (p 0)
+             in let a = 5
+                in (f 2)")
+ 0)
