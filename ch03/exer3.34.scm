@@ -21,17 +21,27 @@
              (apply-env (extend-env-list (cdr saved-vars) (cdr saved-vals) saved-env)
                         search-var))))))
 (define extend-env-rec
-  (lambda (p-name p-var p-body saved-env)
+  (lambda (p-names p-vars p-bodys saved-env)
     (lambda (search-var)
-      (if (eqv? search-var p-name)
-          (proc-val
-           (procedure p-var
-                      p-body
-                      (extend-env-rec p-name p-var p-body saved-env)))
-          (apply-env saved-env search-var)))))
+      (if (null? p-names)
+          (apply-env saved-env search-var)
+          (let ((func (apply-env-rec search-var p-names p-vars p-bodys)))
+            (if (null? func)
+                (apply-env saved-env search-var)
+                (proc-val
+                 (procedure (car func)
+                            (cadr func)
+                            (extend-env-rec p-names p-vars p-bodys saved-env)))))))))
 (define apply-env
   (lambda (env search-var)
     (env search-var)))
+(define apply-env-rec
+  (lambda (var p-names p-vars p-bodys)
+    (if (null? p-names)
+        '()
+        (if (eqv? var (car p-names))
+            (list (car p-vars) (car p-bodys))
+            (apply-env-rec var (cdr p-names) (cdr p-vars) (cdr p-bodys))))))
 (define report-no-binding-found
   (lambda (search-var)
     (eopl:error 'apply-env "No binding for ~s" search-var)))
@@ -47,13 +57,13 @@
     (procedure? val)))
 ;;; procedure : Var x Exp x Env -> Proc
 (define procedure
-  (lambda (var body env)
-    (lambda (val)
-      (value-of body (extend-env var val env)))))
+  (lambda (vars body env)
+    (lambda (vals)
+      (value-of body (extend-env-list vars vals env)))))
 ;;; apply-procedure : Proc x ExpVal -> ExpVal
 (define apply-procedure
-  (lambda (proc1 val)
-    (proc1 val)))
+  (lambda (proc1 vals)
+    (proc1 vals)))
 (define-datatype exp-val exp-val?
   (num-val
    (val number?))
@@ -108,7 +118,7 @@
 ;;;                let-exp (var exp1 body)
 ;;; Expression ::= proc (Identifier) Expression
 ;;;                proc-exp (var body)
-;;; Expression ::= letrec Identifier (Identifier) = Expression in Expression
+;;; Expression ::= letrec Identifier (Identifier*,) = Expression in Expression
 ;;;                let-exp (var exp1 body)
 ;;; Expression ::= (Expression Expression)
 ;;;                call-exp (rator rand)
@@ -136,14 +146,20 @@
                 var-exp)
     (expression ("let" (arbno identifier "=" expression) "in" expression)
                 let-exp)
-    (expression ("proc" "(" identifier ")" expression)
+    (expression ("proc" "(" (separated-list identifier ",") ")" expression)
                 proc-exp)
-    (expression ("letrec" identifier "(" identifier ")" "=" expression "in" expression)
+    (expression ("letrec" (arbno identifier "(" (separated-list identifier ",") ")" "=" expression) "in" expression)
                 letrec-exp)
-    (expression ("(" expression expression ")")
+    (expression ("(" expression (arbno expression) ")")
                 call-exp)))
 
 ;;; ---------------------- Evaluate expression ----------------------
+(define value-of-list
+  (lambda (exps env)
+    (if (null? exps)
+        '()
+        (cons (value-of (car exps) env)
+              (value-of-list (cdr exps) env)))))
 (define value-of
   (lambda (exp env)
     (cases expression exp
@@ -169,16 +185,16 @@
             (var exp1 body)
             (value-of-let-exp var exp1 body env))
            (proc-exp
-            (var body)
-            (proc-val (procedure var body env)))
+            (vars body)
+            (proc-val (procedure vars body env)))
            (letrec-exp
-            (p-name p-vars p-body letrec-body)
-            (value-of letrec-body (extend-env-rec p-name p-vars p-body env)))
+            (p-names p-vars p-bodys letrec-body)
+            (value-of letrec-body (extend-env-rec p-names p-vars p-bodys env)))
            (call-exp
             (rator rand)
             (let ((proc (expval->proc (value-of rator env)))
-                  (arg (value-of rand env)))
-              (apply-procedure proc arg))))))
+                  (args (value-of-list rand env)))
+              (apply-procedure proc args))))))
 (define value-of-let-exp
   (lambda (var exp body env)
     (value-of
@@ -232,3 +248,16 @@
               a = 5
           in -(a, (p 2))")
  6)
+(eqv?
+ (run "letrec f (x, y) = if zero?(x) then y
+                         else
+                            if zero?(y) then x
+                            else -((f -(x,1) -(y,1)), -2)
+       in (f 4 12)")
+ 16)
+(eqv?
+ (run "letrec
+         even(x) = if zero?(x) then 1 else (odd -(x,1))
+         odd(x)  = if zero?(x) then 0 else (even -(x,1))
+       in (odd 13)")
+ 1)
