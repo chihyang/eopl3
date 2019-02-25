@@ -1,5 +1,16 @@
 #lang eopl
 ;;; ---------------------- Environment(from section 3.2) ----------------------
+(define member?
+  (lambda (sym lst)
+    (if (null? lst)
+        #f
+        (or (eqv? sym (car lst))
+            (member? sym (cdr lst))))))
+(define check-duplicates
+  (lambda (lst)
+    (cond ((null? lst) '())
+          ((member? (car lst) (cdr lst)) (car lst))
+          (else (check-duplicates (cdr lst))))))
 (define empty-env
   (lambda ()
     (lambda (search-var)
@@ -12,26 +23,39 @@
           (apply-env saved-env search-var)))))
 (define extend-env-list
   (lambda (saved-vars saved-vals saved-env)
-    (lambda (search-var)
-      (cond ((null? saved-vals)
-             (apply-env saved-env search-var))
-            ((eqv? search-var (car saved-vars))
-             (car saved-vals))
+    (let ((duplicate (check-duplicates saved-vars))
+          (var-len (length saved-vars))
+          (val-len (length saved-vals)))
+      (cond ((not (null? duplicate))
+             (report-duplicate-id duplicate))
+            ((< var-len val-len)
+             (report-argument-mismatch 'greater))
+            ((> var-len val-len)
+             (report-argument-mismatch 'less))
             (else
-             (apply-env (extend-env-list (cdr saved-vars) (cdr saved-vals) saved-env)
-                        search-var))))))
+             (lambda (search-var)
+               (cond ((null? saved-vals)
+                      (apply-env saved-env search-var))
+                     ((eqv? search-var (car saved-vars))
+                      (car saved-vals))
+                     (else
+                      (apply-env (extend-env-list (cdr saved-vars) (cdr saved-vals) saved-env)
+                                 search-var)))))))))
 (define extend-env-rec
   (lambda (p-names p-vars p-bodys saved-env)
-    (lambda (search-var)
-      (if (null? p-names)
-          (apply-env saved-env search-var)
-          (let ((func (apply-env-rec search-var p-names p-vars p-bodys)))
-            (if (null? func)
+    (let ((duplicate (check-duplicates p-vars)))
+      (if (null? duplicate)
+          (lambda (search-var)
+            (if (null? p-names)
                 (apply-env saved-env search-var)
-                (proc-val
-                 (procedure (car func)
-                            (cadr func)
-                            (extend-env-rec p-names p-vars p-bodys saved-env)))))))))
+                (let ((func (apply-env-rec search-var p-names p-vars p-bodys)))
+                  (if (null? func)
+                      (apply-env saved-env search-var)
+                      (proc-val
+                       (procedure (car func)
+                                  (cadr func)
+                                  (extend-env-rec p-names p-vars p-bodys saved-env)))))))
+          (report-duplicate-id duplicate)))))
 (define apply-env
   (lambda (env search-var)
     (env search-var)))
@@ -48,6 +72,12 @@
 (define report-invalid-env
   (lambda (env)
     (eopl:error 'apply-env "Bad environment: ~s" env)))
+(define report-argument-mismatch
+  (lambda (symp)
+    (eopl:error 'extend-env-list "Argument number is ~s than parameter number" symp)))
+(define report-duplicate-id
+  (lambda (sym)
+    (eopl:error 'extend-env-list "Duplicate identifier ~s" sym)))
 
 ;;; ---------------------- Expval ----------------------
 (define identifier? symbol?)
@@ -261,3 +291,11 @@
          odd(x)  = if zero?(x) then 0 else (even -(x,1))
        in (odd 13)")
  1)
+;; error
+(eqv?
+ (run "let in
+       let x = 1
+           y = 2
+       in letrec f(y, y) = -(x, -(0, y))
+          in (f 2)")
+ 3)
