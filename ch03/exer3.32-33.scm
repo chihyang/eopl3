@@ -105,15 +105,15 @@
 (define identifier? symbol?)
 (define-datatype proc proc?
   (procedure
-   (var (list-of identifier?))
+   (vars (list-of identifier?))
    (body expression?)
    (saved-env environment?)))
 (define apply-procedure
-  (lambda (proc1 val)
+  (lambda (proc1 vals)
     (cases proc proc1
            (procedure
-            (var body saved-env)
-            (value-of body (extend-env-list var val saved-env))))))
+            (vars body saved-env)
+            (value-of body (extend-env-list vars vals saved-env))))))
 (define-datatype exp-val exp-val?
   (num-val
    (val number?))
@@ -242,8 +242,8 @@
             (var exp1 body)
             (value-of body (extend-env var (value-of exp1 env) env)))
            (proc-exp
-            (var body)
-            (proc-val (procedure var body env)))
+            (vars body)
+            (proc-val (procedure vars body env)))
            (letrec-exp
             (p-names p-vars p-bodys letrec-body)
             (value-of letrec-body (extend-env-rec p-names p-vars p-bodys env)))
@@ -288,7 +288,6 @@
     (value-of--program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-;;; f(x, y) = x + y
 (eqv?
  (run "letrec
          even(x) = if zero?(x) then 1 else (odd -(x,1))

@@ -275,8 +275,10 @@
 
 ;;; ---------------------- Test ----------------------
 ;;; f(x, y) = x + y
-(run "letrec f (x, y) = if zero?(x) then y
-                        else
+(eqv?
+ (run "letrec f (x, y) = if zero?(x) then y
+                         else
                             if zero?(y) then x
                             else -((f -(x,1) -(y,1)), -2)
-      in (f 4 12)")
+       in (f 4 12)")
+ 16)
