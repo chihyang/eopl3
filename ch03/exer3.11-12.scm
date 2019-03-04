@@ -133,6 +133,7 @@
 ;;; Expression ::= let Identifier = Expression in Expression
 ;;;                let-exp (var exp1 body)
 ;;; Expression ::= cond {Expression ==> Expression}∗ end
+;;;                cond-exp Listof(exp1) Listof(exp2)
 (define let-scanner-spec
   '((white-sp (whitespace) skip)
     (identifier (letter (arbno (or letter digit))) symbol)

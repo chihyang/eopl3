@@ -62,14 +62,15 @@
 ;; root plus number n
 (define mark-leaves-with-red-depth-iter
   (lambda (tree n)
-    (if (leaf? tree)
-        (leaf n)
-        (if (eq? (contents-of tree) 'red)
-            (interior-node
+    (cond ((leaf? tree)
+           (leaf n))
+          ((eq? (contents-of tree) 'red)
+           (interior-node
              'red
              (mark-leaves-with-red-depth-iter (lson tree) (+ n 1))
-             (mark-leaves-with-red-depth-iter (rson tree) (+ n 1)))
-            (interior-node
+             (mark-leaves-with-red-depth-iter (rson tree) (+ n 1))))
+          (else
+           (interior-node
              (contents-of tree)
              (mark-leaves-with-red-depth-iter (lson tree) n)
              (mark-leaves-with-red-depth-iter (rson tree) n))))))
