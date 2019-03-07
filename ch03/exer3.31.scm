@@ -162,7 +162,7 @@
 ;;; Expression ::= proc (Identifier*,) Expression
 ;;;                proc-exp (var body)
 ;;; Expression ::= letrec Identifier (Identifier*,) = Expression in Expression
-;;;                let-exp (var exp1 body)
+;;;                letrec-exp (p-name b-var p-exp1 letrec-body)
 ;;; Expression ::= (Expression Expression*)
 ;;;                call-exp (rator rand)
 ;;; Parse Expression

@@ -94,8 +94,7 @@
 ;;;                var-exp (var)
 ;;; Expression ::= let Identifier = Expression in Expression
 ;;;                let-exp (var exp1 body)
-;;; Expression ::= letrec Identifier (Identifier) = Expression in Expression
-;;;                let-exp (var exp1 body);;; Expression ::= proc (Identifier) Expression
+;;; Expression ::= proc (Identifier) Expression
 ;;;                proc-exp (var body)
 ;;; Expression ::= (Expression Expression)
 ;;;                call-exp (rator rand)
