@@ -180,6 +180,8 @@
 ;;;                nameless-let-exp (exp1 body)
 ;;; Expression ::= %lexproc Expression
 ;;;                nameless-proc-exp (body)
+;;; Expression ::= %letrec-exp {Expression}* in Expression
+;;;                nameless-letrec-exp (p-bodies letrec-body)
 ;;; Parse Expression
 (define let-scanner-spec
   '((white-sp (whitespace) skip)
@@ -230,6 +232,8 @@
                 var-exp)
     (expression ("let" (arbno identifier "=" expression) "in" expression)
                 let-exp)
+    (expression ("letrec" (arbno identifier "(" identifier ")" "=" expression) "in" expression)
+                letrec-exp)
     (expression ("cond" (arbno expression "==>" expression) "end")
                 cond-exp)
     (expression ("proc" "(" identifier ")" expression)
@@ -247,10 +251,22 @@
     (expression ("%lexproc" expression)
                 nameless-proc-exp)
     (expression ("%unpack" number "of" expression "in" expression)
-                nameless-unpack-exp)))
+                nameless-unpack-exp)
+    (expression ("%letrec" (arbno expression) "in" expression)
+                nameless-letrec-exp)
+    (expression ("%letrecxref" number number)
+                nameless-letrec-var-exp)))
 
 ;;; ------------ Static Environment(from section 3.7) ----------------
-;; Senv = Listof(Sym)
+(define-datatype var-dec var-dec?
+  (normal-dec)
+  (letrec-dec
+   (pos number?)))
+(define-datatype var-ref var-ref?
+  (ref
+   (dec var-dec?)
+   (pos number?)))
+;; Senv = Listof(VarDec)
 ;; Lexaddr = N
 ;; empty-senv : () -> Senv
 (define empty-senv
@@ -258,20 +274,47 @@
 ;; extend-senv : Var x Senv -> Senv
 (define extend-senv
   (lambda (var senv)
-    (cons var senv)))
-;; extend-senv : Listof(Var) x Senv -> Senv
+    (cons (cons var (normal-dec)) senv)))
+;; extend-senv : Var x Senv -> Senv
+(define extend-letrec-senv
+  (lambda (var senv)
+    (cons (cons var (letrec-dec 0)) senv)))
+;; extend-senv : Listof(VarDec) x Senv -> Senv
 (define extend-senv*
   (lambda (vars senv)
-    (append vars senv)))
-;; apply-senv : Senv x Var -> Lexaddr
+    (append (reverse
+             (map (lambda (var) (cons var (normal-dec)))
+                  vars))
+            senv)))
+;; extend-letrec-senv : Listof(VarDec) x Senv -> Senv
+(define extend-letrec-senv*
+  (lambda (vars senv)
+    (extend-letrec-senv*-inner vars (length vars) senv)))
+;; extend-letrec-senv : Listof(VarDec) x Num x Senv -> Senv
+(define extend-letrec-senv*-inner
+  (lambda (var pos senv)
+    (if (null? var)
+        senv
+        (extend-letrec-senv*-inner
+         (cdr var)
+         (- pos 1)
+         (cons (cons (car var) (letrec-dec (- pos 1))) senv)))))
+;; apply-senv : Senv x Var -> VarRef
 (define apply-senv
   (lambda (senv var)
+    (apply-senv-iter senv var 0)))
+;; apply-senv : Senv x Var x Num -> VarRef
+(define apply-senv-iter
+  (lambda (senv var pos)
     (cond ((null? senv)
            (report-no-binding-found var))
-          ((eqv? var (car senv))
-           0)
+          ((eqv? var (caar senv))
+           (ref (cdar senv) pos))
           (else
-           (+ 1 (apply-senv (cdr senv) var))))))
+           (apply-senv-iter (cdr senv) var (+ pos 1))))))
+(define report-invalid-var-ref
+  (lambda (var)
+    (eopl:error "Invalid variable reference: ~a" var)))
 
 ;;; --------------------- Translation of Program ---------------------
 ;; translation-of-program : Program -> Nameless-program
@@ -357,7 +400,17 @@
                     (translation-of exp3 senv)))
            (var-exp
             (var)
-            (nameless-var-exp (apply-senv senv var)))
+            (let ((a-ref (apply-senv senv var)))
+              (cases
+               var-ref a-ref
+               (ref (dec pos)
+                    (cases var-dec dec
+                           (normal-dec
+                            ()
+                            (nameless-var-exp pos))
+                           (letrec-dec
+                            (in-pos)
+                            (nameless-letrec-var-exp pos in-pos)))))))
            (let-exp
             (vars vals body)
              (let ((dup (check-duplicates vars)))
@@ -401,15 +454,26 @@
                    (translation-of vals senv)
                    (translation-of body (extend-senv* vars senv)))
                   (report-duplicate-id dup))))
+           (letrec-exp
+            (p-names p-vars p-bodies letrec-body)
+            (let ((dup (check-duplicates p-names)))
+              (if (null? dup)
+                  (let ((letrec-env (extend-letrec-senv* p-names senv)))
+                    (nameless-letrec-exp
+                     (map (lambda (p-var p-body)
+                            (translation-of
+                             p-body
+                             (extend-senv p-var letrec-env)))
+                          p-vars
+                          p-bodies)
+                     (translation-of letrec-body letrec-env)))
+                  (report-duplicate-id dup))))
            (else
             (report-invalid-source-expression exp)))))
 ;; translation-of : () -> Senv
 (define init-senv
   (lambda ()
-    (extend-senv 'i
-                 (extend-senv 'v
-                              (extend-senv 'x
-                                           (empty-senv))))))
+    (empty-senv)))
 (define report-invalid-source-expression
   (lambda (exp)
     (eopl:error
@@ -421,6 +485,13 @@
 
 ;;; ------------- Nameless Environment(from section 3.7) -------------
 ;; nameless-environment? : SchemeVal -> Bool
+(define list-of
+  (lambda (pred)
+    (lambda (val)
+      (or (null? val)
+          (and (pair? val)
+               (pred (car val))
+               ((list-of pred) (cdr val)))))))
 (define nameless-environment?
   (lambda (x)
     ((list-of exp-val?) x)))
@@ -435,11 +506,26 @@
 ;; extend-nameless-env : Listof(Expval) x Nameless-env -> Nameless-env
 (define extend-nameless-env*
   (lambda (vals nameless-env)
-    (append vals nameless-env)))
+    (append (reverse vals) nameless-env)))
 ;; apply-nameless-env : Nameless-env x Lexaddr -> DenVal
 (define apply-nameless-env
   (lambda (nameless-env n)
     (list-ref nameless-env n)))
+(define apply-nameless-env-rec
+  (lambda (nameless-env n in-pos)
+    (let ((a-proc (list-ref nameless-env n))
+          (saved-env (list-tail nameless-env (- n in-pos))))
+      (cases
+       exp-val a-proc
+       (proc-val
+        (in-proc)
+        (cases
+         proc in-proc
+         (procedure
+          (body env)
+          (proc-val (procedure body saved-env)))))
+       (else
+        (report-invalid-exp-value 'proc))))))
 
 ;;; ------------------------ procedure value ------------------------
 (define-datatype proc proc?
@@ -545,6 +631,17 @@
            (nameless-unpack-exp
             (var-length vals body)
             (value-of-nameless-unpack-exp var-length vals body nameless-env))
+           (nameless-letrec-exp
+            (p-bodies letrec-body)
+            (value-of
+             letrec-body
+             (extend-nameless-env*
+              (map (lambda (body) (proc-val (procedure body nameless-env)))
+                   p-bodies)
+              nameless-env)))
+           (nameless-letrec-var-exp
+            (n in-pos)
+            (apply-nameless-env-rec nameless-env n in-pos))
            (else
             (report-invalid-tranlated-expression exp)))))
 (define value-of-program
@@ -727,3 +824,14 @@
            less?(x, -(x, y)) ==> 1
            equal?(x, -(x, y)) ==> minus(y)
          end")
+(eqv?
+ (run "letrec double (x) = if zero?(x) then 0
+                           else -((double -(x,1)),-2)
+       in (double 6)")
+ 12)
+(eqv?
+ (run "letrec
+         even(x) = if zero?(x) then 1 else (odd -(x,1))
+         odd(x)  = if zero?(x) then 0 else (even -(x,1))
+       in (odd 13)")
+ 1)
