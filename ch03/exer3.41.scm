@@ -129,10 +129,10 @@
 ;;;                var-exp (var)
 ;;; Expression ::= let {Identifier = Expression}* in Expression
 ;;;                let-exp (var exp1 body)
-;;; Expression ::= letrec Identifier (Identifier) = Expression in Expression
-;;;                letrec-exp (p-name b-var p-exp1 letrec-body)
-;;; Expression ::= proc (Identifier) Expression
-;;;                proc-exp (var body)
+;;; Expression ::= letrec Identifier (Identifier,*) = Expression in Expression
+;;;                letrec-exp (p-name b-vars p-exp1 letrec-body)
+;;; Expression ::= proc (Identifier*) Expression
+;;;                proc-exp (vars body)
 ;;; Expression ::= (Expression Expression)
 ;;;                call-exp (rator rand)
 ;;; Expression ::= cond {Expression ==> Expression}∗ end
@@ -199,13 +199,13 @@
                 var-exp)
     (expression ("let" (arbno identifier "=" expression) "in" expression)
                 let-exp)
-    (expression ("letrec" (arbno identifier "(" identifier ")" "=" expression) "in" expression)
+    (expression ("letrec" (arbno identifier "(" (separated-list identifier ",") ")" "=" expression) "in" expression)
                 letrec-exp)
     (expression ("cond" (arbno expression "==>" expression) "end")
                 cond-exp)
-    (expression ("proc" "(" identifier ")" expression)
+    (expression ("proc" "(" (arbno identifier) ")" expression)
                 proc-exp)
-    (expression ("(" expression expression ")")
+    (expression ("(" expression (arbno expression) ")")
                 call-exp)
     (expression ("unpack" (arbno identifier) "=" expression "in" expression)
                 unpack-exp)
@@ -394,14 +394,14 @@
              (map (lambda (val) (translation-of val senv))
                   val-list)))
            (proc-exp
-            (var body)
+            (vars body)
             (nameless-proc-exp
-             (translation-of body (extend-senv var senv))))
+             (translation-of body (extend-senv* vars senv))))
            (call-exp
             (rator rand)
             (call-exp
              (translation-of rator senv)
-             (translation-of rand senv)))
+             (map (lambda (exp) (translation-of exp senv)) rand)))
            (let*-exp
             (vars vals body)
             (if (null? vars)
@@ -429,7 +429,7 @@
                      (map (lambda (p-var p-body)
                             (translation-of
                              p-body
-                             (extend-senv p-var letrec-env)))
+                             (extend-senv* p-var letrec-env)))
                           p-vars
                           p-bodies)
                      (translation-of letrec-body letrec-env)))
@@ -504,11 +504,11 @@
    (saved-nameless-env nameless-environment?)))
 ;; apply-procedure : Proc x ExpVal -> ExpVal
 (define apply-procedure
-  (lambda (proc1 val)
+  (lambda (proc1 vals)
     (cases proc proc1
            (procedure
             (body saved-nameless-env)
-            (value-of body (extend-nameless-env val saved-nameless-env))))))
+            (value-of body (extend-nameless-env* vals saved-nameless-env))))))
 
 ;;; ---------------------- Evaluate expression ----------------------
 (define value-of
@@ -582,8 +582,8 @@
            (call-exp
             (rator rand)
             (let ((proc (expval->proc (value-of rator nameless-env)))
-                  (arg (value-of rand nameless-env)))
-              (apply-procedure proc arg)))
+                  (args (map (lambda (exp) (value-of exp nameless-env)) rand)))
+              (apply-procedure proc args)))
            (cond-exp
             (cond-list val-list)
             (value-of-cond-exp cond-list val-list nameless-env))
@@ -804,3 +804,10 @@
          odd(x)  = if zero?(x) then 0 else (even -(x,1))
        in (odd 13)")
  1)
+(eqv?
+ (run "letrec f (x, y) = if zero?(x) then y
+                         else
+                            if zero?(y) then x
+                            else -((f -(x,1) -(y,1)), -2)
+       in (f 4 12)")
+ 16)
