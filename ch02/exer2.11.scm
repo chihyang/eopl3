@@ -13,14 +13,6 @@
       (else
        (apply-env (cdr env) search-var)))))
 (define empty-env? null?)
-(define has-binding?
-  (lambda (env s)
-    (cond ((empty-env? env)
-           #f)
-          ((contains? (caar env) s)
-           #t)
-          (else
-           (has-binding? (cdr env) s)))))
 (define extend-env*
   (lambda (vars vals env)
     (cons (cons vars vals) env)))
