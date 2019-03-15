@@ -1,38 +1,5 @@
 #lang eopl
-;;; ---------------------- Environment(from section 3.2) ----------------------
-(define empty-env?
-  (lambda (env)
-    (and (list? env)
-         (not (null? env))
-         (eqv? (car env) 'empty-env))))
-(define extended-env?
-  (lambda (env)
-    (and (list? env)
-         (not (null? env))
-         (eqv? (car env) 'extend-env))))
-(define environment?
-  (lambda (env)
-    (or (empty-env? env)
-        (extended-env? env))))
-(define empty-env
-  (lambda () (list 'empty-env)))
-(define extend-env
-  (lambda (var val env)
-    (list 'extend-env var val env)))
-(define apply-env
-  (lambda (env search-var)
-    (cond
-      ((eqv? (car env) 'empty-env)
-       (report-no-binding-found search-var))
-      ((eqv? (car env) 'extend-env)
-       (let ((saved-var (cadr env))
-             (saved-val (caddr env))
-             (saved-env (cadddr env)))
-         (if (eqv? search-var saved-var)
-             saved-val
-             (apply-env saved-env search-var))))
-      (else
-       (report-invalid-env env)))))
+;;; ---------------------- Utility ----------------------
 (define member?
   (lambda (sym lst)
     (if (null? lst)
@@ -782,12 +749,11 @@
                 y = -(x,2)
            in -(x,y)")
  1)
-(eqv?
- (run "let x = 30
-         in let x = -(x,1)
+;; error
+(run "let x = 30
+      in let x = -(x,1)
                 x = -(x,2)
-           in +(x,x)")
- 56)
+         in +(x,x)")
 (eqv?
  (run "let x = 30
          in let* x = -(x,1) y = -(x,2)
