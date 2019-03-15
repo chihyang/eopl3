@@ -44,6 +44,7 @@
 ;;; ---- test ----
 (extend-env* '() '() (extend-env 's 2 (empty-env)))
 (extend-env* '(c) '(5) (extend-env 's 2 (empty-env)))
-﻿(extend-env* '(a b c) '(3 4 5) (extend-env 's 2 (empty-env)))
-﻿(extend-env* '(a a d d d d b c) '(3 4 5 3 8 9 0 2) (extend-env 's 2 (empty-env)))
+(extend-env* '(a b c) '(3 4 5) (extend-env 's 2 (empty-env)))
+(extend-env* '(a a d d d d b c) '(3 4 5 3 8 9 0 2) (extend-env 's 2 (empty-env)))
+;; error
 (apply-env (extend-env* '(a a d d d d b c) '(3 4 5 3 8 9 0 2) (extend-env 's 2 (empty-env))) 'x)
