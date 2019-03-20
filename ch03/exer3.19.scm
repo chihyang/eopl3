@@ -210,8 +210,10 @@
     (value-of--program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-(run "let x = 200 in
+(eqv?
+ (run "let x = 200 in
         letproc f (z) = -(z,x) in
           let x = 100 in
             letproc g (z) = -(z,x) in
               -((f 1), (g 1))")
+ -100)
