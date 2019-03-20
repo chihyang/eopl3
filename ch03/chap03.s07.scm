@@ -331,10 +331,17 @@
       (scan&parse string)))))
 
 ;;; ---------------------- Test ----------------------
-(run "let x = 37
+(equal?
+ (run "let x = 37
       in proc (y)
            let z = -(y, x)
            in -(x, y)")
+ (procedure (nameless-let-exp
+             (diff-exp (nameless-var-exp 0)
+                       (nameless-var-exp 1))
+             (diff-exp (nameless-var-exp 2)
+                       (nameless-var-exp 1)))
+            (list (num-val 37))))
 (eqv?
  (run "let x = 200 in
         let f = proc (z) -(z,x) in
