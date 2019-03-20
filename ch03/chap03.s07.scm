@@ -1,38 +1,5 @@
 #lang eopl
-;;; ---------------------- Environment(from section 3.2) ----------------------
-(define empty-env?
-  (lambda (env)
-    (and (list? env)
-         (not (null? env))
-         (eqv? (car env) 'empty-env))))
-(define extended-env?
-  (lambda (env)
-    (and (list? env)
-         (not (null? env))
-         (eqv? (car env) 'extend-env))))
-(define environment?
-  (lambda (env)
-    (or (empty-env? env)
-        (extended-env? env))))
-(define empty-env
-  (lambda () (list 'empty-env)))
-(define extend-env
-  (lambda (var val env)
-    (list 'extend-env var val env)))
-(define apply-env
-  (lambda (env search-var)
-    (cond
-      ((eqv? (car env) 'empty-env)
-       (report-no-binding-found search-var))
-      ((eqv? (car env) 'extend-env)
-       (let ((saved-var (cadr env))
-             (saved-val (caddr env))
-             (saved-env (cadddr env)))
-         (if (eqv? search-var saved-var)
-             saved-val
-             (apply-env saved-env search-var))))
-      (else
-       (report-invalid-env env)))))
+;;; ---------------------- Utility ----------------------
 (define report-no-binding-found
   (lambda (search-var)
     (eopl:error 'apply-env "No binding for ~s" search-var)))
@@ -118,14 +85,14 @@
   '((program (expression) a-program)
     (expression (number)
                 const-exp)
+    (expression (identifier)
+                var-exp)
     (expression ("-" "(" expression "," expression ")")
                 diff-exp)
     (expression ("zero?" "(" expression ")")
                 zero?-exp)
     (expression ("if" expression "then" expression "else" expression)
                 if-exp)
-    (expression (identifier)
-                var-exp)
     (expression ("let" identifier "=" expression "in" expression)
                 let-exp)
     (expression ("proc" "(" identifier ")" expression)
@@ -226,8 +193,7 @@
     ((list-of exp-val?) x)))
 ;; empty-nameless-env : () -> Nameless-env
 (define empty-nameless-env
-  (lambda ()
-    '()))
+  (lambda () '()))
 ;; extend-nameless-env : Expval x Nameless-env -> Nameless-env
 (define extend-nameless-env
   (lambda (val nameless-env)
