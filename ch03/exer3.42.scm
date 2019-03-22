@@ -396,3 +396,16 @@
               let f = proc (x) -(x, z) in
                 (f z)")
  0)
+(eqv?
+ (run "let z = 20
+       in let m = 32
+          in let x = -(z, m)
+             in let f = proc (y) -(y,x)
+                in let g = f
+                   in (proc (func) (func m) g)")
+ 44)
+(eqv?
+ (run "let x = 3 in
+         let f = proc (y) proc (y) -(y,x) in
+           ((f 13) x)")
+ 0)

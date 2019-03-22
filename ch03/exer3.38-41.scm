@@ -801,3 +801,16 @@
          odd(x)  = if zero?(x) then 0 else (even -(x,1))
        in (odd 13)")
  1)
+(eqv?
+ (run "let z = 20
+       in let m = 32
+          in let x = -(z, m)
+             in let f = proc (y) -(y,x)
+                in let g = f
+                   in (proc (func) (func m) g)")
+ 44)
+(eqv?
+ (run "let x = 3 in
+         let f = proc (y) proc (y) -(y,x) in
+           ((f 13) x)")
+ 0)
