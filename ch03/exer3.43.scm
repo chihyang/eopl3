@@ -182,6 +182,7 @@
                 (occurs-free? var rand)))
            (else
             (report-invalid-source-expression exp)))))
+;; no-free-vars? : Exp x Num -> Boolean
 (define no-free-vars?
   (lambda (body param-num)
     (cases expression body

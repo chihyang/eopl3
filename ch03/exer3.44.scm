@@ -258,7 +258,7 @@
              var-pos))
            (nameless-inline-proc-exp
             (exp1)
-            (replace-param-exp exp1 arg))
+            body)
            (call-exp
             (rator rand)
             (call-exp
@@ -531,3 +531,8 @@
                 in let g = f
                    in (proc (func) (func m) g)")
  44)
+(eqv?
+ (run "let x = 3 in
+         let f = proc (y) proc (y) -(y,x) in
+           ((f 13) x)")
+ 0)
