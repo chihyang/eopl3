@@ -126,26 +126,28 @@
           [(eqv? var (caar senv)) #t]
           [else
            (member-var? var (cdr senv))])))
-;; extract-free-vars : Senv x Exp -> Senv
+;; extract-free-vars : Senv x Exp x Listof(Symbol) -> Senv
 (define extract-free-vars
-  (lambda (senv exp)
-    (let ((free-vars (extract-free-vars-iter senv exp -1 (cons '() '()))))
+  (lambda (senv exp vars)
+    (let ((free-vars (extract-free-vars-iter senv exp vars 0 (cons '() '()))))
       (cons (reverse (car free-vars))
             (reverse (cdr free-vars))))))
-;; extract-free-vars-iter : Senv x Exp x Num x (Senv . Listof(number)) -> (Senv . Listof(number))
+;; extract-free-vars-iter : Senv x Exp x Listof(Symbol) x Num x (Senv . Listof(number)) -> (Senv . Listof(number))
 (define extract-free-vars-iter
-  (lambda (senv exp pos trimmed-senv)
+  (lambda (senv exp vars pos trimmed-senv)
     (cond [(empty-senv? senv) trimmed-senv]
           [(member-var? (caar senv) (car trimmed-senv))
-           (extract-free-vars-iter (cdr senv) exp (+ pos 1) trimmed-senv)]
-          [(occurs-free? (caar senv) exp)
+           (extract-free-vars-iter (cdr senv) exp vars (+ pos 1) trimmed-senv)]
+          [(and (not (member? (caar senv) vars))
+                (occurs-free? (caar senv) exp))
            (extract-free-vars-iter
             (cdr senv)
             exp
+            vars
             (+ pos 1)
             (cons (cons (car senv) (car trimmed-senv))
                   (cons pos (cdr trimmed-senv))))]
-          [else (extract-free-vars-iter (cdr senv) exp (+ pos 1) trimmed-senv)])))
+          [else (extract-free-vars-iter (cdr senv) exp vars (+ pos 1) trimmed-senv)])))
 ;; occurs-free? : Var x Exp -> Boolean
 (define occurs-free?
   (lambda (var exp)
@@ -191,7 +193,7 @@
             #t)
            (nameless-var-exp
             (addr)
-            (<= addr param-num))
+            (< addr param-num))
            (diff-exp
             (exp1 exp2)
             (and (no-free-vars? exp1 param-num)
@@ -342,16 +344,15 @@
                       (nameless-let-exp val-exp let-body)))))
            (proc-exp
             (var body)
-            (let* ((free-vars (extract-free-vars (extend-senv var (void-exp) senv) body))
+            (let* ((free-vars (extract-free-vars senv body (list var)))
                    (saved-env (car free-vars))
                    (var-pos (cdr free-vars))
-                   (pos (cond [(null? var-pos) var-pos]
-                              [(eqv? (car var-pos) -1) (cdr var-pos)]
-                              [else var-pos]))
-                   (translated-body (translation-of body (car free-vars))))
+                   (translated-body (translation-of
+                                     body
+                                     (extend-senv var (void-exp) saved-env))))
               (if (no-free-vars? translated-body 1)
                   (nameless-inline-proc-exp translated-body)
-                  (nameless-proc-exp translated-body pos))))
+                  (nameless-proc-exp translated-body var-pos))))
            (call-exp
             (rator rand)
             (let ((rator-exp (translation-of rator senv))
