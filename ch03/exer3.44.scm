@@ -243,14 +243,14 @@
            (if-exp
             (exp1 exp2 exp3)
             (if-exp
-             (replace-param-exp exp1)
-             (replace-param-exp exp2)
-             (replace-param-exp exp3)))
+             (replace-param-exp exp1 arg)
+             (replace-param-exp exp2 arg)
+             (replace-param-exp exp3 arg)))
            (nameless-let-exp
             (exp1 body)
             (nameless-let-exp
-             (replace-param-exp exp1)
-             (replace-param-exp body)))
+             (replace-param-exp exp1 arg)
+             (replace-param-exp body arg)))
            (nameless-proc-exp
             (exp1 var-pos)
             (nameless-proc-exp

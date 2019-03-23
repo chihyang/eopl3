@@ -311,7 +311,8 @@
                                if zero? (x) then 1
                                else (((maker maker2) maker) -(x, 1))
           in let odd = proc (x) (((makeodd makeeven) makeodd) x)
-             in (odd 5)"))
+             in (odd 5)")
+ 1)
 
 (eqv?
  (run "let makeodd = proc (maker)
