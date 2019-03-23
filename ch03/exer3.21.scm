@@ -252,8 +252,12 @@
     (value-of--program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-(run "((proc (x) proc (y) -(y,-(0,x)) 3) 4)")
-(run "(proc (x, y) -(y,-(0,x)) 3 4)")
+(eqv?
+ (run "((proc (x) proc (y) -(y,-(0,x)) 3) 4)")
+ 7)
+(eqv?
+ (run "(proc (x, y) -(y,-(0,x)) 3 4)")
+ 7)
 ;; error
 (run "(proc (x, x) -(y,-(0,x)) 3 4)")
 (run "(proc (x, y) -(y,-(0,x)) 3)")

@@ -486,9 +486,9 @@
          in unpack x y = cons(u,cons(3,emptylist))
            in -(x,y)")
  4)
-;;; error
-;; (eqv?
-;;  (run "let u = 7
-;;          in unpack x y = cons(u,cons(2,cons(3,emptylist)))
-;;            in -(x,y)")
-;;  4)
+;; error
+(eqv?
+ (run "let u = 7
+         in unpack x y = cons(u,cons(2,cons(3,emptylist)))
+           in -(x,y)")
+ 4)

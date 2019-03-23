@@ -207,4 +207,6 @@
     (value-of--program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-(run "((proc (x) proc (y) -(y,-(0,x)) 3) 4)")
+(eqv?
+ (run "((proc (x) proc (y) -(y,-(0,x)) 3) 4)")
+ 7)

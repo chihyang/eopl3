@@ -253,78 +253,91 @@
 
 ;;; ---------------------- Test ----------------------
 ;; exer 3.23
-(run "let makemult = proc (maker)
-                       proc (x)
-                         if zero? (x)
-                         then 0
-                         else -(((maker maker) -(x, 1)), -4)
-      in let times4 = proc (x) ((makemult makemult) x)
-         in (times4 3)")
+(eqv?
+ (run "let makemult = proc (maker)
+                        proc (x)
+                          if zero? (x)
+                          then 0
+                          else -(((maker maker) -(x, 1)), -4)
+       in let times4 = proc (x) ((makemult makemult) x)
+          in (times4 3)")
+ 12)
 
-(run "let makemult = proc (maker)
-                       proc (x)
-                         proc (y)
-                           if zero? (x) then 0
-                           else -((((maker maker) -(x, 1)) y), -(0, y))
-      in let times4 = proc (x) (((makemult makemult) x) 4)
-         in (times4 3)")
+(eqv?
+ (run "let makemult = proc (maker)
+                        proc (x)
+                          proc (y)
+                            if zero? (x) then 0
+                            else -((((maker maker) -(x, 1)) y), -(0, y))
+       in let times4 = proc (x) (((makemult makemult) x) 4)
+          in (times4 3)")
+ 12)
 
-(run "let makemult = proc (maker)
-                       proc (x)
-                         proc (y)
-                           if zero? (x) then 0
-                           else -((((maker maker) -(x, 1)) y), -(0, y))
-      in let times = proc (z) proc (x) (((makemult makemult) x) z)
-         in ((times 3) 4)")
+(eqv?
+ (run "let makemult = proc (maker)
+                        proc (x)
+                          proc (y)
+                            if zero? (x) then 0
+                            else -((((maker maker) -(x, 1)) y), -(0, y))
+       in let times = proc (z) proc (x) (((makemult makemult) x) z)
+          in ((times 3) 4)")
+ 12)
 
-(run "let makemult = proc (maker)
-                       proc (x)
-                         proc (y)
-                           if zero? (x) then 0
-                           else -((((maker maker) -(x, 1)) y), -(0, y))
-      in let times = proc (z) proc (x) (((makemult makemult) x) z)
-         in let makefact = proc (maker)
-                         proc (x)
-                           if zero? (x) then 1
-                           else ((times ((maker maker) -(x, 1))) x)
-            in let fact = proc (x) ((makefact makefact) x)
-               in (fact 4)")
+(eqv?
+ (run "let makemult = proc (maker)
+                        proc (x)
+                          proc (y)
+                            if zero? (x) then 0
+                            else -((((maker maker) -(x, 1)) y), -(0, y))
+       in let times = proc (z) proc (x) (((makemult makemult) x) z)
+          in let makefact = proc (maker)
+                              proc (x)
+                                if zero? (x) then 1
+                                else ((times ((maker maker) -(x, 1))) x)
+             in let fact = proc (x) ((makefact makefact) x)
+                in (fact 4)")
+ 24)
 
 ;; exer 3.24
-(run "let makeodd = proc (maker)
-                      proc (maker2)
-                        proc (x)
-                          if zero? (x) then 0
-                          else (((maker maker2) maker) -(x, 1))
-      in let makeeven = proc (maker)
-                          proc (maker2)
-                            proc (x)
-                              if zero? (x) then 1
-                              else (((maker maker2) maker) -(x, 1))
-         in let odd = proc (x) (((makeodd makeeven) makeodd) x)
-            in (odd 5)")
+(eqv?
+ (run "let makeodd = proc (maker)
+                       proc (maker2)
+                         proc (x)
+                           if zero? (x) then 0
+                           else (((maker maker2) maker) -(x, 1))
+       in let makeeven = proc (maker)
+                           proc (maker2)
+                             proc (x)
+                               if zero? (x) then 1
+                               else (((maker maker2) maker) -(x, 1))
+          in let odd = proc (x) (((makeodd makeeven) makeodd) x)
+             in (odd 5)"))
 
-(run "let makeodd = proc (maker)
+(eqv?
+ (run "let makeodd = proc (maker)
                       proc (maker2)
                         proc (x)
                           if zero? (x) then 0
                           else (((maker maker2) maker) -(x, 1))
-      in let makeeven = proc (maker)
+       in let makeeven = proc (maker)
                           proc (maker2)
                             proc (x)
                               if zero? (x) then 1
                               else (((maker maker2) maker) -(x, 1))
-         in let even = proc (x) (((makeeven makeodd) makeeven) x)
-            in (even 5)")
+          in let even = proc (x) (((makeeven makeodd) makeeven) x)
+             in (even 5)")
+ 0)
 
 ;; exer 3.25
-(run "let makerec = proc (f)
+(eqv?
+ (run "let makerec = proc (f)
         let d = proc (x)
                   proc (z) ((f (x x)) z)
         in proc (n) ((f (d d)) n)
-      in let maketimes4 = proc (f)
+       in let maketimes4 = proc (f)
                             proc (x)
                               if zero?(x) then 0
                               else -((f -(x,1)), -4)
-         in let times4 = (makerec maketimes4)
-            in (times4 3)")
+          in let times4 = (makerec maketimes4)
+             in (times4 3)")
+ 12)
