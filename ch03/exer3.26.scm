@@ -342,3 +342,9 @@
           in let times4 = (makerec maketimes4)
              in (times4 3)")
  12)
+
+(eqv?
+ (run "let x = 3 in
+         let f = proc (y) proc (y) -(y,x) in
+           ((f 13) x)")
+ 0)
