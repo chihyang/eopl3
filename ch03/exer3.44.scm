@@ -502,7 +502,7 @@
                        (const-exp 37))
              (diff-exp (const-exp 37)
                        (nameless-var-exp 1)))
-            '()))
+            (list (num-val 37))))
 (eqv?
  (run "let x = 200 in
         let f = proc (z) -(z,x) in
