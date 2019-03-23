@@ -42,7 +42,8 @@ procedure.
 
 - The key is to know what is a **known procedure**: if we can eliminate all the
   free variables from the body of a procedure, then that procedure can be put
-  into where it is referred.
+  into where it is referred, without the necessity of taking a lengthy
+  environment.
 
 - Don't forget to consider the case of recursive function as in exercise 3.23
   and 3.25.
