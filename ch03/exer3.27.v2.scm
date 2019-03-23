@@ -258,19 +258,26 @@
     (value-of--program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-(run "(traceproc (x) -(1,x) 1)")
+(eqv?
+ (run "(traceproc (x) -(1,x) 1)")
+ 0)
 
-(run "let f = traceproc (x) -(1,x) in f")
+(equal?
+ (run "let f = traceproc (x) -(1,x) in f")
+ (procedure 'x (diff-exp (const-exp 1) (var-exp 'x)) '(empty-env) #t))
 
-(run "let makemult = traceproc (maker)
+(eqv?
+ (run "let makemult = traceproc (maker)
                        traceproc (x)
                          if zero? (x)
                          then 0
                          else -(((maker maker) -(x, 1)), -4)
       in let times4 = traceproc (x) ((makemult makemult) x)
          in (times4 3)")
+ 12)
 
-(run "let makerec = traceproc (f)
+(eqv?
+ (run "let makerec = traceproc (f)
         let d = traceproc (x)
                   traceproc (z) ((f (x x)) z)
         in proc (n) ((f (d d)) n)
@@ -280,3 +287,4 @@
                               else -((f -(x,1)), -4)
          in let times4 = (makerec maketimes4)
             in (times4 3)")
+ 12)
