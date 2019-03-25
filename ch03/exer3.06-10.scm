@@ -184,14 +184,6 @@
                 var-exp)
     (expression ("let" identifier "=" expression "in" expression)
                 let-exp)))
-(sllgen:make-define-datatypes let-scanner-spec let-grammar)
-(define list-the-datatypes
-  (lambda ()
-    (sllgen:list-define-datatypes let-scanner-spec let-grammar)))
-(define just-scan
-  (sllgen:make-string-scanner let-scanner-spec let-grammar))
-(define scan&parse
-  (sllgen:make-string-parser let-scanner-spec let-grammar))
 ;;; Evaluate Expression
 (define value-of
   (lambda (exp env)
@@ -279,7 +271,7 @@
            (let-exp
             (var exp1 body)
             (value-of body (extend-env var (value-of exp1 env) env))))))
-(define value-of--program
+(define value-of-program
   (lambda (prog)
     (cases program prog
            (a-program
@@ -298,39 +290,55 @@
                      (pair-val
                       (val1 val2)
                       (expval->pair val))))))))
+
+;;; ---------------------- Sllgen operations ----------------------
+(sllgen:make-define-datatypes let-scanner-spec let-grammar)
+(define list-the-datatypes
+  (lambda ()
+    (sllgen:list-define-datatypes let-scanner-spec let-grammar)))
+(define just-scan
+  (sllgen:make-string-scanner let-scanner-spec let-grammar))
+(define scan&parse
+  (sllgen:make-string-parser let-scanner-spec let-grammar))
 (define read-eval-print
   (sllgen:make-rep-loop
    "--> "
-   value-of--program
+   value-of-program
    (sllgen:make-stream-parser let-scanner-spec let-grammar)))
+;; run : String -> Bool | Int
+(define run
+  (lambda (string)
+    (value-of-program
+     (scan&parse string))))
+
 ;;; ----- test -----
 (eqv?
- (value-of--program
+ (value-of-program
   (scan&parse "let x = 7 in
                  let y = 2 in
                    let y = let x = -(x, 1) in -(x, y)
                      in -(-(x,8), y)"))
  -5)
 (eq?
- (value-of--program (scan&parse "equal?(1,let x = 1 in -(x,0))"))
+ (value-of-program (scan&parse "equal?(1,let x = 1 in -(x,0))"))
  #t)
 (eq?
- (value-of--program (scan&parse "greater?(1,let x = 1 in -(x,0))"))
+ (value-of-program (scan&parse "greater?(1,let x = 1 in -(x,0))"))
  #f)
 (equal?
- (value-of--program
+ (value-of-program
   (scan&parse "let x = 4 in cons(x, cons(cons(-(x,1), emptylist), emptylist))"))
  '(4 (3)))
 (eqv?
  #f
- (value-of--program
+ (value-of-program
   (scan&parse "null?(
                 cdr(let x = 4 in
                       cons(x,
                            cons(cons(-(x,1), emptylist),
                                 emptylist))))")))
 (equal?
- (value-of--program
+ (value-of-program
   (scan&parse
    "let x = 4 in list(x, -(x,1), -(x,3))"))
  '(4 3 1))

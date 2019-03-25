@@ -375,7 +375,7 @@
             (value-of-less?-exp exp1 exp2 env))
            (else
             (report-invalid-exp-value 'bool-exp)))))
-(define value-of--program
+(define value-of-program
   (lambda (prog)
     (cases program prog
            (a-program
@@ -412,11 +412,11 @@
 (define read-eval-print
   (sllgen:make-rep-loop
    "--> "
-   value-of--program
+   value-of-program
    (sllgen:make-stream-parser let-scanner-spec let-grammar)))
 (define run
   (lambda (exp)
-    (value-of--program (scan&parse exp))))
+    (value-of-program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
 (eqv?

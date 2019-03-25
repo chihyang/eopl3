@@ -162,7 +162,7 @@
            (let-exp
             (var exp1 body)
             (value-of body (extend-env var (value-of exp1 env) env))))))
-(define value-of--program
+(define value-of-program
   (lambda (prog)
     (cases program prog
            (a-program
@@ -178,9 +178,9 @@
 (define read-eval-print
   (sllgen:make-rep-loop
    "--> "
-   value-of--program
+   value-of-program
    (sllgen:make-stream-parser let-scanner-spec let-grammar)))
-(value-of--program
+(value-of-program
  (scan&parse "let x = 7 in
                let y = 2 in
                  let y = let x = -(x, 1) in -(x, y)

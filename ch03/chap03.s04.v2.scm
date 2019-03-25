@@ -174,7 +174,7 @@
             (let ((proc (expval->proc (value-of rator env)))
                   (arg (value-of rand env)))
               (apply-procedure proc arg))))))
-(define value-of--program
+(define value-of-program
   (lambda (prog)
     (cases program prog
            (a-program
@@ -203,11 +203,11 @@
 (define read-eval-print
   (sllgen:make-rep-loop
    "--> "
-   value-of--program
+   value-of-program
    (sllgen:make-stream-parser let-scanner-spec let-grammar)))
 (define run
   (lambda (exp)
-    (value-of--program (scan&parse exp))))
+    (value-of-program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
 (run "letrec double (x) = if zero?(x) then 0
