@@ -1,5 +1,16 @@
 #lang eopl
-;;; ---------------------- Environment(from section 3.2) ----------------------
+;;; ---------------------- Environment (from section 3.2) ----------------------
+(define member?
+  (lambda (sym lst)
+    (if (null? lst)
+        #f
+        (or (eqv? sym (car lst))
+            (member? sym (cdr lst))))))
+(define check-duplicates
+  (lambda (lst)
+    (cond ((null? lst) '())
+          ((member? (car lst) (cdr lst)) (car lst))
+          (else (check-duplicates (cdr lst))))))
 (define empty-env?
   (lambda (env)
     (and (list? env)
@@ -20,17 +31,6 @@
 (define extend-env
   (lambda (var val env)
     (list 'extend-env var val env)))
-(define member?
-  (lambda (sym lst)
-    (if (null? lst)
-        #f
-        (or (eqv? sym (car lst))
-            (member? sym (cdr lst))))))
-(define check-duplicates
-  (lambda (lst)
-    (cond ((null? lst) '())
-          ((member? (car lst) (cdr lst)) (car lst))
-          (else (check-duplicates (cdr lst))))))
 (define extend-env*
   (lambda (vars vals env)
     (let ((duplicate (check-duplicates vars))
@@ -53,12 +53,6 @@
                                  (cdr vals)
                                  (list 'extend-env (car vars) (car vals) env))]))))
                (extend-env*-inner vars vals env))]))))
-(define report-argument-mismatch
-  (lambda (symp)
-    (eopl:error 'extend-env* "Argument number is ~s than parameter number" symp)))
-(define report-duplicate-id
-  (lambda (sym)
-    (eopl:error 'extend-env* "Duplicate identifier ~s" sym)))
 (define extend-env-rec
   (lambda (p-names p-vars p-bodys env)
     (let ((dup-name (check-duplicates p-names)))
@@ -107,6 +101,12 @@
 (define report-invalid-env
   (lambda (env)
     (eopl:error 'apply-env "Bad environment: ~s" env)))
+(define report-argument-mismatch
+  (lambda (symp)
+    (eopl:error 'extend-env* "Argument number is ~s than parameter number" symp)))
+(define report-duplicate-id
+  (lambda (sym)
+    (eopl:error 'extend-env* "Duplicate identifier ~s" sym)))
 
 ;;; ---------------------- Expval ----------------------
 (define identifier? symbol?)
