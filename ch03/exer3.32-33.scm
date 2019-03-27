@@ -31,27 +31,34 @@
     (cond ((null? lst) '())
           ((member? (car lst) (cdr lst)) (car lst))
           (else (check-duplicates (cdr lst))))))
-(define extend-env-list
+(define extend-env*
   (lambda (vars vals env)
-    (let ((duplicate (check-duplicates vars)))
-      (if (null? duplicate)
-          (if (null? vars)
-              (if (null? vals)
-                  env
-                  (report-argument-mismatch 'greater))
-              (if (null? vals)
-                  (report-argument-mismatch 'less)
-                  (extend-env-list
-                   (cdr vars)
-                   (cdr vals)
-                   (list 'extend-env (car vars) (car vals) env))))
-          (report-duplicate-id duplicate)))))
+    (let ((duplicate (check-duplicates vars))
+          (var-len (length vars))
+          (val-len (length vals)))
+      (cond [(not (null? duplicate))
+             (report-duplicate-id duplicate)]
+            [(< var-len val-len)
+             (report-argument-mismatch 'greater)]
+            [(> var-len val-len)
+             (report-argument-mismatch 'less)]
+            [else
+             (letrec ((extend-env*-inner
+                       (lambda (vars vals env)
+                         (cond [(null? vars)
+                                env]
+                               [else
+                                (extend-env*-inner
+                                 (cdr vars)
+                                 (cdr vals)
+                                 (list 'extend-env (car vars) (car vals) env))]))))
+               (extend-env*-inner vars vals env))]))))
 (define report-argument-mismatch
   (lambda (symp)
-    (eopl:error 'extend-env-list "Argument number is ~s than parameter number" symp)))
+    (eopl:error 'extend-env* "Argument number is ~s than parameter number" symp)))
 (define report-duplicate-id
   (lambda (sym)
-    (eopl:error 'extend-env-list "Duplicate identifier ~s" sym)))
+    (eopl:error 'extend-env* "Duplicate identifier ~s" sym)))
 (define extend-env-rec
   (lambda (p-names p-vars p-bodys env)
     (let ((dup-name (check-duplicates p-names)))
@@ -113,7 +120,7 @@
     (cases proc proc1
            (procedure
             (vars body saved-env)
-            (value-of body (extend-env-list vars vals saved-env))))))
+            (value-of body (extend-env* vars vals saved-env))))))
 (define-datatype exp-val exp-val?
   (num-val
    (val number?))
