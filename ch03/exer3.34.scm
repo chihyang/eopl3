@@ -299,3 +299,10 @@
        in letrec f(y, y) = -(x, -(0, y))
           in (f 2)")
  3)
+(eqv?
+ (run "let x = 3 in
+       letrec
+         even(x) = if zero?(x) then 1 else (odd -(x,1))
+         odd(x)  = if zero?(x) then 0 else (even -(x,1))
+       in let y = x in (even y)")
+ 0)
