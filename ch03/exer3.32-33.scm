@@ -76,7 +76,7 @@
                                   (cadr (cadr env))
                                   (caddr (cadr env)))))
          (if (null? func)
-             (apply-env (cddr env) search-var)
+             (apply-env (caddr env) search-var)
              (let ((saved-p-vars (car func))
                    (saved-p-body (cadr func)))
                (proc-val (procedure saved-p-vars saved-p-body env))))))
