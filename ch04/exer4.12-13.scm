@@ -616,6 +616,36 @@
        end")
  -1)
 (eqv?
+ (run "let g =
+        let counter = newref(0)
+        in proc (dummy)
+             begin
+               setref(counter, -(deref(counter), -1));
+               deref(counter)
+             end
+       in let a = (g 11)
+          in let b = (g 11)
+             in -(a,b)")
+ -1)
+(eqv?
+ (run "let g = proc (dummy)
+                 let counter = newref(0)
+                 in begin
+                      setref(counter, -(deref(counter), -1));
+                      deref(counter)
+                    end
+       in let a = (g 11)
+          in let b = (g 11)
+             in -(a,b)")
+ 0)
+(eqv?
+ (run "let x = newref(newref(0))
+       in begin
+           setref(deref(x), 11);
+           deref(deref(x))
+          end")
+ 11)
+(eqv?
  (run "newref(3)")
  0)
 (eqv?
