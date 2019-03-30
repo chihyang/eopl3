@@ -204,7 +204,7 @@
 
 ;;; ---------------------- Store (from section 4.2) ----------------------
 ;; empty-store : () -> Sto
-(define empty-store (lambda () (cons 0 (make-vector 2))))
+(define empty-store (lambda () (cons 0 (make-vector 20))))
 ;; usage : A scheme variable containing the current state of the
 ;; store. Initially set to a dummy value.
 (define the-store 'uninitialized)

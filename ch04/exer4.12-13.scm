@@ -243,8 +243,7 @@
 ;; containing val
 (define setref!
   (lambda (ref val store)
-    (set! store
-      (letrec ((setref-inner
+    (letrec ((setref-inner
                 ;; usage : returns a list like store1, except that position ref1
                 ;; contains val.
                 (lambda (store1 ref1)
@@ -255,8 +254,7 @@
                         [else
                          (cons (car store1)
                                (setref-inner (cdr store1) (- ref1 1)))]))))
-        (setref-inner store ref)))
-    store))
+        (setref-inner store ref))))
 ;; extend-store : Sto x ExpVal -> Sto
 (define extend-store
   (lambda (store val)
