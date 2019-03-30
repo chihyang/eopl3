@@ -139,7 +139,7 @@
   (lambda (type)
     (eopl:error
      'exp-val
-     "No a valid exp value of type ~s" type)))
+     "Not a valid exp value of type ~s" type)))
 
 ;;; ---------------------- Syntax for the PROC language ----------------------
 ;;; Program    ::= Expression

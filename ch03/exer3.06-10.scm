@@ -89,7 +89,7 @@
   (lambda (type)
     (eopl:error
      'exp-val
-     "No a valid exp value of type ~s" type)))
+     "Not a valid exp value of type ~s" type)))
 ;;; Syntax for the LET language
 ;;; Program    ::= Expression
 ;;;                a-program (exp1)

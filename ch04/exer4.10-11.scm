@@ -200,7 +200,7 @@
   (lambda (type)
     (eopl:error
      'exp-val
-     "No a valid exp value of type ~s" type)))
+     "Not a valid exp value of type ~s" type)))
 
 ;;; ---------------------- Store (from section 4.2) ----------------------
 ;; empty-store : () -> Sto
@@ -577,3 +577,8 @@
                deref(x)
               end)")
  '(12 11 9))
+(run "let x = newref(22)
+        in let f = proc (z)
+                    let zz = newref(-(z,deref(x)))
+                    in deref(zz)
+           in -((f 66), (f 55))")

@@ -87,7 +87,7 @@
   (lambda (type)
     (eopl:error
      'exp-val
-     "No a valid exp value of type ~s" type)))
+     "Not a valid exp value of type ~s" type)))
 
 ;;; ---------------------- Syntax for the PROC language ----------------------
 ;;; Program    ::= Expression
@@ -445,7 +445,7 @@
   (lambda (exp)
     (eopl:error
      'expression
-     "No a valid source exp ~a" exp)))
+     "Not a valid source exp ~a" exp)))
 (define report-duplicate-id
   (lambda (sym)
     (eopl:error 'extend-env "Duplicate identifier ~s" sym)))
@@ -691,7 +691,7 @@
   (lambda (exp)
     (eopl:error
      'expression
-     "No a valid translated exp ~a" exp)))
+     "Not a valid translated exp ~a" exp)))
 (define report-invalid-cond-exp
   (lambda ()
     (eopl:error

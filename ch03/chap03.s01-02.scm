@@ -52,7 +52,7 @@
   (lambda (type)
     (eopl:error
      'exp-val
-     "No a valid exp value of type ~s" type)))
+     "Not a valid exp value of type ~s" type)))
 ;;; ----- test -----
 (define n1 (num-val 1))
 (define b1 (bool-val #t))

@@ -50,7 +50,7 @@
   (lambda (type)
     (eopl:error
      'exp-val
-     "No a valid exp value of type ~s" type)))
+     "Not a valid exp value of type ~s" type)))
 
 ;;; ---------------------- Syntax for the PROC language ----------------------
 ;;; Program    ::= Expression
@@ -252,7 +252,7 @@
   (lambda (exp)
     (eopl:error
      'expression
-     "No a valid source exp ~a" exp)))
+     "Not a valid source exp ~a" exp)))
 
 ;;; ------------- Nameless Environment(from section 3.7) -------------
 ;; nameless-environment? : SchemeVal -> Bool
@@ -345,7 +345,7 @@
   (lambda (exp)
     (eopl:error
      'expression
-     "No a valid translated exp ~a" exp)))
+     "Not a valid translated exp ~a" exp)))
 
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
