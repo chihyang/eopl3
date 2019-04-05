@@ -42,30 +42,30 @@
                       (apply-env (extend-env-list (cdr saved-vars) (cdr saved-vals) saved-env)
                                  search-var)))))))))
 (define extend-env-rec
-  (lambda (p-names p-vars p-bodys saved-env)
+  (lambda (p-names p-vars p-bodies saved-env)
     (let ((duplicate (check-duplicates p-vars)))
       (if (null? duplicate)
           (lambda (search-var)
             (if (null? p-names)
                 (apply-env saved-env search-var)
-                (let ((func (apply-env-rec search-var p-names p-vars p-bodys)))
+                (let ((func (apply-env-rec search-var p-names p-vars p-bodies)))
                   (if (null? func)
                       (apply-env saved-env search-var)
                       (proc-val
                        (procedure (car func)
                                   (cadr func)
-                                  (extend-env-rec p-names p-vars p-bodys saved-env)))))))
+                                  (extend-env-rec p-names p-vars p-bodies saved-env)))))))
           (report-duplicate-id duplicate)))))
 (define apply-env
   (lambda (env search-var)
     (env search-var)))
 (define apply-env-rec
-  (lambda (var p-names p-vars p-bodys)
+  (lambda (var p-names p-vars p-bodies)
     (if (null? p-names)
         '()
         (if (eqv? var (car p-names))
-            (list (car p-vars) (car p-bodys))
-            (apply-env-rec var (cdr p-names) (cdr p-vars) (cdr p-bodys))))))
+            (list (car p-vars) (car p-bodies))
+            (apply-env-rec var (cdr p-names) (cdr p-vars) (cdr p-bodies))))))
 (define report-no-binding-found
   (lambda (search-var)
     (eopl:error 'apply-env "No binding for ~s" search-var)))
@@ -218,8 +218,8 @@
             (vars body)
             (proc-val (procedure vars body env)))
            (letrec-exp
-            (p-names p-vars p-bodys letrec-body)
-            (value-of letrec-body (extend-env-rec p-names p-vars p-bodys env)))
+            (p-names p-vars p-bodies letrec-body)
+            (value-of letrec-body (extend-env-rec p-names p-vars p-bodies env)))
            (call-exp
             (rator rand)
             (let ((proc (expval->proc (value-of rator env)))

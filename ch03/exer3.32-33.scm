@@ -54,10 +54,10 @@
                                  (list 'extend-env (car vars) (car vals) env))]))))
                (extend-env*-inner vars vals env))]))))
 (define extend-env-rec
-  (lambda (p-names p-vars p-bodys env)
+  (lambda (p-names p-vars p-bodies env)
     (let ((dup-name (check-duplicates p-names)))
       (if (null? dup-name)
-          (list 'extend-env-rec (list p-names p-vars p-bodys) env)
+          (list 'extend-env-rec (list p-names p-vars p-bodies) env)
           (report-duplicate-id dup-name)))))
 (define apply-env
   (lambda (env search-var)
@@ -89,12 +89,12 @@
 ;;;                   Listof(Listof(Sym)),
 ;;;                   Listof(Expression)))
 (define apply-env-rec
-  (lambda (var p-names p-vars p-bodys)
+  (lambda (var p-names p-vars p-bodies)
     (if (null? p-names)
         '()
         (if (eqv? var (car p-names))
-            (list (car p-vars) (car p-bodys))
-            (apply-env-rec var (cdr p-names) (cdr p-vars) (cdr p-bodys))))))
+            (list (car p-vars) (car p-bodies))
+            (apply-env-rec var (cdr p-names) (cdr p-vars) (cdr p-bodies))))))
 (define report-no-binding-found
   (lambda (search-var)
     (eopl:error 'apply-env "No binding for ~s" search-var)))
@@ -252,8 +252,8 @@
             (vars body)
             (proc-val (procedure vars body env)))
            (letrec-exp
-            (p-names p-vars p-bodys letrec-body)
-            (value-of letrec-body (extend-env-rec p-names p-vars p-bodys env)))
+            (p-names p-vars p-bodies letrec-body)
+            (value-of letrec-body (extend-env-rec p-names p-vars p-bodies env)))
            (call-exp
             (rator rand)
             (let ((proc (expval->proc (value-of rator env)))

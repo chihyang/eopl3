@@ -54,10 +54,10 @@
                                  (list 'extend-env (car vars) (car vals) env))]))))
                (extend-env*-inner vars vals env))]))))
 (define extend-env-rec
-  (lambda (p-names p-vars p-bodys env)
+  (lambda (p-names p-vars p-bodies env)
     (let ((dup-name (check-duplicates p-names)))
       (if (null? dup-name)
-          (list 'extend-env-rec (list p-names p-vars p-bodys) env)
+          (list 'extend-env-rec (list p-names p-vars p-bodies) env)
           (report-duplicate-id dup-name)))))
 (define apply-env
   (lambda (env search-var)
@@ -89,12 +89,12 @@
 ;;;                   Listof(Listof(Sym)),
 ;;;                   Listof(Expression)))
 (define apply-env-rec
-  (lambda (var p-names p-vars p-bodys)
+  (lambda (var p-names p-vars p-bodies)
     (cond [(null? p-names) '()]
           [(eqv? var (car p-names))
-           (list (car p-vars) (car p-bodys))]
+           (list (car p-vars) (car p-bodies))]
           [else
-           (apply-env-rec var (cdr p-names) (cdr p-vars) (cdr p-bodys))])))
+           (apply-env-rec var (cdr p-names) (cdr p-vars) (cdr p-bodies))])))
 ;; init-env : () → Env
 ;; usage: (init-env) = [i= ^1^, v= ^5^, x= ^10^]
 (define init-env
@@ -382,8 +382,8 @@
             (let ((vals (map (lambda (exp1) (value-of exp1 env)) exps)))
               (value-of body (extend-env* vars (map (lambda (val1) (newref val1)) vals) env))))
            (letrec-exp
-            (p-names p-vars p-bodys letrec-body)
-            (value-of letrec-body (extend-env-rec p-names p-vars p-bodys env)))
+            (p-names p-vars p-bodies letrec-body)
+            (value-of letrec-body (extend-env-rec p-names p-vars p-bodies env)))
            (proc-exp
             (vars body)
             (proc-val (procedure vars body env)))
