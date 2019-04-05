@@ -14,20 +14,24 @@
 
 (define-datatype environment environment?
   (empty-env-inner)
-  (extend-env
+  (extend-env-inner
    (vars valid-vars?)
    (vals vector?)
    (env environment?)))
 ;; empty-env : () -> Env
 (define empty-env empty-env-inner)
+;; extend-env : Id x ExpVal x Env -> Env
+(define extend-env
+  (lambda (var val env)
+    (extend-env-inner (list var) (make-vector 1 val) env)))
 ;; extend-env* : Listof(Id) x Listof(ExpVal) x Env -> Env
 (define extend-env*
   (lambda (vars vals env)
-    (extend-env vars (list->vector vals) env)))
+    (extend-env-inner vars (list->vector vals) env)))
 (define extend-env-rec
   (lambda (p-names b-vars bodies saved-env)
     (let ((vec (make-vector (length p-names))))
-      (let ((new-env (extend-env p-names vec saved-env)))
+      (let ((new-env (extend-env-inner p-names vec saved-env)))
         (make-proc-vec! vec 0 b-vars bodies new-env)
         new-env))))
 (define make-proc-vec!
@@ -43,7 +47,7 @@
            (empty-env-inner
             ()
             (report-no-binding-found search-var))
-           (extend-env
+           (extend-env-inner
             (saved-vars saved-vals saved-env)
             (let ((val (search-val saved-vars saved-vals search-var)))
               (if (null? val)

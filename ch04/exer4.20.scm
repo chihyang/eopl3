@@ -13,11 +13,13 @@
           (else (check-duplicates (cdr lst))))))
 
 (define-datatype environment environment?
-  (empty-env)
+  (empty-env-inner)
   (extend-env-inner
    (vars valid-vars?)
    (vals vector?)
    (env environment?)))
+;; empty-env : () -> Env
+(define empty-env empty-env-inner)
 ;; extend-env : Id x ExpVal x Env -> Env
 (define extend-env
   (lambda (var val env)
@@ -42,7 +44,7 @@
 (define apply-env
   (lambda (env search-var)
     (cases environment env
-           (empty-env
+           (empty-env-inner
             ()
             (report-no-binding-found search-var))
            (extend-env-inner
