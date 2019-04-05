@@ -14,18 +14,22 @@
 
 (define-datatype environment environment?
   (empty-env)
-  (extend-env
+  (extend-env-inner
    (vars valid-vars?)
    (vals vector?)
    (env environment?)))
+;; extend-env : Id x ExpVal x Env -> Env
+(define extend-env
+  (lambda (var val env)
+    (extend-env-inner (list var) (make-vector 1 val) env)))
 ;; extend-env* : Listof(Id) x Listof(ExpVal) x Env -> Env
 (define extend-env*
   (lambda (vars vals env)
-    (extend-env vars (list->vector vals) env)))
+    (extend-env-inner vars (list->vector vals) env)))
 (define extend-env-rec
   (lambda (p-names b-vars bodies saved-env)
     (let ((vec (make-vector (length p-names))))
-      (let ((new-env (extend-env p-names vec saved-env)))
+      (let ((new-env (extend-env-inner p-names vec saved-env)))
         (make-proc-vec! vec 0 b-vars bodies new-env)
         new-env))))
 (define make-proc-vec!
@@ -33,7 +37,7 @@
     (cond ([null? b-vars] vec)
           (else
            (vector-set!
-            vec n (newref (proc-val (procedure (car b-vars) (car bodies) env))))
+            vec n (proc-val (procedure (car b-vars) (car bodies) env)))
            (make-proc-vec! vec (+ n 1) (cdr b-vars) (cdr bodies) env)))))
 (define apply-env
   (lambda (env search-var)
@@ -41,7 +45,7 @@
            (empty-env
             ()
             (report-no-binding-found search-var))
-           (extend-env
+           (extend-env-inner
             (saved-vars saved-vals saved-env)
             (let ((val (search-val saved-vars saved-vals search-var)))
               (if (null? val)
@@ -107,7 +111,7 @@
     (cases proc proc1
            (procedure
             (vars body saved-env)
-            (value-of body (extend-env* vars (map newref vals) saved-env))))))
+            (value-of body (extend-env* vars vals saved-env))))))
 (define-datatype exp-val exp-val?
   (num-val
    (val number?))
@@ -118,7 +122,9 @@
   (null-val)
   (pair-val
    (val1 exp-val?)
-   (val2 exp-val?)))
+   (val2 exp-val?))
+  (ref-val
+   (val number?)))
 (define expval->num
   (lambda (value)
     (cases exp-val value
@@ -154,12 +160,14 @@
                     (bool-val (bool) bool)
                     (null-val () '())
                     (proc-val (proc) proc)
+                    (ref-val (ref) ref)
                     (pair-val (val3 val4) (expval->pair val1)))
              (cases exp-val val2
                     (num-val (num) num)
                     (bool-val (bool) bool)
                     (null-val () '())
                     (proc-val (proc) proc)
+                    (ref-val (ref) ref)
                     (pair-val (val3 val4) (expval->pair val2)))))
            (else
             (report-invalid-exp-value 'pair)))))
@@ -171,11 +179,24 @@
             proc1)
            (else
             (report-invalid-exp-value 'proc)))))
+(define expval->ref
+  (lambda (value)
+    (cases exp-val value
+           (ref-val
+            (ref)
+            ref)
+           (else
+            (report-invalid-exp-value 'ref)))))
 (define report-invalid-exp-value
   (lambda (type)
     (eopl:error
      'exp-val
      "Not a valid exp value of type ~s" type)))
+(define report-invalid-var
+  (lambda (var type)
+    (eopl:error
+     'set
+     "~s is not a variable created by ~s" var type)))
 
 ;;; ---------------------- Store (from section 4.2) ----------------------
 ;; empty-store : () -> Sto
@@ -266,6 +287,8 @@
 ;;;                begin-exp (exp1 exps)
 ;;; Expression ::= set Identifier = Expression
 ;;;                assign-exp (var exp1)
+;;; Expression ::= letmutable Identifier = Expression in Expression
+;;;                letmutable-exp (var exp1 exp2)
 ;;; Parse Expression
 (define let-scanner-spec
   '((white-sp (whitespace) skip)
@@ -311,7 +334,9 @@
     (expression ("begin" expression (arbno ";" expression) "end")
                 begin-exp)
     (expression ("set" identifier "=" expression)
-                assign-exp)))
+                assign-exp)
+    (expression ("letmutable" identifier "=" expression "in" expression)
+                letmutable-exp)))
 
 ;;; ---------------------- Evaluate expression ----------------------
 (define value-of
@@ -322,7 +347,13 @@
             (num-val num))
            (var-exp
             (var)
-            (deref (apply-env env var)))
+            (let ((val (apply-env env var)))
+              (cases exp-val val
+                     (ref-val
+                      (ref)
+                      (deref ref))
+                     (else
+                      val))))
            (emptylist-exp
             ()
             (value-of-emptylist-exp env))
@@ -356,7 +387,7 @@
            (let-exp
             (vars exps body)
             (let ((vals (map (lambda (exp1) (value-of exp1 env)) exps)))
-              (value-of body (extend-env* vars (map newref vals) env))))
+              (value-of body (extend-env* vars vals env))))
            (letrec-exp
             (p-names p-vars p-bodies letrec-body)
             (value-of letrec-body (extend-env-rec p-names p-vars p-bodies env)))
@@ -378,11 +409,21 @@
                      (value-of (begin-exp (car exps) (cdr exps)) env))]))
            (assign-exp
             (var exp1)
-            (begin
-              (setref!
-               (apply-env env var)
-               (value-of exp1 env))
-              (num-val 27))))))
+            (let ((val (apply-env env var)))
+              (cases exp-val val
+                     (ref-val
+                      (ref)
+                      (begin
+                        (setref!
+                         ref
+                         (value-of exp1 env))
+                        (num-val 27)))
+                     (else
+                      (report-invalid-var var 'letmutable)))))
+           (letmutable-exp
+            (var exp1 exp2)
+            (let ((val (value-of exp1 env)))
+              (value-of exp2 (extend-env var (ref-val (newref val)) env)))))))
 ;; value-of-program : Program -> SchemeVal
 (define value-of-program
   (lambda (prog)
@@ -405,6 +446,9 @@
                       (val1 val2)
                       (expval->pair val))
                      (proc-val
+                      (val)
+                      val)
+                     (ref-val
                       (val)
                       val)))))))
 (define value-of-emptylist-exp
@@ -483,7 +527,7 @@
  -1)
 (eqv?
  (run "let g =
-        let counter = 0
+        letmutable counter = 0
         in proc (dummy)
              begin
                set counter = -(counter, -1);
@@ -495,7 +539,7 @@
  -1)
 (eqv?
  (run "let g = proc (dummy)
-                 let counter = 0
+                 letmutable counter = 0
                  in begin
                       set counter = -(counter, -1);
                       counter
@@ -505,7 +549,7 @@
              in -(a,b)")
  0)
 (eqv?
- (run "let x = 0
+ (run "letmutable x = 0
       in letrec even(dummy)
                  = if zero? (x)
                    then 1
@@ -523,7 +567,7 @@
       in begin set x = 13; (odd 888) end")
  1)
 (eqv?
- (run "let x = 0
+ (run "letmutable x = 0
       in letrec even()
                  = if zero? (x)
                    then 1
@@ -545,7 +589,7 @@
          list(x, -(x,1), -(x,3))")
  '(12 11 9))
 (equal?
- (run "let x = 12 in
+ (run "letmutable x = 12 in
          list(x,
               begin
                set x = -(x,1);
@@ -563,22 +607,21 @@
                     in zz
            in -((f 66), (f 55))")
  11)
-(eqv?
- (run "let f = proc (x)
+;; error
+(run "let f = proc (x)
                 proc (y)
                   begin
                   set x = -(x,-1);
                   -(x,y)
                 end
       in ((f 44) 33)")
- 12)
 (eqv?
  (run "letrec times4(x) = if zero?(x) then 0
                          else -((times4 -(x,1)), -4)
       in (times4 3)")
  12)
 (eqv?
- (run "let times4 = 0
+ (run "letmutable times4 = 0
       in begin
            set times4 = proc (x)
                            if zero?(x) then 0
