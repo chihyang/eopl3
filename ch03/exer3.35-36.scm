@@ -6,6 +6,10 @@
    (vars valid-vars?)
    (vals vector?)
    (env environment?)))
+;; extend-env* : Listof(Id) x Listof(ExpVal) x Env -> Env
+(define extend-env*
+  (lambda (vars vals env)
+    (extend-env vars (list->vector vals) env)))
 (define extend-env-rec
   (lambda (p-names b-vars bodies saved-env)
     (let ((vec (make-vector (length p-names))))
@@ -223,7 +227,7 @@
                 (value-of exp3 env)))
            (let-exp
             (vars exps body)
-            (value-of body (extend-env vars (list->vector (value-of-list exps env)) env)))
+            (value-of body (extend-env* vars (value-of-list exps env) env)))
            (proc-exp
             (vars body)
             (proc-val (procedure vars body env)))
