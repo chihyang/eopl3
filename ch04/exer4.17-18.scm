@@ -380,7 +380,7 @@
            (let-exp
             (vars exps body)
             (let ((vals (map (lambda (exp1) (value-of exp1 env)) exps)))
-              (value-of body (extend-env* vars (map (lambda (val1) (newref val1)) vals) env))))
+              (value-of body (extend-env* vars (map newref vals) env))))
            (letrec-exp
             (p-names p-vars p-bodies letrec-body)
             (value-of letrec-body (extend-env-rec p-names p-vars p-bodies env)))
