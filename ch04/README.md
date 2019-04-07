@@ -68,14 +68,14 @@ subroutine sub1() { x = -(x, 1) };
 Procedure declarations follow normal value declarations. Subroutine declarations
 follow procedure declarations. "Normal" variable declared latter can refer to
 those declared earlier but not vice versa. Procedures can refer to all the
-normal variables and mutually recursive. Subroutines can refer to all the
+normal variables and are mutually recursive. Subroutines can refer to all the
 procedures and normal variables. The result is a lengthy and bizarre program
 with three different declaration rules and keywords. In some parts of the
 interpreter, I have to make a function that requires a long list of arguments! I
 guess if anyone really uses such a program, they would be mad at such stupid
 language designer... ;( So why not make it easier? Why not make a unified
-grammar for "normal" variables, procedures and statements? We only need to make
+grammar for "normal" variables, procedures and subroutines? We only need to make
 subroutine another kind of expression that contains a statement, as
 [this](https://github.com/EFanZh/EOPL-Exercises/blob/master/solutions/exercise-4.27.rkt#L39)
-does. Still, we cannot call subroutine inside a procedure (why?), but everything
-else is much easier.
+does. We cannot call subroutine inside a procedure (why?), but everything else
+is much more clear.
