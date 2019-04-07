@@ -1,8 +1,7 @@
 Notes on chapter 4
 ==================
 
-> # Exercise 4.12
->
+# Exercise 4.12
 > Our understanding of the store, as expressed in this interpreter, depends on the
 > meaning of effects in Scheme. In particular, it depends on us knowing *when*
 > these effects take place in a Scheme program. We can avoid this dependency by
@@ -36,20 +35,17 @@ Notes on chapter 4
  to support my guess, although it uses different jargon for `newref`(`newbox`),
  `deref`(`openbox`), and `setref`(`setbox`).
 
-> # Exercise 4.25
->
+# Exercise 4.25
 > Extend the block statement of the language of exercise 4.22 to allow variables
 > to be initialized. In your solution, does the scope of a variable include the
 > initializer for variables declared later in the same block statement?
 
-> # Exercise 4.26 
->
+# Exercise 4.26
 > Extend the solution to the preceding exercise so that procedures declared in a
 > single block aremutually recursive. Consider restricting the language so that
 > the variable declarations in a block are followed by the procedure declarations.
-> 
-> # Exercise 4.27
->
+ 
+# Exercise 4.27
 > Extend the language of the preceding exercise to include *subroutines*. In our
 > usage a subroutine is like a procedure, except that it does not return a value
 > and its body is a statement, rather than an expression. Also, add subroutine
