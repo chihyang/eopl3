@@ -15,7 +15,7 @@
 (define-datatype environment environment?
   (empty-env-inner)
   (extend-env-inner
-   (vars valid-vars?)
+   (vars (list-of identifier?))
    (vals vector?)
    (env environment?)))
 ;; empty-env : () -> Env
@@ -27,7 +27,16 @@
 ;; extend-env* : Listof(Id) x Listof(ExpVal) x Env -> Env
 (define extend-env*
   (lambda (vars vals env)
-    (extend-env-inner vars (list->vector vals) env)))
+    (let ((dup (check-duplicates vars))
+          (var-len (length vars))
+          (val-len (length vals)))
+      (cond [(not (null? dup)) (report-duplicate-id dup)]
+            [(< var-len val-len)
+             (report-argument-mismatch 'greater)]
+            [(> var-len val-len)
+             (report-argument-mismatch 'less)]
+            [else
+             (extend-env-inner vars (list->vector vals) env)]))))
 (define extend-env-rec
   (lambda (p-names b-vars bodies saved-env)
     (let ((vec (make-vector (length p-names))))
@@ -65,17 +74,6 @@
           (else
            (search-from-vector-vals
             (cdr saved-vars) saved-vals search-var (+ n 1))))))
-(define valid-vars?
-  (lambda (vars)
-    (and ((list-of identifier?) vars)
-         (no-duplicate? vars))))
-(define no-duplicate?
-  (lambda (vars)
-    (let ((duplicate (check-duplicates vars)))
-      (if (null? duplicate)
-          #t
-          (report-duplicate-id duplicate)))))
-
 
 ;; init-env : () → Env
 ;; usage: (init-env) = [i= ^1^, v= ^5^, x= ^10^]
