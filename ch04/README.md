@@ -15,10 +15,10 @@ Notes on chapter 4
 > also a new store. These are packaged in a data type called `answer`. Complete
 > this definition of `value-of`.
 
-- If we don't rely on scheme procedures like `set!`, we must explicitly pass a
-  store to `newref`, `deref` and `setref!`. Thus store becomes a data structure
-  similar to environment. And we can use similar way for environment to process
-  store. On page 116, in the implementation of `newref-exp`:
+If we don't rely on scheme procedures like `set!`, we must explicitly pass a
+store to `newref`, `deref` and `setref!`. Thus store becomes a data structure
+similar to environment. And we can use similar way for environment to process
+store. On page 116, in the implementation of `newref-exp`:
 
 ``` scheme
 (deref-exp (exp1)
