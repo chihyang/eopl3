@@ -10,7 +10,7 @@ Notes on chapter 4
 > specification. A fragment of this interpreter appears in figure 4.6. We call
 > this a *store-passing interpreter*. Extend this interpreter to cover all of the
 > language EXPLICIT-REFS.
-
+>
 > Every procedure that might modify the store returns not just its usual value but
 > also a new store. These are packaged in a data type called `answer`. Complete
 > this definition of `value-of`.
