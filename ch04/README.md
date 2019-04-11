@@ -108,5 +108,7 @@ is much more clear.
 > Here we have used a version of let with multiple declarations (exercise 3.16). What
 > are the expressed and denoted values of this language?
 
+```
 ExpVal = Int + Bool + Proc + Ref(ExpVal)
 DenVal = Ref(ExpVal)
+```
