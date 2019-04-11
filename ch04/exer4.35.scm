@@ -639,7 +639,7 @@
 ;; tests from exercise 4.35
 (eqv?
  (run "let a = 3
-      in let b = 4
+           b = 4
          in let swap = proc (x) proc (y)
                          let temp = deref(x)
                          in begin
