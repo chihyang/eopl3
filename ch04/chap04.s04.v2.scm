@@ -569,9 +569,26 @@
     (value-of-program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-(run "let glo = pair(11,22)
+(eqv?
+ (run "let glo = pair(11,22)
         in let f = proc (loc)
                      let d1 = setright(loc, left(loc))
                      in let d2 = setleft(glo, 99)
                         in -(left(loc),right(loc))
       in (f glo)")
+ 88)
+(eqv?
+ (run
+       "let swap = proc (x) proc (y)
+               let temp = x
+               in begin
+                 set x = y;
+                 set y = temp
+               end
+  in let a = 33
+    in let b = 44
+       in begin
+            ((swap a) b);
+            -(a,b)
+          end")
+ -11)
