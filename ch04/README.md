@@ -79,3 +79,34 @@ subroutine another kind of expression that contains a statement, as
 [this](https://github.com/EFanZh/EOPL-Exercises/blob/master/solutions/exercise-4.27.rkt#L39)
 does. We cannot call subroutine inside a procedure (why?), but everything else
 is much more clear.
+
+# Exercise 4.35
+
+> We can get some of the benefits of call-by-reference without leaving
+> the call-by-value framework. Extend the language IMPLICIT-REFS by adding a
+> new expression
+>
+> Expression ::= ref Identifier<br/>
+>                ref-exp (var)
+>
+> This differs fromthe language EXPLICIT-REFS, since references are only of variables.
+> This allows us to write familiar programs such as swap within our call-by-value language.
+> What should be the value of this expression?
+>
+> ``` scheme
+> let a = 3
+> in let b = 4
+>    in let swap = proc (x) proc (y)
+>                   let temp = deref(x)
+>                   in begin
+>                       setref(x,deref(y));
+>                       setref(y,temp)
+>                      end
+>       in begin ((swap ref a) ref b); -(a,b) end
+> ```
+>
+> Here we have used a version of let with multiple declarations (exercise 3.16). What
+> are the expressed and denoted values of this language?
+
+ExpVal = Int + Bool + Proc + Ref(ExpVal)
+DenVal = Ref(ExpVal)
