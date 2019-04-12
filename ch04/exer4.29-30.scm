@@ -591,7 +591,7 @@
            (arraylength-exp
             (exp1)
             (let ((val (value-of exp1 env)))
-              (arraylength (expval->array val)))))))
+              (num-val (arraylength (expval->array val))))))))
 ;; value-of-program : Program -> SchemeVal
 (define value-of-program
   (lambda (prog)
@@ -696,3 +696,9 @@
                arrayref(a,1)
       end")
  2)
+
+;; tests from exercise 4.30
+(eqv?
+ (run "let a = newarray(4,-99)
+       in arraylength(a)")
+ 4)
