@@ -125,14 +125,17 @@
   (procedure
    (vars (list-of identifier?))
    (body expression?)
-   (saved-env environment?)
-   (call-by-value? boolean?)))
+   (saved-env environment?)))
 (define apply-procedure
-  (lambda (proc1 vals)
-    (cases proc proc1
-           (procedure
-            (vars body saved-env call-by-value)
-            (value-of body (extend-env* vars vals saved-env))))))
+  (lambda (proc1 refs)
+    (let ((newrefs (map (lambda (v) (newref (deref v))) refs)))
+      (cases proc proc1
+             (procedure
+              (vars body saved-env)
+              (let ((val (value-of body (extend-env* vars newrefs saved-env))))
+                (map (lambda (r1 r2) (setref! r1 (deref r2)))
+                     refs newrefs)
+                val))))))
 ;; mutpair? : SchemeVal -> Bool
 (define mutpair?
   (lambda (v)
@@ -292,7 +295,7 @@
      'exp-val
      "Not a valid reference ~a for store ~a" ref store)))
 
-;;; ---------------------- Syntax for the PROC language ----------------------
+;;; ---------------------- Syntax for the CALL-BY-VALUE-RESULT language ----------------------
 ;;; Program    ::= Expression
 ;;;                a-program (exp1)
 ;;; Expression ::= Number
@@ -319,12 +322,8 @@
 ;;;                if-exp (exp1 exp2 exp3)
 ;;; Expression ::= let {Identifier = Expression}* in Expression
 ;;;                let-exp (var exp1 body)
-;;; Expression ::= letref {Identifier = Expression}* in Expression
-;;;                letref-exp (var exp1 body)
 ;;; Expression ::= proc (Identifier*,) Expression
 ;;;                proc-exp (var body)
-;;; Expression ::= value-proc (Identifier*,) Expression
-;;;                value-proc-exp (var body)
 ;;; Expression ::= letrec {Identifier (Identifier*,)}* = Expression in Expression
 ;;;                letrec-exp (p-name b-var p-exp1 letrec-body)
 ;;; Expression ::= (Expression Expression*)
@@ -379,14 +378,10 @@
                 if-exp)
     (expression ("let" (arbno identifier "=" expression) "in" expression)
                 let-exp)
-    (expression ("letref" (arbno identifier "=" expression) "in" expression)
-                letref-exp)
     (expression ("letrec" (arbno identifier "(" (separated-list identifier ",") ")" "=" expression) "in" expression)
                 letrec-exp)
     (expression ("proc" "(" (separated-list identifier ",") ")" expression)
                 proc-exp)
-    (expression ("value-proc" "(" (separated-list identifier ",") ")" expression)
-                value-proc-exp)
     (expression ("(" expression (arbno expression) ")")
                 call-exp)
     (expression ("begin" expression (arbno ";" expression) "end")
@@ -448,28 +443,17 @@
             (vars exps body)
             (let ((vals (map (lambda (exp1) (value-of exp1 env)) exps)))
               (value-of body (extend-env* vars (map newref vals) env))))
-           (letref-exp
-            (vars exps body)
-            (let ((vals (value-of-operands exps env #f)))
-              (value-of body (extend-env* vars vals env))))
            (letrec-exp
             (p-names p-vars p-bodies letrec-body)
             (value-of letrec-body (extend-env-rec p-names p-vars p-bodies env)))
            (proc-exp
             (vars body)
-            (proc-val (procedure vars body env #f)))
-           (value-proc-exp
-            (vars body)
-            (proc-val (procedure vars body env #t)))
+            (proc-val (procedure vars body env)))
            (call-exp
             (rator rand)
-            (let ((proc1 (expval->proc (value-of rator env))))
-              (let ((args
-                     (cases proc proc1
-                            (procedure
-                             (vars body saved-env call-by-value?)
-                             (value-of-operands rand env call-by-value?)))))
-                (apply-procedure proc1 args))))
+            (let ((proc1 (expval->proc (value-of rator env)))
+                  (args (value-of-operands rand env)))
+              (apply-procedure proc1 args)))
            (begin-exp
             (exp1 exps)
             (cond [(null? exps)
@@ -569,19 +553,22 @@
             ()
             (bool-val #t))
            (else (bool-val #f)))))
-;; value-of-operands : Listof(Exp) x Env x Boolean -> Listof(Ref)
+;; value-of-operands : Listof(VarExp) x Env x Boolean -> Listof(Ref)
 (define value-of-operands
-  (lambda (exps env call-by-value?)
+  (lambda (exps env)
     (map (lambda (exp)
            (cases expression exp
-                  (var-exp (var)
-                           (let ((ref (apply-env env var)))
-                             (if call-by-value?
-                                 (newref (deref ref))
-                                 ref)))
+                  (var-exp
+                   (var)
+                   (apply-env env var))
                   (else
-                   (newref (value-of exp env)))))
+                   (report-invalid-argument exp))))
          exps)))
+(define report-invalid-argument
+  (lambda (exp)
+    (eopl:error
+     'value-of-operands
+     "Not a var exp: ~s" exp)))
 
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
@@ -602,110 +589,8 @@
     (value-of-program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-;; tests from section 4.5.1
-(eqv?
- (run "let glo = pair(11,22)
-        in let f = proc (loc)
-                     let d1 = setright(loc, left(loc))
-                     in let d2 = setleft(glo, 99)
-                        in -(left(loc),right(loc))
-      in (f glo)")
- 88)
-(eqv?
- (run
-       "let swap = proc (x) proc (y)
-               let temp = x
-               in begin
-                 set x = y;
-                 set y = temp
-               end
-  in let a = 33
-    in let b = 44
-       in begin
-            ((swap a) b);
-            -(a,b)
-          end")
- 11)
-(eqv?
- (run "let b = 3
-      in let p = proc (x) proc(y)
-                   begin
-                     set x = 4;
-                     y
-                   end
-         in ((p b) b)")
- 4)
-
-;; tests from exercise 4.33
-(eqv?
- (run "let swap = value-proc (x) proc (y)
-               let temp = x
-               in begin
-                 set x = y;
-                 set y = temp
-               end
-       in let a = 33
-          in let b = 44
-             in begin
-                  ((swap a) b);
-                  -(a,b)
-                end")
- 0)
-(eqv?
- (run "let swap = proc (x) value-proc (y)
-               let temp = x
-               in begin
-                 set x = y;
-                 set y = temp
-               end
-       in let a = 33
-          in let b = 44
-             in begin
-                  ((swap a) b);
-                  -(a,b)
-                end")
- 0)
-(eqv?
- (run "let swap = value-proc (x) value-proc (y)
-               let temp = x
-               in begin
-                 set x = y;
-                 set y = temp
-               end
-       in let a = 33
-          in let b = 44
-             in begin
-                  ((swap a) b);
-                  -(a,b)
-                end")
- -11)
-(eqv?
- (run "let b = 3
-      in let p = value-proc (x) value-proc(y)
-                   begin
-                     set x = 4;
-                     y
-                   end
-         in ((p b) b)")
- 3)
-
-;; test from exercise 4.34
-(eqv?
- (run "let b = 3
-       in letref a = b
-          in let p = proc (x) proc(y)
-                       begin
-                         set x = 4;
-                         y
-                       end
-             in begin
-                  ((p a) a);
-                  b
-                end")
- 4)
-
 ;; tests from exercise 4.37
-;; compare this with exercise 4.37
+;; compare this with exercise 4.32
 (eqv?
  (run "let b = 3
        in let p = proc (x, y)
@@ -723,4 +608,4 @@
                      set x = 4
                    end
           in begin (p b b); b end")
- 4)
+ 5)
