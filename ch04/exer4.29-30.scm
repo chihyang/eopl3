@@ -131,7 +131,10 @@
     (cases proc proc1
            (procedure
             (vars body saved-env)
-            (value-of body (extend-env* vars (map newref vals) saved-env))))))
+            (let ((new-env (extend-env* vars (map newref vals) saved-env)))
+              (begin
+                (print-body 'proc vars new-env)
+                (value-of body new-env)))))))
 ;; mutpair? : SchemeVal -> Bool
 (define mutpair?
   (lambda (v)
@@ -518,10 +521,14 @@
            (let-exp
             (vars exps body)
             (let ((vals (map (lambda (exp1) (value-of exp1 env)) exps)))
-              (value-of body (extend-env* vars (map newref vals) env))))
+              (let ((new-env (extend-env* vars (map newref vals) env)))
+                (print-body 'let vars new-env)
+                (value-of body new-env))))
            (letrec-exp
             (p-names p-vars p-bodies letrec-body)
-            (value-of letrec-body (extend-env-rec p-names p-vars p-bodies env)))
+            (let ((new-env (extend-env-rec p-names p-vars p-bodies env)))
+              (print-body 'letrec p-names new-env)
+              (value-of letrec-body new-env)))
            (proc-exp
             (vars body)
             (proc-val (procedure vars body env)))
@@ -656,6 +663,71 @@
             ()
             (bool-val #t))
            (else (bool-val #f)))))
+
+;;; ---------------------------- Print utility ----------------------------
+(define print-body
+  (lambda (bound-type vars env)
+    (eopl:printf "\nEntering body of ~s ~s with\n" bound-type vars)
+    (eopl:printf "environment =\n")
+    (print-env env)
+    (eopl:printf "\nstore =\n" )
+    (print-store)))
+(define print-env
+  (lambda (env)
+    (letrec ((print-env-inner
+              (lambda (env)
+                (cond [(empty-env? env)
+                       (eopl:printf "")]
+                      [(eqv? (car env) 'extend-env)
+                       (begin
+                         (eopl:printf "(~s ~s)" (cadr env) (caddr env))
+                         (if (empty-env? (cadddr env))
+                             (eopl:printf "")
+                             (eopl:printf " "))
+                         (print-env-inner (cadddr env)))]
+                      [(eqv? (car env) 'extend-env-rec)
+                       (begin
+                         (eopl:printf "(rec ~s ...)" (cadr env))
+                         (if (empty-env? (caddr env))
+                             (eopl:printf "")
+                             (eopl:printf " "))
+                         (print-env-inner (caddr env)))]))))
+      (eopl:printf "(")
+      (print-env-inner env)
+      (eopl:printf ")"))))
+(define print-store
+  (lambda ()
+    (letrec ((print-store-inner
+              (lambda (i sto)
+                (if (null? sto)
+                    (eopl:printf "")
+                    (begin
+                      (if (eqv? i 0)
+                          (eopl:printf "")
+                          (eopl:printf " "))
+                      (eopl:printf "~s " i)
+                      (print-expval (car sto))
+                      (if (null? (cdr sto))
+                          (eopl:printf "")
+                          (eopl:printf "\n"))
+                      (print-store-inner (+ i 1) (cdr sto)))))))
+      (eopl:printf "(")
+      (print-store-inner 0 (get-store))
+      (eopl:printf ")\n"))))
+(define print-expval
+  (lambda (val)
+    (cases exp-val val
+           (proc-val
+            (proc1)
+            (cases proc proc1
+                   (procedure
+                    (vars body saved-env)
+                    (eopl:printf "(procedure ~s ... ρ="
+                                 vars)
+                    (print-env saved-env)
+                    (eopl:printf ")"))))
+           (else
+            (eopl:printf "~s" val)))))
 
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
