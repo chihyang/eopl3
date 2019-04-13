@@ -366,7 +366,7 @@
      'exp-val
      "Not a valid reference ~a for store ~a" ref store)))
 
-;;; ---------------------- Syntax for the PROC language ----------------------
+;;; ---------------------- Syntax for the CALL-BY-REFERENCE language ----------------------
 ;;; Program    ::= Expression
 ;;;                a-program (exp1)
 ;;; Expression ::= Number
@@ -689,24 +689,22 @@
 ;; value-of-operands : Listof(Exp) x Env x Boolean -> Ref
 (define value-of-operands
   (lambda (exps env call-by-value?)
-    (if (null? exps)
-        '()
-        (map (lambda (exp)
-               (cases expression exp
-                      (var-exp
-                       (var)
-                       (let ((ref (apply-env env var)))
-                         (if call-by-value?
-                             (newref (deref ref))
-                             ref)))
-                      (arrayref-exp
-                       (exp1 exp2)
-                       (ref-of-array-element
-                        (expval->array (value-of exp1 env))
-                        (expval->num (value-of exp2 env))))
-                      (else
-                       (newref (value-of exp env)))))
-             exps))))
+    (map (lambda (exp)
+           (cases expression exp
+                  (var-exp
+                   (var)
+                   (let ((ref (apply-env env var)))
+                     (if call-by-value?
+                         (newref (deref ref))
+                         ref)))
+                  (arrayref-exp
+                   (exp1 exp2)
+                   (ref-of-array-element
+                    (expval->array (value-of exp1 env))
+                    (expval->num (value-of exp2 env))))
+                  (else
+                   (newref (value-of exp env)))))
+         exps)))
 
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)

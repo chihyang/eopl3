@@ -303,7 +303,7 @@
      'exp-val
      "Not a valid reference ~a for store ~a" ref store)))
 
-;;; ---------------------- Syntax for the PROC language ----------------------
+;;; ---------------------- Syntax for the CALL-BY-VALUE language ----------------------
 ;;; Program    ::= Expression
 ;;;                a-program (exp1)
 ;;; Expression ::= Number
