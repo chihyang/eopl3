@@ -569,21 +569,19 @@
             ()
             (bool-val #t))
            (else (bool-val #f)))))
-;; value-of-operands : Listof(Exp) x Env x Boolean -> Ref
+;; value-of-operands : Listof(Exp) x Env x Boolean -> Listof(Ref)
 (define value-of-operands
   (lambda (exps env call-by-value?)
-    (if (null? exps)
-        '()
-        (map (lambda (exp)
-               (cases expression exp
-                      (var-exp (var)
-                               (let ((ref (apply-env env var)))
-                                 (if call-by-value?
-                                     (newref (deref ref))
-                                     ref)))
-                      (else
-                       (newref (value-of exp env)))))
-             exps))))
+    (map (lambda (exp)
+           (cases expression exp
+                  (var-exp (var)
+                           (let ((ref (apply-env env var)))
+                             (if call-by-value?
+                                 (newref (deref ref))
+                                 ref)))
+                  (else
+                   (newref (value-of exp env)))))
+         exps)))
 
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)

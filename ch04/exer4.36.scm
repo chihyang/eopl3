@@ -861,6 +861,18 @@
                    ((swap arrayref(a, 0)) arrayref(a, 1))
              end")
  27)
+;; what if we pass an array to a procedure?
+;; Note that : an-array is not only a ref, every array is some consecutive
+;; reference plus a new reference following them
+(eqv?
+ (run "letrec arrayinit(x, i) =
+                   if zero?(i) then 98
+                   else begin
+                          arrayset(x, -(i, 1), i);
+                          (arrayinit x -(i, 1))
+                        end
+       in (arrayinit newarray(4,-99) 4)")
+ 98)
 ;; error
 (eqv?
  (run "let a = newarray(4,-99)
