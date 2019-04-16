@@ -108,6 +108,13 @@
     (lambda (val)
       (let ((proc1 (expval->proc rator)))
         (apply-procedure/k proc1 val cont)))))
+;; let2-exp-cont : Var x Var x Exp x Exp x Env x Cont -> Cont
+(define let2-exp-cont
+  (lambda (var1 var2 exp2 body env cont)
+    (lambda (val1)
+      (value-of/k
+       exp2 env
+       (let-exp-cont var2 body (extend-env var1 val1 env) cont)))))
 ;; apply-cont : Cont x ExpVal -> FinalAnswer
 (define apply-cont
   (lambda (cont v)
@@ -179,6 +186,8 @@
 ;;;                var-exp (var)
 ;;; Expression ::= let Identifier = Expression in Expression
 ;;;                let-exp (var exp1 body)
+;;; Expression ::= let2 Identifier = Expression Identifier = Expression in Expression
+;;;                let2-exp (var1 exp1 var2 exp2 body)
 ;;; Expression ::= letrec Identifier (Identifier) = Expression in Expression
 ;;;                let-exp (var exp1 body)
 ;;; Expression ::= proc (Identifier) Expression
@@ -209,6 +218,8 @@
                 var-exp)
     (expression ("let" identifier "=" expression "in" expression)
                 let-exp)
+    (expression ("let2" identifier "=" expression identifier "=" expression "in" expression)
+                let2-exp)
     (expression ("letrec" identifier "(" identifier ")" "=" expression "in" expression)
                 letrec-exp)
     (expression ("proc" "(" identifier ")" expression)
@@ -239,6 +250,9 @@
            (let-exp
             (var exp1 body)
             (value-of/k exp1 env (let-exp-cont var body env cont)))
+           (let2-exp
+            (var1 exp1 var2 exp2 body)
+            (value-of/k exp1 env (let2-exp-cont var1 var2 exp2 body env cont)))
            (letrec-exp
             (p-name p-var p-body letrec-body)
             (value-of/k letrec-body (extend-env-rec p-name p-var p-body env) cont))
@@ -285,12 +299,11 @@
     (value-of-program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-(run "letrec double (x) = if zero?(x) then 0
-                       else -((double -(x,1)),-2)
-      in (double 6)")
 (eqv?
- (run "let x = 7 in
-         let y = 2 in
-           let y = let x = -(x, 1) in -(x, y)
-             in -(-(x,8), y)")
- -5)
+ (run "letrec double (x) = if zero?(x) then 0
+                       else -((double -(x,1)),-2)
+       in (double 6)")
+ 12)
+(eqv?
+ (run "let2 x = 3 f = proc(x) -(x, -3) in (f 3)")
+ 6)

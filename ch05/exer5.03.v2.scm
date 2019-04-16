@@ -56,62 +56,80 @@
 ;; FinalAnswer = ExpVal
 ;; Cont = ExpVal -> FinalAnswer
 ;; end-cont : () -> Cont
-(define end-cont
-  (lambda ()
-    (lambda (val)
-      (begin
-        (eopl:printf "End of computation.~%")
-        val))))
-;; zero1-cont : Cont -> Cont
-(define zero1-cont
-  (lambda (cont)
-    (lambda (val)
-      (apply-cont cont
-                  (bool-val
-                   (zero? (expval->num val)))))))
-;; let-exp-cont : Var x Exp x Env x Cont -> Cont
-;; why is this wrong?
-;; (define let-exp-cont
-;;   (lambda (var body env cont)
-;;     (apply-cont cont (value-of/k body (extend-env var val env) cont))))
-(define let-exp-cont
-  (lambda (var body env cont)
-    (lambda (val)
-      (value-of/k body (extend-env var val env) cont))))
-;; if-test-cont : Exp x Exp x Env x Cont -> Cont
-(define if-test-cont
-  (lambda (exp2 exp3 env cont)
-    (lambda (val)
-      (if (expval->bool val)
-          (value-of/k exp2 env cont)
-          (value-of/k exp3 env cont)))))
-;; diff1-cont : Exp x Env x Cont -> Cont
-(define diff1-cont
-  (lambda (exp2 env cont)
-    (lambda (val)
-      (value-of/k exp2 env (diff2-cont val cont)))))
-;; diff2-cont : ExpVal x Cont -> Cont
-(define diff2-cont
-  (lambda (val1 cont)
-    (lambda (val2)
-      (let ((num1 (expval->num val1))
-            (num2 (expval->num val2)))
-        (apply-cont cont (num-val (- num1 num2)))))))
-;; rand-cont : Exp x Env x Cont -> Cont
-(define rator-cont
-  (lambda (rand env cont)
-    (lambda (val)
-      (value-of/k rand env (rand-cont val cont)))))
-;; rand-cont : ExpVal x Cont -> Cont
-(define rand-cont
-  (lambda (rator cont)
-    (lambda (val)
-      (let ((proc1 (expval->proc rator)))
-        (apply-procedure/k proc1 val cont)))))
+(define-datatype continuation continuation?
+  (end-cont)
+  (zero1-cont
+   (cont continuation?))
+  (let-exp-cont
+   (var identifier?)
+   (body expression?)
+   (env environment?)
+   (cont continuation?))
+  (if-test-cont
+   (exp2 expression?)
+   (exp3 expression?)
+   (env environment?)
+   (cont continuation?))
+  (diff1-cont
+   (exp2 expression?)
+   (env environment?)
+   (cont continuation?))
+  (diff2-cont
+   (val1 exp-val?)
+   (cont continuation?))
+  (rator-cont
+   (exp2 expression?)
+   (env environment?)
+   (cont continuation?))
+  (rand-cont
+   (val exp-val?)
+   (cont continuation?))
+  (let2-exp-cont
+   (var1 identifier?)
+   (var2 identifier?)
+   (exp2 expression?)
+   (body expression?)
+   (env environment?)
+   (cont continuation?)))
 ;; apply-cont : Cont x ExpVal -> FinalAnswer
 (define apply-cont
-  (lambda (cont v)
-    (cont v)))
+  (lambda (cont val)
+    (cases continuation cont
+           (end-cont
+            ()
+            (begin
+              (eopl:printf "End of computation.~%")
+              val))
+           (zero1-cont
+            (cont)
+            (apply-cont cont (bool-val (zero? (expval->num val)))))
+           (let-exp-cont
+            (var body env cont)
+            (value-of/k body (extend-env var val env) cont))
+           (if-test-cont
+            (exp2 exp3 env cont)
+            (if (expval->bool val)
+                (value-of/k exp2 env cont)
+                (value-of/k exp3 env cont)))
+           (diff1-cont
+            (exp2 env cont)
+            (value-of/k exp2 env (diff2-cont val cont)))
+           (diff2-cont
+            (val1 cont)
+            (let ((num1 (expval->num val1))
+                  (num2 (expval->num val)))
+              (apply-cont cont (num-val (- num1 num2)))))
+           (rator-cont
+            (exp2 env cont)
+            (value-of/k exp2 env (rand-cont val cont)))
+           (rand-cont
+            (rator cont)
+            (let ((proc1 (expval->proc rator)))
+              (apply-procedure/k proc1 val cont)))
+           (let2-exp-cont
+            (var1 var2 exp2 body env cont)
+            (value-of/k exp2 env
+                        (let-exp-cont var2 body (extend-env var1 val env) cont))))))
 
 ;;; ---------------------- Expval ----------------------
 (define identifier? symbol?)
@@ -181,6 +199,8 @@
 ;;;                let-exp (var exp1 body)
 ;;; Expression ::= letrec Identifier (Identifier) = Expression in Expression
 ;;;                let-exp (var exp1 body)
+;;; Expression ::= let2 Identifier = Expression Identifier = Expression in Expression
+;;;                let2-exp (var1 exp1 var2 exp2 body)
 ;;; Expression ::= proc (Identifier) Expression
 ;;;                proc-exp (var body)
 ;;; Expression ::= (Expression Expression)
@@ -209,6 +229,8 @@
                 var-exp)
     (expression ("let" identifier "=" expression "in" expression)
                 let-exp)
+    (expression ("let2" identifier "=" expression identifier "=" expression "in" expression)
+                let2-exp)
     (expression ("letrec" identifier "(" identifier ")" "=" expression "in" expression)
                 letrec-exp)
     (expression ("proc" "(" identifier ")" expression)
@@ -239,6 +261,9 @@
            (let-exp
             (var exp1 body)
             (value-of/k exp1 env (let-exp-cont var body env cont)))
+           (let2-exp
+            (var1 exp1 var2 exp2 body)
+            (value-of/k exp1 env (let2-exp-cont var1 var2 exp2 body env cont)))
            (letrec-exp
             (p-name p-var p-body letrec-body)
             (value-of/k letrec-body (extend-env-rec p-name p-var p-body env) cont))
@@ -289,8 +314,8 @@
                        else -((double -(x,1)),-2)
       in (double 6)")
 (eqv?
- (run "let x = 7 in
-         let y = 2 in
-           let y = let x = -(x, 1) in -(x, y)
-             in -(-(x,8), y)")
- -5)
+ (run "let2 x = 3 f = proc(x) -(x, -3) in (f 3)")
+ 6)
+(eqv?
+ (run "let2 x = 3 f = proc(x) -(x, -3) in (f 3)")
+ 6)

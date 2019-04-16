@@ -295,3 +295,9 @@
 (run "letrec double (x) = if zero?(x) then 0
                        else -((double -(x,1)),-2)
       in (double 6)")
+(eqv?
+ (run "let x = 7 in
+         let y = 2 in
+           let y = let x = -(x, 1) in -(x, y)
+             in -(-(x,8), y)")
+ -5)
