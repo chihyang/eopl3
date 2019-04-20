@@ -1,24 +1,30 @@
 #lang eopl
-;;; constructor
 (define empty-stack
-  (lambda () '()))
+  (lambda ()
+    (lambda (op)
+      (if (eqv? op 'empty-stack?)
+          #t
+          (report-empty-stack op)))))
 (define push
   (lambda (val stack)
-    (cons val stack)))
-;;; observer
+    (lambda (op)
+      (cond [(eqv? op 'empty-stack?) #f]
+            [(eqv? op 'pop) stack]
+            [(eqv? op 'top) val]))))
 (define pop
-  (lambda (stack)
-    (if (null? stack)
-        (report-empty-stack 'pop)
-        (cdr stack))))
+  (lambda (s)
+    (s 'pop)))
 (define top
-  (lambda (stack)
-    (if (null? stack)
-        (report-empty-stack 'top)
-        (car stack))))
+  (lambda (s)
+    (s 'top)))
 (define empty-stack?
-  (lambda (stack)
-    (null? stack)))
+  (lambda (s)
+    (s 'empty-stack?)))
+(define stack->list
+  (lambda (s)
+    (if (empty-stack? s)
+        '()
+        (cons (top s) (stack->list (pop s))))))
 (define report-empty-stack
   (lambda (op)
     (eopl:error
@@ -27,8 +33,8 @@
 ;;; ---- test ----
 (eqv? (top (push 2 (empty-stack))) 2)
 (eqv? (top (push 4 (pop (push 2 (empty-stack))))) 4)
-(equal? (push 5 (push 4 (pop (push 2 (empty-stack))))) '(5 4))
-(equal? (pop (push 2 (empty-stack))) '())
+(equal? (stack->list (push 5 (push 4 (pop (push 2 (empty-stack)))))) '(5 4))
+(equal? (stack->list (pop (push 2 (empty-stack)))) '())
 (eqv? (empty-stack? (empty-stack)) #t)
 (eqv? (empty-stack? (push 2 (empty-stack))) #f)
 (eqv? (empty-stack? (pop (push 2 (empty-stack)))) #t)
