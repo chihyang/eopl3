@@ -1,16 +1,5 @@
 #lang eopl
 ;;; ---------------------- Environment(from section 3.2) ----------------------
-(define member?
-  (lambda (sym lst)
-    (if (null? lst)
-        #f
-        (or (eqv? sym (car lst))
-            (member? sym (cdr lst))))))
-(define check-duplicates
-  (lambda (lst)
-    (cond ((null? lst) '())
-          ((member? (car lst) (cdr lst)) (car lst))
-          (else (check-duplicates (cdr lst))))))
 (define empty-env?
   (lambda (env)
     (and (list? env)
@@ -34,28 +23,6 @@
 (define extend-env-rec
   (lambda (p-name p-var p-body env)
     (list 'extend-env-rec p-name p-var p-body env)))
-;; extend-env* : Listof(Id) x Listof(ExpVal) x Env -> Env
-(define extend-env*
-  (lambda (vars vals env)
-    (let ((dup (check-duplicates vars))
-          (var-len (length vars))
-          (val-len (length vals)))
-      (cond [(not (null? dup)) (report-duplicate-id dup)]
-            [(< var-len val-len)
-             (report-argument-mismatch 'greater)]
-            [(> var-len val-len)
-             (report-argument-mismatch 'less)]
-            [else
-             (letrec ((extend-env*-inner
-                       (lambda (vars vals env)
-                         (cond [(null? vars)
-                                env]
-                               [else
-                                (extend-env*-inner
-                                 (cdr vars)
-                                 (cdr vals)
-                                 (list 'extend-env (car vars) (car vals) env))]))))
-               (extend-env*-inner vars vals env))]))))
 (define apply-env
   (lambda (env search-var)
     (cond
@@ -84,12 +51,6 @@
 (define report-invalid-env
   (lambda (env)
     (eopl:error 'apply-env "Bad environment: ~s" env)))
-(define report-argument-mismatch
-  (lambda (symp)
-    (eopl:error 'extend-env* "Argument number is ~s than parameter number" symp)))
-(define report-duplicate-id
-  (lambda (sym)
-    (eopl:error 'extend-env* "Duplicate identifier ~s" sym)))
 
 ;;; ---------------------- Continuation ----------------------
 ;; FinalAnswer = ExpVal
@@ -123,11 +84,20 @@
   (rand-cont
    (val exp-val?)
    (cont continuation?))
-  (let-multi-exp-cont
-   (saved-vars (list-of identifier?))
-   (saved-vals (list-of exp-val?))
-   (cont-vars (list-of identifier?))
-   (cont-exps (list-of expression?))
+  (let2-exp-cont
+   (var1 identifier?)
+   (var2 identifier?)
+   (exp2 expression?)
+   (body expression?)
+   (saved-env environment?)
+   (env environment?)
+   (cont continuation?))
+  (let3-exp-cont
+   (var1 identifier?)
+   (var2 identifier?)
+   (var3 identifier?)
+   (exp2 expression?)
+   (exp3 expression?)
    (body expression?)
    (env environment?)
    (cont continuation?)))
@@ -166,23 +136,14 @@
             (rator cont)
             (let ((proc1 (expval->proc rator)))
               (apply-procedure/k proc1 val cont)))
-           (let-multi-exp-cont
-            (saved-vars saved-vals cont-vars cont-exps body env cont)
-            (if (null? cont-exps)
-                (value-of/k body
-                            (extend-env* (cons (car cont-vars) saved-vars)
-                                         (cons val saved-vals)
-                                         env)
-                            cont)
-                (value-of/k (car cont-exps)
-                            env
-                            (let-multi-exp-cont (cons (car cont-vars) saved-vars)
-                                                (cons val saved-vals)
-                                                (cdr cont-vars)
-                                                (cdr cont-exps)
-                                                body
-                                                env
-                                                cont)))))))
+           (let2-exp-cont
+            (var1 var2 exp2 body saved-env env cont)
+            (value-of/k exp2 env
+                        (let-exp-cont var2 body (extend-env var1 val env) cont)))
+           (let3-exp-cont
+            (var1 var2 var3 exp2 exp3 body env cont)
+            (value-of/k exp2 env
+                        (let2-exp-cont var2 var3 exp3 body (extend-env var1 val env) env cont))))))
 
 ;;; ---------------------- Expval ----------------------
 (define identifier? symbol?)
@@ -250,14 +211,12 @@
 ;;;                var-exp (var)
 ;;; Expression ::= let Identifier = Expression in Expression
 ;;;                let-exp (var exp1 body)
-;;; Expression ::= let2 Identifier = Expression Identifier = Expression in Expression
-;;;                let2-exp (var1 exp1 var2 exp2 body)
-;;; Expression ::= let3 Identifier = Expression
-;;;                     Identifier = Expression
-;;;                     Identifier = Expression in Expression
-;;;                let3-exp (var1 exp1 var2 exp2 var3 exp3 body)
 ;;; Expression ::= letrec Identifier (Identifier) = Expression in Expression
 ;;;                let-exp (var exp1 body)
+;;; Expression ::= let2 Identifier = Expression Identifier = Expression in Expression
+;;;                let2-exp (var1 exp1 var2 exp2 body)
+;;; Expression ::= let3 Identifier = Expression Identifier = Expression Identifier = Expression in Expression
+;;;                let3-exp (var1 exp1 var2 exp2 body)
 ;;; Expression ::= proc (Identifier) Expression
 ;;;                proc-exp (var body)
 ;;; Expression ::= (Expression Expression)
@@ -319,13 +278,13 @@
             (value-of/k exp1 env (if-test-cont exp2 exp3 env cont)))
            (let-exp
             (var exp1 body)
-            (value-of/k exp1 env (let-multi-exp-cont '() '() (list var) '() body env cont)))
+            (value-of/k exp1 env (let-exp-cont var body env cont)))
            (let2-exp
             (var1 exp1 var2 exp2 body)
-            (value-of/k exp1 env (let-multi-exp-cont '() '() (list var1 var2) (list exp2) body env cont)))
+            (value-of/k exp1 env (let2-exp-cont var1 var2 exp2 body env env cont)))
            (let3-exp
             (var1 exp1 var2 exp2 var3 exp3 body)
-            (value-of/k exp1 env (let-multi-exp-cont '() '() (list var1 var2 var3) (list exp2 exp3) body env cont)))
+            (value-of/k exp1 env (let3-exp-cont var1 var2 var3 exp2 exp3 body env cont)))
            (letrec-exp
             (p-name p-var p-body letrec-body)
             (value-of/k letrec-body (extend-env-rec p-name p-var p-body env) cont))
@@ -372,14 +331,12 @@
     (value-of-program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-(eqv?
- (run "letrec double (x) = if zero?(x) then 0
+(run "letrec double (x) = if zero?(x) then 0
                        else -((double -(x,1)),-2)
-       in (double 6)")
- 12)
+      in (double 6)")
 (eqv?
  (run "let2 x = 3 f = proc(x) -(x, -3) in (f 3)")
  6)
 (eqv?
- (run "let3 x = 3 f = proc(x) -(x, -3) y = 4 in -(x, y)")
- -1)
+ (run "let3 x = 3 f = proc(m) -(m, -3) y = 4 in (f y)")
+ 7)
