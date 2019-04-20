@@ -116,11 +116,6 @@
   (end-cont)
   (zero1-cont
    (cont continuation?))
-  (let-exp-cont
-   (var identifier?)
-   (body expression?)
-   (env environment?)
-   (cont continuation?))
   (if-test-cont
    (exp2 expression?)
    (exp3 expression?)
@@ -183,9 +178,6 @@
            (zero1-cont
             (cont)
             (apply-cont cont (bool-val (zero? (expval->num val)))))
-           (let-exp-cont
-            (var body env cont)
-            (value-of/k body (extend-env var val env) cont))
            (if-test-cont
             (exp2 exp3 env cont)
             (if (expval->bool val)
@@ -215,11 +207,11 @@
            (let-cont
             (saved-vars saved-vals cont-vars cont-exps body env cont)
             (if (null? cont-exps)
-                (value-of/k body
-                            (extend-env* (cons (car cont-vars) saved-vars)
-                                         (cons val saved-vals)
-                                         env)
-                            cont)
+                (let ((l-vars (reverse (cons (car cont-vars) saved-vars)))
+                      (l-vals (reverse (cons val saved-vals))))
+                  (value-of/k body
+                              (extend-env* l-vars l-vals env)
+                              cont))
                 (value-of/k (car cont-exps)
                             env
                             (let-cont (cons (car cont-vars) saved-vars)
