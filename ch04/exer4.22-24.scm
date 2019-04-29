@@ -647,9 +647,3 @@
          {x = -(x,1); z = +(z,x)}
        while not(zero?(x));
        print z}")
-(run "var x,y,z;
-      {x = 3; y = 4; z = 0;
-       do
-         { x = -(x,1); z = +(z,x)}
-       while not(zero?(x));
-       print z}")
