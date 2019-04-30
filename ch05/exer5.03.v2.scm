@@ -70,10 +70,11 @@
                   (bool-val
                    (zero? (expval->num val)))))))
 ;; let-exp-cont : Var x Exp x Env x Cont -> Cont
-;; why is this wrong?
+;; why is this wrong? try it, see how many 'End of computations.' you can see
 ;; (define let-exp-cont
 ;;   (lambda (var body env cont)
-;;     (apply-cont cont (value-of/k body (extend-env var val env) cont))))
+;;     (lambda (val)
+;;       (apply-cont cont (value-of/k body (extend-env var val env) cont)))))
 (define let-exp-cont
   (lambda (var body env cont)
     (lambda (val)

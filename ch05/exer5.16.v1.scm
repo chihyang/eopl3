@@ -104,7 +104,7 @@
 ;; Cont = ExpVal -> FinalAnswer
 ;; end-cont : () -> Cont
 (define-datatype continuation continuation?
-  (end-cont)
+  (end-command-cont)
   (zero1-cont
    (cont continuation?))
   (not-cont
@@ -211,15 +211,10 @@
    (stmt statement?)
    (env environment?)
    (cont continuation?)))
-;; apply-cont : Cont x ExpVal -> FinalAnswer
+;; apply-cont : Cont x ExpVal -> Unspecified
 (define apply-cont
   (lambda (cont val)
     (cases continuation cont
-           (end-cont
-            ()
-            (begin
-              (eopl:printf "End of computation.~%")
-              val))
            (zero1-cont
             (cont)
             (apply-cont cont (bool-val (zero? (expval->num val)))))
@@ -378,12 +373,14 @@
             (exp stmt env cont1)
             (if (expval->bool val)
                 (result-of stmt env cont)
-                (apply-command-cont cont1))))))
-;; apply-cont : Cont -> FinalAnswer
+                (apply-command-cont cont1)))
+           (else
+            (report-invalid-cont cont 'expression)))))
+;; apply-command-cont : Cont -> Unspecified
 (define apply-command-cont
   (lambda (cont)
     (cases continuation cont
-           (end-cont
+           (end-command-cont
             ()
             (begin
               (eopl:printf "End of computation.~%")))
@@ -396,7 +393,13 @@
             (exp stmt env cont1)
             (value-of/k exp env cont))
            (else
-            (eopl:error "Oh my gosh!")))))
+            (report-invalid-cont cont 'statement)))))
+;; report-invalid-cont : SchemeVal x Symbol -> Unspecified
+(define report-invalid-cont
+  (lambda (cont type)
+    (eopl:error
+     'apply-cont
+     "Not a valid ~s continuation: ~s" type cont)))
 
 ;;; ---------------------- Expval ----------------------
 (define identifier? symbol?)
@@ -796,7 +799,7 @@
     (cases program prog
            (a-program
             (stmt)
-            (result-of stmt (empty-env) (end-cont))))))
+            (result-of stmt (empty-env) (end-command-cont))))))
 
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
