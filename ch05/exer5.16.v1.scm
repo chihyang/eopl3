@@ -104,15 +104,9 @@
 ;; Cont = ExpVal -> FinalAnswer
 ;; end-cont : () -> Cont
 (define-datatype continuation continuation?
-  (end-command-cont)
   (zero1-cont
    (cont continuation?))
   (not-cont
-   (cont continuation?))
-  (let-exp-cont
-   (var identifier?)
-   (body expression?)
-   (env environment?)
    (cont continuation?))
   (if-test-cont
    (exp2 expression?)
@@ -192,25 +186,32 @@
    (exp expression?)
    (env environment?)
    (cont continuation?))
-  (set-rhs-command-cont
+  (set-rhs-stmt-cont
    (ref reference?)
-   (cont continuation?))
-  (print-command-cont
-   (cont continuation?))
-  (multi-command-cont
-   (stmts (list-of statement?))
-   (env environment?)
-   (cont continuation?))
-  (if-command-cont
+   (cont command-cont?))
+  (print-stmt-cont
+   (cont command-cont?))
+  (if-stmt-cont
    (stmt1 statement?)
    (stmt2 statement?)
    (env environment?)
-   (cont continuation?))
+   (cont command-cont?))
+  (while-stmt-cont
+   (exp expression?)
+   (stmt statement?)
+   (env environment?)
+   (cont command-cont?)))
+(define-datatype command-cont command-cont?
+  (end-command-cont)
+  (multi-command-cont
+   (stmts (list-of statement?))
+   (env environment?)
+   (cont command-cont?))
   (while-command-cont
    (exp expression?)
    (stmt statement?)
    (env environment?)
-   (cont continuation?)))
+   (cont command-cont?)))
 ;; apply-cont : Cont x ExpVal -> Unspecified
 (define apply-cont
   (lambda (cont val)
@@ -221,9 +222,6 @@
            (not-cont
             (cont)
             (apply-cont cont (bool-val (not (expval->bool val)))))
-           (let-exp-cont
-            (var body env cont)
-            (value-of/k body (extend-env var val env) cont))
            (if-test-cont
             (exp2 exp3 env cont)
             (if (expval->bool val)
@@ -334,12 +332,12 @@
            (begin-exp-cont
             (exp env cont)
             (value-of/k exp env cont))
-           (set-rhs-command-cont
+           (set-rhs-stmt-cont
             (ref cont1)
             (begin
               (setref! ref val)
               (apply-command-cont cont1)))
-           (print-command-cont
+           (print-stmt-cont
             (cont1)
             (begin
               (cases exp-val val
@@ -359,27 +357,20 @@
                       (val)
                       (eopl:pretty-print val)))
               (apply-command-cont cont1)))
-           (multi-command-cont
-            (stmts env cont1)
-            (if (null? stmts)
-                (apply-command-cont cont1)
-                (result-of (car stmts) env (multi-command-cont (cdr stmts) env cont1))))
-           (if-command-cont
+           (if-stmt-cont
             (stmt1 stmt2 env cont1)
             (if (expval->bool val)
                 (result-of stmt1 env cont1)
                 (result-of stmt2 env cont1)))
-           (while-command-cont
+           (while-stmt-cont
             (exp stmt env cont1)
             (if (expval->bool val)
-                (result-of stmt env cont)
-                (apply-command-cont cont1)))
-           (else
-            (report-invalid-cont cont 'expression)))))
-;; apply-command-cont : Cont -> Unspecified
+                (result-of stmt env (while-command-cont exp stmt env cont1))
+                (apply-command-cont cont1))))))
+;; apply-command-cont : CmdCont -> Unspecified
 (define apply-command-cont
   (lambda (cont)
-    (cases continuation cont
+    (cases command-cont cont
            (end-command-cont
             ()
             (begin
@@ -391,9 +382,7 @@
                 (result-of (car stmts) env (multi-command-cont (cdr stmts) env cont))))
            (while-command-cont
             (exp stmt env cont1)
-            (value-of/k exp env cont))
-           (else
-            (report-invalid-cont cont 'statement)))))
+            (value-of/k exp env (while-stmt-cont exp stmt env cont1))))))
 ;; report-invalid-cont : SchemeVal x Symbol -> Unspecified
 (define report-invalid-cont
   (lambda (cont type)
@@ -756,10 +745,10 @@
            (assign-stmt
             (var exp)
             (let ((ref (apply-env env var)))
-              (value-of/k exp env (set-rhs-command-cont ref cont))))
+              (value-of/k exp env (set-rhs-stmt-cont ref cont))))
            (print-stmt
             (exp1)
-            (value-of/k exp1 env (print-command-cont cont)))
+            (value-of/k exp1 env (print-stmt-cont cont)))
            (multi-stmt
             (stmts)
             (if (null? stmts)
@@ -767,10 +756,10 @@
                 (result-of (car stmts) env (multi-command-cont (cdr stmts) env cont))))
            (if-stmt
             (exp1 stmt1 stmt2)
-            (value-of/k exp1 env (if-command-cont stmt1 stmt2 env cont)))
+            (value-of/k exp1 env (if-stmt-cont stmt1 stmt2 env cont)))
            (while-stmt
             (exp1 body)
-            (value-of/k exp1 env (while-command-cont exp1 body env cont)))
+            (value-of/k exp1 env (while-stmt-cont exp1 body env cont)))
            (do-while-stmt
             (body exp1)
             (result-of body env (while-command-cont exp1 body env cont)))
