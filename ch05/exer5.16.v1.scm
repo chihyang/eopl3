@@ -101,7 +101,7 @@
 
 ;;; ---------------------- Continuation ----------------------
 ;; FinalAnswer = ExpVal
-;; Cont = ExpVal -> FinalAnswer
+;; Cont = ExpVal -> Unspecified
 ;; end-cont : () -> Cont
 (define-datatype continuation continuation?
   (zero1-cont
@@ -666,7 +666,7 @@
                 assign-exp)))
 
 ;;; ---------------------- Evaluate expression ----------------------
-;; value-of/k : Exp x Env x Cont -> FinalAnswer
+;; value-of/k : Exp x Env x Cont -> Unspecified
 (define value-of/k
   (lambda (exp env cont)
     (cases expression exp
@@ -738,7 +738,7 @@
             (var exp1)
             (let ((ref (apply-env env var)))
               (value-of/k exp1 env (set-rhs-cont ref cont)))))))
-;; result-of/k : Statement x Env x Command-Cont -> Sto
+;; result-of/k : Statement x Env x CmdCont -> Unspecified
 (define result-of/k
   (lambda (stmt env cont)
     (cases statement stmt

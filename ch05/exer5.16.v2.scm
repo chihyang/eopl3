@@ -100,8 +100,7 @@
     (eopl:error 'extend-env* "Duplicate identifier ~s" sym)))
 
 ;;; ---------------------- Continuation ----------------------
-;; FinalAnswer = ExpVal
-;; Cont = ExpVal -> FinalAnswer
+;; Cont = ExpVal -> Unspecified
 ;; zero1-cont : Cont -> Cont
 (define zero1-cont
   (lambda (cont)
@@ -316,6 +315,7 @@
     (cont v)))
 
 ;;; ---------------------- Command Continuation ----------------------
+;; CmdCont = ExpVal -> Unspecified
 ;; end-command-cont : () -> Cont
 (define end-command-cont
   (lambda ()
@@ -621,7 +621,7 @@
                 assign-exp)))
 
 ;;; ---------------------- Evaluate expression ----------------------
-;; value-of/k : Exp x Env x Cont -> FinalAnswer
+;; value-of/k : Exp x Env x Cont -> Unspecified
 (define value-of/k
   (lambda (exp env cont)
     (cases expression exp
