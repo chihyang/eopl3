@@ -301,14 +301,14 @@
   (lambda (stmt1 stmt2 env cont)
     (lambda (val)
       (if (expval->bool val)
-          (result-of stmt1 env cont)
-          (result-of stmt2 env cont)))))
+          (result-of/k stmt1 env cont)
+          (result-of/k stmt2 env cont)))))
 ;; while-stmt-cont : Exp x Stmt x Env x CmdCont -> CmdCont
 (define while-stmt-cont
   (lambda (exp stmt env cont)
     (lambda (val)
       (if (expval->bool val)
-          (result-of stmt env (while-command-cont exp stmt env cont))
+          (result-of/k stmt env (while-command-cont exp stmt env cont))
           (apply-command-cont cont)))))
 ;; apply-cont : Cont x ExpVal -> Unspecified
 (define apply-cont
@@ -327,7 +327,7 @@
     (lambda ()
       (if (null? stmts)
           (apply-command-cont cont)
-          (result-of (car stmts) env (multi-command-cont (cdr stmts) env cont))))))
+          (result-of/k (car stmts) env (multi-command-cont (cdr stmts) env cont))))))
 ;; while-command-cont : Exp x Stmt x Env x CmdCont -> CmdCont
 (define while-command-cont
   (lambda (exp stmt env cont)
@@ -693,8 +693,8 @@
             (var exp1)
             (let ((ref (apply-env env var)))
               (value-of/k exp1 env (set-rhs-cont ref cont)))))))
-;; result-of : Statement x Env x CmdCont -> Unspecified
-(define result-of
+;; result-of/k : Statement x Env x CmdCont -> Unspecified
+(define result-of/k
   (lambda (stmt env cont)
     (cases statement stmt
            (assign-stmt
@@ -708,7 +708,7 @@
             (stmts)
             (if (null? stmts)
                 (apply-command-cont cont)
-                (result-of (car stmts) env (multi-command-cont (cdr stmts) env cont))))
+                (result-of/k (car stmts) env (multi-command-cont (cdr stmts) env cont))))
            (if-stmt
             (exp1 stmt1 stmt2)
             (value-of/k exp1 env (if-stmt-cont stmt1 stmt2 env cont)))
@@ -717,12 +717,12 @@
             (value-of/k exp1 env (while-stmt-cont exp1 body env cont)))
            (do-while-stmt
             (body exp1)
-            (result-of body env (while-command-cont exp1 body env cont)))
+            (result-of/k body env (while-command-cont exp1 body env cont)))
            (block-stmt
             (vars body)
             (if (null? vars)
-                (result-of body env cont)
-                (result-of body
+                (result-of/k body env cont)
+                (result-of/k body
                            (extend-env* vars
                                         (map (lambda (var) (newref 'uninitialized))
                                              vars)
@@ -743,7 +743,7 @@
     (cases program prog
            (a-program
             (stmt)
-            (result-of stmt (empty-env) (end-command-cont))))))
+            (result-of/k stmt (empty-env) (end-command-cont))))))
 
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
