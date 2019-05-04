@@ -118,12 +118,10 @@
 ;; apply-procedure/k : Proc x Listof(ExpVal) x Cont -> Bounce
 (define apply-procedure/k
   (lambda (proc1 vals cont)
-    (a-procedure
-     (lambda ()
-       (cases proc proc1
-              (procedure
-               (vars body saved-env)
-               (value-of/k body (extend-env* vars (map newref vals) saved-env) cont)))))))
+    (cases proc proc1
+           (procedure
+            (vars body saved-env)
+            (a-value-of body (extend-env* vars (map newref vals) saved-env) cont)))))
 (define-datatype exp-val exp-val?
   (num-val
    (val number?))
@@ -589,8 +587,10 @@
 (define-datatype bounce bounce?
   (a-expval
    (val exp-val?))
-  (a-procedure
-   (proc procedure?)))
+  (a-value-of
+   (exp expression?)
+   (env environment?)
+   (cont continuation?)))
 ;; trampoline : Bounce -> FinalAnswer
 (define trampoline
   (lambda (bnc)
@@ -598,9 +598,9 @@
            (a-expval
             (val)
             val)
-           (a-procedure
-            (proc)
-            (trampoline (proc))))))
+           (a-value-of
+            (exp env cont)
+            (trampoline (value-of/k exp env cont))))))
 
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
