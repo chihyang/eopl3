@@ -7,7 +7,7 @@ Notes on chapter 5
 
 What is a *snapshot* for our interpreter? At any time, we either evaluate an
 expression, apply or continuation, or get a *FinalAnswer*. So at any time, the
-continuation could be composed of one of the following:
+snapshot could be composed of one of the following:
 
 * an expressed value
 * an expression, an environment and a continuation
