@@ -7,7 +7,7 @@ Notes on chapter 5
 
 What is a *snapshot* for our interpreter? At any time, we either evaluate an
 expression, apply or continuation, or get a *FinalAnswer*. So at any time, the
-continuation could be composed of the following part:
+continuation could be composed of one of the following:
 
 * an expressed value.
 * an expression, an environment and a continuation;
@@ -29,7 +29,7 @@ Hence our new data type *Bounce* has the following variants:
 ```
 
 However, because we only make a non-`expval` bounce in `apply-procedure/k`, the
-last variant above is not necessary here. For exercise 5.19, we would see the
+last variant above is not necessary here. In exercise 5.19, we would see the
 usage of the last variant.
 
 This note is inspired by
