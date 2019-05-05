@@ -12,6 +12,7 @@ snapshot could be composed of one of the following:
 * an expressed value
 * an expression, an environment and a continuation
 * a continuation and an expressed value
+* a procedure, a list of expressed values, and a continuation
 
 Hence our new data type *Bounce* has the following variants:
 
@@ -25,7 +26,11 @@ Hence our new data type *Bounce* has the following variants:
    (cont continuation?))
   (a-apply-cont
    (cont continuation?)
-   (val exp-val?)))
+   (val exp-val?))
+  (a-apply-procedure
+   (proc1 proc?)
+   (vals (list-of exp-val?))
+   (cont continuation?)))
 ```
 
 However, because we only make a non-`expval` bounce in `apply-procedure/k`, the

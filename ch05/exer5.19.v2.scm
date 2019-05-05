@@ -344,13 +344,13 @@
            (rator-cont
             (exps env cont)
             (if (null? exps)
-                (apply-procedure/k (expval->proc val) '() cont)
+                (a-apply-procedure (expval->proc val) '() cont)
                 (a-value-of (car exps) env (rand-cont val '() (cdr exps) env cont))))
            (rand-cont
             (rator saved-vals cont-exps env cont)
             (if (null? cont-exps)
                 (let ((proc1 (expval->proc rator)))
-                  (apply-procedure/k proc1 (reverse (cons val saved-vals)) cont))
+                  (a-apply-procedure proc1 (reverse (cons val saved-vals)) cont))
                 (a-value-of (car cont-exps)
                             env
                             (rand-cont rator (cons val saved-vals) (cdr cont-exps) env cont))))
@@ -593,7 +593,11 @@
    (cont continuation?))
   (a-apply-cont
    (cont continuation?)
-   (val exp-val?)))
+   (val exp-val?))
+  (a-apply-procedure
+   (proc1 proc?)
+   (vals (list-of exp-val?))
+   (cont continuation?)))
 ;; trampoline : Bounce -> FinalAnswer
 (define trampoline
   (lambda (bnc)
@@ -606,7 +610,10 @@
             (trampoline (value-of/k exp env cont)))
            (a-apply-cont
             (cont val)
-            (trampoline (apply-cont cont val))))))
+            (trampoline (apply-cont cont val)))
+           (a-apply-procedure
+            (proc1 vals cont)
+            (trampoline (apply-procedure/k proc1 vals cont))))))
 
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
