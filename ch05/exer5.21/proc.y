@@ -53,13 +53,6 @@ call_exp:       '(' expression expression ')' {}
 
 %%
 
-void main(int argc, char **argv) {
-    yyscan_t scanner;
-    if (yylex_init(&scanner)) {
-        printf("Failed to start scanner\n");
-        exit(1);
-    }
-    while(yylex(scanner)) {
-    }
-    yylex_destroy(scanner);
+void yyerror(char *s) {
+    fprintf(stderr, "error: %s\n", s);
 }

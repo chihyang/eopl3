@@ -1,5 +1,5 @@
 %{
-# include "exer5.21.h"
+# include "proc_parser.h"
 %}
 
 %option reentrant nodefault noyywrap
@@ -13,16 +13,16 @@ number      ("-"?[0-9]+)|("-"?[0-9]*\.[0-9]+)|("-"?[0-9]+\.[0-9]*)
 
 {newline}    ;
 {whitespace} ;
-if           { printf("kw if\n"); /* return IF; */ }
-in           { printf("kw in\n"); /* return IN; */ }
-let          { printf("kw let\n"); /* return LET; */ }
-else         { printf("kw else\n"); /* return ELSE; */ }
-proc         { printf("kw proc\n"); /* return PROC; */ }
-then         { printf("kw then\n"); /* return THEN; */ }
-zero\?       { printf("kw zero?\n"); /* return ZERO; */ }
-letrec       { printf("kw letrec\n"); /* return LETREC; */ }
-{identifier} { printf("id: %s\n", yytext); }
-{number}     { printf("number: %s\n", yytext); }
-.            { printf("others: %s\n", yytext); }
+if           { return IF; }
+in           { return IN; }
+let          { return LET; }
+else         { return ELSE; }
+proc         { return PROC; }
+then         { return THEN; }
+zero\?       { return ZERO; }
+letrec       { return LETREC; }
+{identifier} { return IDENTIFIER; }
+{number}     { return NUMBER; }
+.            { return yytext[0]; }
 
 %%
