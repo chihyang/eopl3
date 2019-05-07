@@ -1,13 +1,14 @@
 %{
-# include "proc_parser.h"
+#include <stdlib.h>
+#include "proc_parser.h"
 %}
 
-%option reentrant nodefault noyywrap
+%option reentrant nodefault noyywrap yylineno
 
 newline    \n
 whitespace [ \t\r]
 identifier [a-zA-Z]([a-zA-Z]|[0-9])*
-number      ("-"?[0-9]+)|("-"?[0-9]*\.[0-9]+)|("-"?[0-9]+\.[0-9]*)
+number      ("-"?[0-9]+)
 
 %%
 
@@ -22,7 +23,7 @@ then         { return THEN; }
 zero\?       { return ZERO; }
 letrec       { return LETREC; }
 {identifier} { return IDENTIFIER; }
-{number}     { return NUMBER; }
+{number}     { yylval = atoi(yytext); return NUMBER; }
 .            { return yytext[0]; }
 
 %%
