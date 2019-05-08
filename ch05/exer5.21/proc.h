@@ -17,6 +17,9 @@ typedef struct ast_program_s *ast_program_t;
 typedef struct ast_node_s *ast_node_t;
 typedef struct symbol_s *symbol_t;
 
+symbol_t new_symbol(const char *name);
+void symbol_free(symbol_t sym);
+
 ast_program_t new_ast_program(ast_node_t exp);
 ast_node_t new_const_node(int num);
 ast_node_t new_var_node(symbol_t id);
@@ -28,6 +31,7 @@ ast_node_t new_if_node(ast_node_t cond, ast_node_t exp1, ast_node_t exp2);
 ast_node_t new_let_node(symbol_t id, ast_node_t exp1, ast_node_t exp2);
 ast_node_t new_diff_node(ast_node_t exp1, ast_node_t exp2);
 ast_node_t new_call_node(ast_node_t exp1, ast_node_t exp2);
+
 ast_node_t ast_free(ast_node_t ast);
 
 /* environment */

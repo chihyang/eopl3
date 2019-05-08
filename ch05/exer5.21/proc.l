@@ -22,8 +22,8 @@ proc         { return PROC; }
 then         { return THEN; }
 zero\?       { return ZERO; }
 letrec       { return LETREC; }
-{identifier} { return IDENTIFIER; }
-{number}     { yylval = atoi(yytext); return NUMBER; }
+{identifier} { yylval.id = new_symbol(yytext) ;return IDENTIFIER; }
+{number}     { yylval.num = atoi(yytext); return NUMBER; }
 .            { return yytext[0]; }
 
 %%
