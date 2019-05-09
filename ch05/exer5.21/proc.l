@@ -1,9 +1,10 @@
 %{
 #include <stdlib.h>
+#include "proc.h"
 #include "proc_parser.h"
 %}
 
-%option reentrant nodefault noyywrap yylineno
+%option reentrant bison-bridge nodefault noyywrap yylineno
 
 newline    \n
 whitespace [ \t\r]
@@ -22,8 +23,8 @@ proc         { return PROC; }
 then         { return THEN; }
 zero\?       { return ZERO; }
 letrec       { return LETREC; }
-{identifier} { yylval.id = new_symbol(yytext) ;return IDENTIFIER; }
-{number}     { yylval.num = atoi(yytext); return NUMBER; }
+{identifier} { yylval->id = symbol_new(yytext) ;return IDENTIFIER; }
+{number}     { yylval->num = atoi(yytext); return NUMBER; }
 .            { return yytext[0]; }
 
 %%

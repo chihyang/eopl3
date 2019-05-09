@@ -1,7 +1,14 @@
 %{
 #include <stdio.h>
 #include "proc.h"
+#include "proc_parser.h"
+#include "proc_scanner.h"
 %}
+
+%define api.pure
+%lex-param { void *scanner }
+%parse-param { void *scanner }
+%parse-param { ast_program_t prgm }
 
 %union {
     ast_program_t prgm;

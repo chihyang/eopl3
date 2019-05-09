@@ -330,11 +330,19 @@ void call_node_free(ast_call_t exp) {
     free(exp);
 }
 
+void symbol_free(symbol_t id) {
+    if (id) {
+        free(id->name);
+        free(id);
+    }
+}
+
 int main(int argc, char *argv[]) {
-    yyscan_t yyscanner;
-    if (yylex_init(&yyscanner) == 0) {
-        yyparse();
-        yylex_destroy(yyscanner);
+    yyscan_t scaninfo = NULL;
+    ast_program_t prgm = NULL;
+    if (yylex_init(&scaninfo) == 0) {
+        yyparse(scaninfo, prgm);
+        yylex_destroy(scaninfo);
         return 0;
     } else {
         fprintf(stderr, "Failed to initialize scanner!\n");
