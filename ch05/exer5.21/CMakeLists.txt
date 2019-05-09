@@ -19,6 +19,7 @@ flex_target(PROC_SCANNER proc.l
 add_flex_bison_dependency(PROC_SCANNER PROC_PARSER)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(proc
   proc.c
