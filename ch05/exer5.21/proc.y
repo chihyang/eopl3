@@ -8,7 +8,7 @@
 %define api.pure
 %lex-param { void *scanner }
 %parse-param { void *scanner }
-%parse-param { ast_program_t prgm }
+%parse-param { ast_program_t *prgm }
 
 %union {
     ast_program_t prgm;
@@ -27,7 +27,7 @@
 %%
 
 program:        expression
-                { $$ = new_ast_program($1); }
+                { $$ = new_ast_program($1); *prgm = $$; }
                 ;
 
 expression:     const_exp

@@ -182,6 +182,7 @@ ast_node_t new_let_node(symbol_t id, ast_node_t exp1, ast_node_t exp2) {
     ast_let_t e = malloc(sizeof(ast_let_s));
     if (e) {
         e->type = LET_EXP;
+        e->id = id;
         e->exp1 = exp1;
         e->exp2 = exp2;
         return (ast_node_t)e;
@@ -341,8 +342,9 @@ int main(int argc, char *argv[]) {
     yyscan_t scaninfo = NULL;
     ast_program_t prgm = NULL;
     if (yylex_init(&scaninfo) == 0) {
-        yyparse(scaninfo, prgm);
+        yyparse(scaninfo, &prgm);
         yylex_destroy(scaninfo);
+        ast_program_free(prgm);
         return 0;
     } else {
         fprintf(stderr, "Failed to initialize scanner!\n");
