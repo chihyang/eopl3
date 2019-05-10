@@ -60,6 +60,21 @@ typedef struct ast_call_s {
     ast_node_t rand;
 } ast_call_s, *ast_call_t;
 
+typedef struct proc_s {
+    symbol_t id;
+    ast_node_t body;
+    env_t env;
+} proc_s, *proc_t;
+
+typedef struct exp_val_s {
+    EXP_VAL type;
+    union {
+        boolean_t bv;
+        int iv;
+        proc_t pv;
+    };
+} exp_val_s, *exp_val_t;
+
 void const_node_free(ast_const_t exp);
 void var_node_free(ast_var_t exp);
 void proc_node_free(ast_proc_t exp);
@@ -70,6 +85,8 @@ void let_node_free(ast_let_t exp);
 void diff_node_free(ast_diff_t exp);
 void call_node_free(ast_call_t exp);
 void report_ast_malloc_fail(const char* node_name);
+void report_exp_val_malloc_fail(const char *val_type);
+void report_invalid_exp_val(const char *val_type);
 
 symbol_t symbol_new(const char* name) {
     symbol_t s = malloc(sizeof(symbol_s));
@@ -282,19 +299,15 @@ void const_node_free(ast_const_t exp) {
 }
 
 void var_node_free(ast_var_t exp) {
-    symbol_free(exp->var);
     free(exp);
 }
 
 void proc_node_free(ast_proc_t exp) {
-    symbol_free(exp->var);
     ast_free(exp->body);
     free(exp);
 }
 
 void letrec_node_free(ast_letrec_t exp) {
-    symbol_free(exp->p_name);
-    symbol_free(exp->p_var);
     ast_free(exp->p_body);
     ast_free(exp->letrec_body);
     free(exp);
@@ -313,7 +326,6 @@ void if_node_free(ast_if_t exp) {
 }
 
 void let_node_free(ast_let_t exp) {
-    symbol_free(exp->id);
     ast_free(exp->exp1);
     ast_free(exp->exp2);
     free(exp);
@@ -338,13 +350,107 @@ void symbol_free(symbol_t id) {
     }
 }
 
+proc_t new_proc(symbol_t id, ast_node_t body, env_t env) {
+    proc_t p = malloc(sizeof(proc_s));
+    if (p) {
+        p->id = id;
+        p->body = body;
+        p->env = env;
+        return p;
+    } else {
+        report_exp_val_malloc_fail("procedure");
+        return NULL;
+    }
+}
+
+void proc_free(proc_t p) {
+    free(p);
+}
+
+exp_val_t new_bool_val(boolean_t val) {
+    exp_val_t ev = malloc(sizeof(exp_val_s));
+    if (ev) {
+        ev->type = BOOL_VAL;
+        ev->bv = val;
+        return ev;
+    } else {
+        report_exp_val_malloc_fail("bool");
+        return NULL;
+    }
+}
+
+exp_val_t new_int_val(int val) {
+    exp_val_t ev = malloc(sizeof(exp_val_s));
+    if (ev) {
+        ev->type = NUM_VAL;
+        ev->iv = val;
+        return ev;
+    } else {
+        report_exp_val_malloc_fail("num");
+        return NULL;
+    }
+}
+
+exp_val_t new_proc_val(proc_t val) {
+    exp_val_t ev = malloc(sizeof(exp_val_s));
+    if (ev) {
+        ev->type = PROC_VAL;
+        ev->pv = val;
+        return ev;
+    } else {
+        report_exp_val_malloc_fail("procedure");
+        return NULL;
+    }
+}
+
+void exp_val_free(exp_val_t val) {
+    free(val);
+}
+
+boolean_t expval_to_bool(exp_val_t val) {
+    if (val->type == BOOL_VAL) {
+        return val->bv;
+    } else {
+        report_invalid_exp_val("boolean");
+        abort();
+    }
+}
+
+int expval_to_int(exp_val_t val) {
+    if (val->type == NUM_VAL) {
+        return val->iv;
+    } else {
+        report_invalid_exp_val("number");
+        abort();
+    }
+}
+
+proc_t expval_to_proc(exp_val_t val) {
+    if (val->type == PROC_VAL) {
+        return val->pv;
+    } else {
+        report_invalid_exp_val("procedure");
+        abort();
+    }
+}
+
+void report_exp_val_malloc_fail(const char *val_type) {
+    fprintf(stderr, "failed to create a new %s exp value!\n", val_type);
+    abort();
+}
+
+void report_invalid_exp_val(const char *val_type) {
+    fprintf(stderr, "not a valid exp val of type %s!\n", val_type);
+}
+
 int main(int argc, char *argv[]) {
     yyscan_t scaninfo = NULL;
     ast_program_t prgm = NULL;
-    if (yylex_init(&scaninfo) == 0) {
-        yyparse(scaninfo, &prgm);
+    if (yylex_init_extra(symtab, &scaninfo) == 0) {
+        yyparse(scaninfo, symtab, &prgm);
         yylex_destroy(scaninfo);
         ast_program_free(prgm);
+        symbol_table_free(symtab);
         return 0;
     } else {
         fprintf(stderr, "Failed to initialize scanner!\n");

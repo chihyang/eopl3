@@ -8,6 +8,7 @@
 %define api.pure
 %lex-param { void *scanner }
 %parse-param { void *scanner }
+%parse-param { symbol_t table }
 %parse-param { ast_program_t *prgm }
 
 %union {

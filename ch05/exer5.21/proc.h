@@ -6,8 +6,14 @@ typedef struct symbol_s {
     char* name;
 } symbol_s, *symbol_t;
 
-symbol_t symbol_new(const char* name);
+symbol_t symbol_new(const char *name);
 void symbol_free(symbol_t sym);
+
+/* simple symtab of fixed size */
+#define NHASH 9997
+symbol_s symtab[NHASH];
+void symbol_table_free(symbol_t table);
+symbol_t symbol_lookup(symbol_t table, char *name);
 
 /* abstract tree */
 typedef enum {
@@ -43,8 +49,8 @@ ast_node_t new_let_node(symbol_t id, ast_node_t exp1, ast_node_t exp2);
 ast_node_t new_diff_node(ast_node_t exp1, ast_node_t exp2);
 ast_node_t new_call_node(ast_node_t exp1, ast_node_t exp2);
 
-void ast_free(ast_node_t ast);
 void ast_program_free(ast_program_t prgm);
+void ast_free(ast_node_t ast);
 
 /* environment */
 typedef struct env_s *env_t;
@@ -52,12 +58,34 @@ typedef struct env_s *env_t;
 /* procedure */
 typedef struct proc_s *proc_t;
 proc_t new_proc(symbol_t id, ast_node_t body, env_t env);
+void proc_free(proc_t p);
 
 /* expressed value */
+typedef enum {
+    BOOL_VAL = 0x01,
+    NUM_VAL,
+    PROC_VAL
+} EXP_VAL;
+
+typedef enum {
+    FALSE = 0x00,
+    TRUE = 0x01
+} boolean_t;
+
 typedef struct exp_val_s *exp_val_t;
-exp_val_t new_bool_val(int val);
+exp_val_t new_bool_val(boolean_t val);
 exp_val_t new_int_val(int val);
 exp_val_t new_proc_val(proc_t val);
+void exp_val_free(exp_val_t val);
+boolean_t expval_to_bool(exp_val_t val);
+int expval_to_int(exp_val_t val);
+proc_t expval_to_proc(exp_val_t val);
+
+/* environment */
+env_t empty_env();
+env_t extend_env(symbol_t var, exp_val_t val, env_t env);
+env_t extend_env_rec(symbol_t p_name, exp_val_t p_var, ast_node_t p_body, env_t env);
+exp_val_t apply_env(env_t env, symbol_t var);
 
 /* continuation */
 typedef struct continuation_s *continuation_t;
@@ -66,7 +94,6 @@ typedef struct bounce_s *bounce_t;
 /* value-of/k */
 bounce_t value_of_k(ast_node_t node, env_t env, continuation_t cont);
 bounce_t apply_cont(exp_val_t val, continuation_t cont);
-bounce_t apply_env(env_t env, symbol_t var);
 bounce_t apply_procedure(proc_t proc1, exp_val_t val, continuation_t cont);
 struct exp_val_s trampoline(bounce_t bnc);
 void value_of_program(ast_program_t prgm);
