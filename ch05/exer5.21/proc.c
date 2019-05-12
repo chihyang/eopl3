@@ -676,8 +676,7 @@ exp_val_t value_of(ast_node_t node, env_t *env) {
             ast_call_t exp = (ast_call_t)node;
             exp_val_t rator_val = value_of(exp->rator, env);
             exp_val_t rand_val = value_of(exp->rand, env);
-            exp_val_t call_val = apply_procedure(expval_to_proc(rator_val),
-                                                 copy_exp_val(rand_val));
+            exp_val_t call_val = apply_procedure(expval_to_proc(rator_val), rand_val);
             exp_val_free(rand_val);
             exp_val_free(rator_val);
             return call_val;
@@ -690,7 +689,7 @@ exp_val_t value_of(ast_node_t node, env_t *env) {
 }
 
 exp_val_t apply_procedure(proc_t proc1, exp_val_t val) {
-    env_t env = extend_env(proc1->id, val, proc1->env);
+    env_t env = extend_env(proc1->id, copy_exp_val(val), proc1->env);
     env_t *current_env = &env;
     exp_val_t call_val = value_of(proc1->body, current_env);
     env_pop(*current_env);
