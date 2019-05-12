@@ -80,22 +80,37 @@ void exp_val_free(exp_val_t val);
 boolean_t expval_to_bool(exp_val_t val);
 int expval_to_int(exp_val_t val);
 proc_t expval_to_proc(exp_val_t val);
+exp_val_t copy_exp_val(exp_val_t val);
+void print_exp_val(exp_val_t val);
 
 /* environment */
+typedef enum {
+    EMPTY_ENV = 0x01,
+    EXTEND_ENV,
+    EXTEND_REC_ENV
+} ENV_TYPE;
+
 env_t empty_env();
 env_t extend_env(symbol_t var, exp_val_t val, env_t env);
-env_t extend_env_rec(symbol_t p_name, exp_val_t p_var, ast_node_t p_body, env_t env);
+env_t extend_env_rec(symbol_t p_name, symbol_t p_var, ast_node_t p_body, env_t env);
 exp_val_t apply_env(env_t env, symbol_t var);
+env_t env_pop(env_t env);
 
 /* continuation */
 typedef struct continuation_s *continuation_t;
 /* bounce */
 typedef struct bounce_s *bounce_t;
+
+/* value-of */
+exp_val_t value_of(ast_node_t node, env_t *env);
+exp_val_t apply_procedure(proc_t proc1, exp_val_t val);
+
 /* value-of/k */
 bounce_t value_of_k(ast_node_t node, env_t env, continuation_t cont);
 bounce_t apply_cont(exp_val_t val, continuation_t cont);
-bounce_t apply_procedure(proc_t proc1, exp_val_t val, continuation_t cont);
+bounce_t apply_procedure_k(proc_t proc1, exp_val_t val, continuation_t cont);
 struct exp_val_s trampoline(bounce_t bnc);
+
 void value_of_program(ast_program_t prgm);
 
 #endif

@@ -75,6 +75,26 @@ typedef struct exp_val_s {
     };
 } exp_val_s, *exp_val_t;
 
+typedef struct env_s {
+    ENV_TYPE type;
+} env_s, *env_t;
+
+typedef struct extend_env_s {
+    ENV_TYPE type;
+    symbol_t var;
+    exp_val_t val;
+    env_t env;
+} extend_env_s, *extend_env_t;
+
+typedef struct extend_rec_env_s {
+    ENV_TYPE type;
+    symbol_t p_name;
+    symbol_t p_var;
+    ast_node_t p_body;
+    exp_val_t proc_val;
+    env_t env;
+} extend_rec_env_s, *extend_rec_env_t;
+
 void const_node_free(ast_const_t exp);
 void var_node_free(ast_var_t exp);
 void proc_node_free(ast_proc_t exp);
@@ -87,6 +107,8 @@ void call_node_free(ast_call_t exp);
 void report_ast_malloc_fail(const char* node_name);
 void report_exp_val_malloc_fail(const char *val_type);
 void report_invalid_exp_val(const char *val_type);
+void report_no_binding_found(symbol_t search_var);
+void report_invalid_env(env_t env);
 
 symbol_t symbol_new(const char* name) {
     symbol_t s = malloc(sizeof(symbol_s));
@@ -210,7 +232,7 @@ ast_node_t new_let_node(symbol_t id, ast_node_t exp1, ast_node_t exp2) {
 }
 
 ast_node_t new_diff_node(ast_node_t exp1, ast_node_t exp2) {
-    ast_diff_t e = malloc(sizeof(ast_diff_t));
+    ast_diff_t e = malloc(sizeof(ast_diff_s));
     if (e) {
         e->type = DIFF_EXP;
         e->exp1 = exp1;
@@ -403,8 +425,33 @@ exp_val_t new_proc_val(proc_t val) {
     }
 }
 
+exp_val_t copy_exp_val(exp_val_t val) {
+    exp_val_t cv = malloc(sizeof(exp_val_s));
+    if (cv) {
+        if (val->type == PROC_VAL) {
+            cv->type = PROC_VAL;
+            cv->pv = new_proc(val->pv->id, val->pv->body, val->pv->env);
+        } else {
+            memcpy(cv, val, sizeof(*val));
+        }
+        return cv;
+    } else {
+        fprintf(stderr, "failed to copy a exp value!\n");
+        abort();
+    }
+}
+
+void print_exp_val(exp_val_t val) {
+    printf("print exp val\n");
+}
+
 void exp_val_free(exp_val_t val) {
-    free(val);
+    if (val) {
+        if (val->type == PROC_VAL) {
+            proc_free(val->pv);
+        }
+        free(val);
+    }
 }
 
 boolean_t expval_to_bool(exp_val_t val) {
@@ -434,6 +481,199 @@ proc_t expval_to_proc(exp_val_t val) {
     }
 }
 
+env_t empty_env() {
+    env_t env = malloc(sizeof(env_s));
+    if (env) {
+        env->type = EMPTY_ENV;
+        return env;
+    } else {
+        fprintf(stderr, "failed to create a new empty env!\n");
+        abort();
+    }
+}
+
+env_t extend_env(symbol_t var, exp_val_t val, env_t env) {
+    extend_env_t e = malloc(sizeof(extend_env_s));
+    if (e) {
+        e->type = EXTEND_ENV;
+        e->var = var;
+        e->val = val;
+        e->env = env;
+        return (env_t)env;
+    } else {
+        fprintf(stderr, "failed to create a new extend env!\n");
+        abort();
+    }
+}
+
+env_t extend_env_rec(symbol_t p_name, symbol_t p_var, ast_node_t p_body, env_t env) {
+    extend_rec_env_t e = malloc(sizeof(extend_rec_env_s));
+    if (e) {
+        e->type = EXTEND_REC_ENV;
+        e->p_name = p_name;
+        e->p_var = p_var;
+        e->p_body = p_body;
+        e->proc_val = NULL;
+        e->env = env;
+        return (env_t)env;
+    } else {
+        fprintf(stderr, "failed to create a new extend rec env!\n");
+        abort();
+    }
+}
+
+exp_val_t apply_env(env_t env, symbol_t var) {
+    switch (env->type) {
+        case EMPTY_ENV: {
+            report_no_binding_found(var);
+            abort();
+        }
+        case EXTEND_ENV: {
+            extend_env_t e = (extend_env_t)env;
+            if (strcmp(e->var->name, var->name) == 0) {
+                return e->val;
+            } else {
+                apply_env(e->env, var);
+            }
+        }
+        case EXTEND_REC_ENV: {
+            extend_rec_env_t e = (extend_rec_env_t)env;
+            if (strcmp(e->p_name->name, var->name) == 0) {
+                if (e->proc_val) {
+                    return e->proc_val;
+                } else {
+                    e->proc_val = new_proc_val(new_proc(e->p_var, e->p_body, env));
+                    return e->proc_val;
+                }
+            } else {
+                apply_env(e->env, var);
+            }
+        }
+        default: {
+            report_invalid_env(env);
+            abort();
+        }
+    }
+}
+
+env_t env_pop(env_t env) {
+    switch (env->type) {
+        case EMPTY_ENV: {
+            free(env);
+            return NULL;
+        }
+        case EXTEND_ENV: {
+            extend_env_t e = (extend_env_t)env;
+            exp_val_free(e->val);
+            env_t next = e->env;
+            free(e);
+            return next;
+        }
+        case EXTEND_REC_ENV: {
+            extend_rec_env_t e = (extend_rec_env_t)env;
+            exp_val_free(e->proc_val);
+            env_t next = e->env;
+            free(e);
+            return next;
+        }
+        default: {
+            report_invalid_env(env);
+            abort();
+        }
+    }
+}
+
+void value_of_program(ast_program_t prgm) {
+    env_t e = empty_env();
+    env_t *current_env = &e;
+    exp_val_t val = value_of(prgm->exp, current_env);
+    print_exp_val(val);
+    exp_val_free(val);
+}
+
+exp_val_t value_of(ast_node_t node, env_t *env) {
+    switch (node->type) {
+        case CONST_EXP: {
+            ast_const_t exp = (ast_const_t)node;
+            return new_int_val(exp->num);
+        }
+        case VAR_EXP: {
+            ast_var_t exp = (ast_var_t)node;
+            return copy_exp_val(apply_env(*env, exp->var));
+        }
+        case PROC_EXP: {
+            ast_proc_t exp = (ast_proc_t)node;
+            return new_proc_val(new_proc(exp->var, exp->body, *env));
+        }
+        case LETREC_EXP: {
+            ast_letrec_t exp = (ast_letrec_t)node;
+            *env = extend_env_rec(exp->p_name, exp->p_var, exp->p_body, *env);
+            exp_val_t val = value_of(exp->letrec_body, env);
+            *env = env_pop(*env);
+            return val;
+        }
+        case ZERO_EXP: {
+            ast_zero_t exp = (ast_zero_t)node;
+            exp_val_t val = value_of(exp->exp1, env);
+            if (expval_to_int(val) == 0) {
+                exp_val_free(val);
+                return new_bool_val(TRUE);
+            } else {
+                exp_val_free(val);
+                return new_bool_val(FALSE);
+            }
+        }
+        case IF_EXP: {
+            ast_if_t exp = (ast_if_t)node;
+            exp_val_t val1 = value_of(exp->cond, env);
+            if (expval_to_bool(val1)) {
+                exp_val_free(val1);
+                value_of(exp->exp1, env);
+            } else {
+                exp_val_free(val1);
+                value_of(exp->exp2, env);
+            }
+        }
+        case LET_EXP: {
+            ast_let_t exp = (ast_let_t)node;
+            exp_val_t val1 = value_of(exp->exp1, env);
+            *env = extend_env(exp->id, val1, *env);
+            exp_val_t val2 = value_of(exp->exp2, env);
+            *env = env_pop(*env);
+            return val2;
+        }
+        case DIFF_EXP: {
+            ast_diff_t exp = (ast_diff_t)node;
+            exp_val_t val1 = value_of(exp->exp1, env);
+            exp_val_t val2 = value_of(exp->exp2, env);
+            int diff_val = expval_to_int(val1) - expval_to_int(val2);
+            exp_val_free(val1);
+            exp_val_free(val2);
+            return new_int_val(diff_val);
+        }
+        case CALL_EXP: {
+            ast_call_t exp = (ast_call_t)node;
+            exp_val_t rator_val = value_of(exp->rator, env);
+            exp_val_t rand_val = value_of(exp->rand, env);
+            exp_val_t call_val = apply_procedure(expval_to_proc(rator_val), rand_val);
+            exp_val_free(rator_val);
+            exp_val_free(rand_val);
+            return call_val;
+        }
+        default: {
+            fprintf(stderr, "unknown type of expression: %d\n", node->type);
+            abort();
+        }
+    }
+}
+
+exp_val_t apply_procedure(proc_t proc1, exp_val_t val) {
+    env_t *current_env = extend_env(proc1->id, val, proc1->env);
+    exp_val_t call_val = value_of(proc1->body, current_env);
+    *current_env = env_pop(*current_env);
+    return call_val;
+}
+
 void report_exp_val_malloc_fail(const char *val_type) {
     fprintf(stderr, "failed to create a new %s exp value!\n", val_type);
     abort();
@@ -443,15 +683,26 @@ void report_invalid_exp_val(const char *val_type) {
     fprintf(stderr, "not a valid exp val of type %s!\n", val_type);
 }
 
+void report_no_binding_found(symbol_t search_var) {
+    fprintf(stderr, "no binding for %s\n", search_var->name);
+}
+
+void report_invalid_env(env_t env) {
+    fprintf(stderr, "bad environment: %p", env);
+}
+
 int main(int argc, char *argv[]) {
     yyscan_t scaninfo = NULL;
     ast_program_t prgm = NULL;
     if (yylex_init_extra(symtab, &scaninfo) == 0) {
-        yyparse(scaninfo, symtab, &prgm);
-        yylex_destroy(scaninfo);
-        ast_program_free(prgm);
-        symbol_table_free(symtab);
-        return 0;
+        int v = yyparse(scaninfo, symtab, &prgm);
+        if (v == 0) {
+            value_of_program(prgm);
+            yylex_destroy(scaninfo);
+            ast_program_free(prgm);
+            symbol_table_free(symtab);
+            return 0;
+        }
     } else {
         fprintf(stderr, "Failed to initialize scanner!\n");
         exit(1);
