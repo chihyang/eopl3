@@ -120,11 +120,11 @@ symbol_t symbol_new(const char* name) {
         } else {
             free(s);
             report_ast_malloc_fail("symbol");
-            return NULL;
+            exit(1);
         }
     } else {
         report_ast_malloc_fail("symbol");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -135,7 +135,7 @@ ast_program_t new_ast_program(ast_node_t exp) {
         return p;
     } else {
         report_ast_malloc_fail("program");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -147,7 +147,7 @@ ast_node_t new_const_node(int num) {
         return (ast_node_t)e;
     } else {
         report_ast_malloc_fail("const");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -159,7 +159,7 @@ ast_node_t new_var_node(symbol_t id) {
         return (ast_node_t)e;
     } else {
         report_ast_malloc_fail("var");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -172,7 +172,7 @@ ast_node_t new_proc_node(symbol_t var, ast_node_t body) {
         return (ast_node_t)e;
     } else {
         report_ast_malloc_fail("proc");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -188,7 +188,7 @@ ast_node_t new_letrec_node(
         return (ast_node_t)e;
     } else {
         report_ast_malloc_fail("letrec");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -200,7 +200,7 @@ ast_node_t new_zero_node(ast_node_t exp) {
         return (ast_node_t)e;
     } else {
         report_ast_malloc_fail("zero");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -214,7 +214,7 @@ ast_node_t new_if_node(ast_node_t cond, ast_node_t exp1, ast_node_t exp2) {
         return (ast_node_t)e;
     } else {
         report_ast_malloc_fail("if");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -228,7 +228,7 @@ ast_node_t new_let_node(symbol_t id, ast_node_t exp1, ast_node_t exp2) {
         return (ast_node_t)e;
     } else {
         report_ast_malloc_fail("let");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -241,7 +241,7 @@ ast_node_t new_diff_node(ast_node_t exp1, ast_node_t exp2) {
         return (ast_node_t)e;
     } else {
         report_ast_malloc_fail("diff");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -254,7 +254,7 @@ ast_node_t new_call_node(ast_node_t exp1, ast_node_t exp2) {
         return (ast_node_t)e;
     } else {
         report_ast_malloc_fail("call");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -382,7 +382,7 @@ proc_t new_proc(symbol_t id, ast_node_t body, env_t env) {
         return p;
     } else {
         report_exp_val_malloc_fail("procedure");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -398,7 +398,7 @@ exp_val_t new_bool_val(boolean_t val) {
         return ev;
     } else {
         report_exp_val_malloc_fail("bool");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -410,7 +410,7 @@ exp_val_t new_int_val(int val) {
         return ev;
     } else {
         report_exp_val_malloc_fail("num");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -422,7 +422,7 @@ exp_val_t new_proc_val(proc_t val) {
         return ev;
     } else {
         report_exp_val_malloc_fail("procedure");
-        return NULL;
+        exit(1);
     }
 }
 
@@ -698,7 +698,6 @@ exp_val_t apply_procedure(proc_t proc1, exp_val_t val) {
 
 void report_exp_val_malloc_fail(const char *val_type) {
     fprintf(stderr, "failed to create a new %s exp value!\n", val_type);
-    exit(1);
 }
 
 void report_invalid_exp_val(const char *val_type) {
