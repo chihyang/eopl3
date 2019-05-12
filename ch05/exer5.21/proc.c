@@ -166,6 +166,7 @@ ast_node_t new_var_node(symbol_t id) {
 ast_node_t new_proc_node(symbol_t var, ast_node_t body) {
     ast_proc_t e = malloc(sizeof(ast_proc_s));
     if (e) {
+        e->type = PROC_EXP;
         e->var = var;
         e->body = body;
         return (ast_node_t)e;
@@ -248,8 +249,8 @@ ast_node_t new_call_node(ast_node_t exp1, ast_node_t exp2) {
     ast_call_t e = malloc(sizeof(ast_call_s));
     if (e) {
         e->type = CALL_EXP;
-        e->rand = exp1;
-        e->rator = exp2;
+        e->rator = exp1;
+        e->rand = exp2;
         return (ast_node_t)e;
     } else {
         report_ast_malloc_fail("call");
@@ -259,7 +260,7 @@ ast_node_t new_call_node(ast_node_t exp1, ast_node_t exp2) {
 
 void report_ast_malloc_fail(const char* node_name) {
     fprintf(stderr, "failed to create a new %s ast node!\n", node_name);
-    abort();
+    exit(1);
 }
 
 void ast_program_free(ast_program_t prgm) {
@@ -310,7 +311,7 @@ void ast_free(ast_node_t exp) {
             }
             default: {
                 fprintf(stderr, "Unknown type of exp: %d", exp->type);
-                abort();
+                exit(1);
             }
         }
     }
@@ -437,12 +438,29 @@ exp_val_t copy_exp_val(exp_val_t val) {
         return cv;
     } else {
         fprintf(stderr, "failed to copy a exp value!\n");
-        abort();
+        exit(1);
     }
 }
 
 void print_exp_val(exp_val_t val) {
-    printf("print exp val\n");
+    switch (val->type) {
+        case NUM_VAL: {
+            printf("%d\n", val->iv);
+            break;
+        }
+        case BOOL_VAL: {
+            printf("%s\n", val->bv == TRUE ? "#t" : "#f");
+            break;
+        }
+        case PROC_VAL: {
+            printf("(procedure (%s) ...)\n", val->pv->id->name);
+            break;
+        }
+        default: {
+            fprintf(stderr, "not a valid exp val: %d!\n", val->type);
+            break;
+        }
+    }
 }
 
 void exp_val_free(exp_val_t val) {
@@ -459,7 +477,7 @@ boolean_t expval_to_bool(exp_val_t val) {
         return val->bv;
     } else {
         report_invalid_exp_val("boolean");
-        abort();
+        exit(1);
     }
 }
 
@@ -468,7 +486,7 @@ int expval_to_int(exp_val_t val) {
         return val->iv;
     } else {
         report_invalid_exp_val("number");
-        abort();
+        exit(1);
     }
 }
 
@@ -477,7 +495,7 @@ proc_t expval_to_proc(exp_val_t val) {
         return val->pv;
     } else {
         report_invalid_exp_val("procedure");
-        abort();
+        exit(1);
     }
 }
 
@@ -488,7 +506,7 @@ env_t empty_env() {
         return env;
     } else {
         fprintf(stderr, "failed to create a new empty env!\n");
-        abort();
+        exit(1);
     }
 }
 
@@ -499,10 +517,10 @@ env_t extend_env(symbol_t var, exp_val_t val, env_t env) {
         e->var = var;
         e->val = val;
         e->env = env;
-        return (env_t)env;
+        return (env_t)e;
     } else {
         fprintf(stderr, "failed to create a new extend env!\n");
-        abort();
+        exit(1);
     }
 }
 
@@ -515,10 +533,10 @@ env_t extend_env_rec(symbol_t p_name, symbol_t p_var, ast_node_t p_body, env_t e
         e->p_body = p_body;
         e->proc_val = NULL;
         e->env = env;
-        return (env_t)env;
+        return (env_t)e;
     } else {
         fprintf(stderr, "failed to create a new extend rec env!\n");
-        abort();
+        exit(1);
     }
 }
 
@@ -526,14 +544,14 @@ exp_val_t apply_env(env_t env, symbol_t var) {
     switch (env->type) {
         case EMPTY_ENV: {
             report_no_binding_found(var);
-            abort();
+            exit(1);
         }
         case EXTEND_ENV: {
             extend_env_t e = (extend_env_t)env;
             if (strcmp(e->var->name, var->name) == 0) {
                 return e->val;
             } else {
-                apply_env(e->env, var);
+                return apply_env(e->env, var);
             }
         }
         case EXTEND_REC_ENV: {
@@ -546,12 +564,12 @@ exp_val_t apply_env(env_t env, symbol_t var) {
                     return e->proc_val;
                 }
             } else {
-                apply_env(e->env, var);
+                return apply_env(e->env, var);
             }
         }
         default: {
             report_invalid_env(env);
-            abort();
+            exit(1);
         }
     }
 }
@@ -578,7 +596,7 @@ env_t env_pop(env_t env) {
         }
         default: {
             report_invalid_env(env);
-            abort();
+            exit(1);
         }
     }
 }
@@ -589,6 +607,9 @@ void value_of_program(ast_program_t prgm) {
     exp_val_t val = value_of(prgm->exp, current_env);
     print_exp_val(val);
     exp_val_free(val);
+    while(*current_env) {
+        *current_env = env_pop(*current_env);
+    }
 }
 
 exp_val_t value_of(ast_node_t node, env_t *env) {
@@ -614,12 +635,12 @@ exp_val_t value_of(ast_node_t node, env_t *env) {
         }
         case ZERO_EXP: {
             ast_zero_t exp = (ast_zero_t)node;
-            exp_val_t val = value_of(exp->exp1, env);
-            if (expval_to_int(val) == 0) {
-                exp_val_free(val);
+            exp_val_t val1 = value_of(exp->exp1, env);
+            if (expval_to_int(val1) == 0) {
+                exp_val_free(val1);
                 return new_bool_val(TRUE);
             } else {
-                exp_val_free(val);
+                exp_val_free(val1);
                 return new_bool_val(FALSE);
             }
         }
@@ -628,10 +649,10 @@ exp_val_t value_of(ast_node_t node, env_t *env) {
             exp_val_t val1 = value_of(exp->cond, env);
             if (expval_to_bool(val1)) {
                 exp_val_free(val1);
-                value_of(exp->exp1, env);
+                return value_of(exp->exp1, env);
             } else {
                 exp_val_free(val1);
-                value_of(exp->exp2, env);
+                return value_of(exp->exp2, env);
             }
         }
         case LET_EXP: {
@@ -647,36 +668,38 @@ exp_val_t value_of(ast_node_t node, env_t *env) {
             exp_val_t val1 = value_of(exp->exp1, env);
             exp_val_t val2 = value_of(exp->exp2, env);
             int diff_val = expval_to_int(val1) - expval_to_int(val2);
-            exp_val_free(val1);
             exp_val_free(val2);
+            exp_val_free(val1);
             return new_int_val(diff_val);
         }
         case CALL_EXP: {
             ast_call_t exp = (ast_call_t)node;
             exp_val_t rator_val = value_of(exp->rator, env);
             exp_val_t rand_val = value_of(exp->rand, env);
-            exp_val_t call_val = apply_procedure(expval_to_proc(rator_val), rand_val);
-            exp_val_free(rator_val);
+            exp_val_t call_val = apply_procedure(expval_to_proc(rator_val),
+                                                 copy_exp_val(rand_val));
             exp_val_free(rand_val);
+            exp_val_free(rator_val);
             return call_val;
         }
         default: {
             fprintf(stderr, "unknown type of expression: %d\n", node->type);
-            abort();
+            exit(1);
         }
     }
 }
 
 exp_val_t apply_procedure(proc_t proc1, exp_val_t val) {
-    env_t *current_env = extend_env(proc1->id, val, proc1->env);
+    env_t env = extend_env(proc1->id, val, proc1->env);
+    env_t *current_env = &env;
     exp_val_t call_val = value_of(proc1->body, current_env);
-    *current_env = env_pop(*current_env);
+    env_pop(*current_env);
     return call_val;
 }
 
 void report_exp_val_malloc_fail(const char *val_type) {
     fprintf(stderr, "failed to create a new %s exp value!\n", val_type);
-    abort();
+    exit(1);
 }
 
 void report_invalid_exp_val(const char *val_type) {
@@ -698,11 +721,11 @@ int main(int argc, char *argv[]) {
         int v = yyparse(scaninfo, symtab, &prgm);
         if (v == 0) {
             value_of_program(prgm);
-            yylex_destroy(scaninfo);
             ast_program_free(prgm);
-            symbol_table_free(symtab);
-            return 0;
         }
+        yylex_destroy(scaninfo);
+        symbol_table_free(symtab);
+        return 0;
     } else {
         fprintf(stderr, "Failed to initialize scanner!\n");
         exit(1);
