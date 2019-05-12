@@ -721,8 +721,8 @@ int main(int argc, char *argv[]) {
         int v = yyparse(scaninfo, symtab, &prgm);
         if (v == 0) {
             value_of_program(prgm);
-            ast_program_free(prgm);
         }
+        ast_program_free(prgm);
         yylex_destroy(scaninfo);
         symbol_table_free(symtab);
         return 0;

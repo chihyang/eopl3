@@ -25,6 +25,7 @@
 %type   <exp>           expression const_exp var_exp proc_exp letrec_exp zero_exp if_exp let_exp diff_exp call_exp
 %type   <prgm>          program
 
+%destructor { ast_free($$); } expression
 %%
 
 program:        expression
