@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0.2)
 project(PROC_LANG)
 
 set(CMAKE_C_FLAGS "$ENV{CFLAGS} -std=c99 -fPIC -Wall -Wno-deprecated -Winline")

@@ -64,7 +64,7 @@ typedef struct proc_s {
     symbol_t id;
     ast_node_t body;
     env_t env;
-} proc_s, *proc_t;
+} proc_s;
 
 typedef struct exp_val_s {
     EXP_VAL type;
@@ -72,12 +72,12 @@ typedef struct exp_val_s {
         boolean_t bv;
         int iv;
         proc_t pv;
-    };
-} exp_val_s, *exp_val_t;
+    } val;
+} exp_val_s;
 
 typedef struct env_s {
     ENV_TYPE type;
-} env_s, *env_t;
+} env_s;
 
 typedef struct extend_env_s {
     ENV_TYPE type;
@@ -394,7 +394,7 @@ exp_val_t new_bool_val(boolean_t val) {
     exp_val_t ev = malloc(sizeof(exp_val_s));
     if (ev) {
         ev->type = BOOL_VAL;
-        ev->bv = val;
+        ev->val.bv = val;
         return ev;
     } else {
         report_exp_val_malloc_fail("bool");
@@ -406,7 +406,7 @@ exp_val_t new_int_val(int val) {
     exp_val_t ev = malloc(sizeof(exp_val_s));
     if (ev) {
         ev->type = NUM_VAL;
-        ev->iv = val;
+        ev->val.iv = val;
         return ev;
     } else {
         report_exp_val_malloc_fail("num");
@@ -418,7 +418,7 @@ exp_val_t new_proc_val(proc_t val) {
     exp_val_t ev = malloc(sizeof(exp_val_s));
     if (ev) {
         ev->type = PROC_VAL;
-        ev->pv = val;
+        ev->val.pv = val;
         return ev;
     } else {
         report_exp_val_malloc_fail("procedure");
@@ -431,7 +431,7 @@ exp_val_t copy_exp_val(exp_val_t val) {
     if (cv) {
         if (val->type == PROC_VAL) {
             cv->type = PROC_VAL;
-            cv->pv = new_proc(val->pv->id, val->pv->body, val->pv->env);
+            cv->val.pv = new_proc(val->val.pv->id, val->val.pv->body, val->val.pv->env);
         } else {
             memcpy(cv, val, sizeof(*val));
         }
@@ -445,15 +445,15 @@ exp_val_t copy_exp_val(exp_val_t val) {
 void print_exp_val(exp_val_t val) {
     switch (val->type) {
         case NUM_VAL: {
-            printf("%d\n", val->iv);
+            printf("%d\n", val->val.iv);
             break;
         }
         case BOOL_VAL: {
-            printf("%s\n", val->bv == TRUE ? "#t" : "#f");
+            printf("%s\n", val->val.bv == TRUE ? "#t" : "#f");
             break;
         }
         case PROC_VAL: {
-            printf("(procedure (%s) ...)\n", val->pv->id->name);
+            printf("(procedure (%s) ...)\n", val->val.pv->id->name);
             break;
         }
         default: {
@@ -466,7 +466,7 @@ void print_exp_val(exp_val_t val) {
 void exp_val_free(exp_val_t val) {
     if (val) {
         if (val->type == PROC_VAL) {
-            proc_free(val->pv);
+            proc_free(val->val.pv);
         }
         free(val);
     }
@@ -474,7 +474,7 @@ void exp_val_free(exp_val_t val) {
 
 boolean_t expval_to_bool(exp_val_t val) {
     if (val->type == BOOL_VAL) {
-        return val->bv;
+        return val->val.bv;
     } else {
         report_invalid_exp_val("boolean");
         exit(1);
@@ -483,7 +483,7 @@ boolean_t expval_to_bool(exp_val_t val) {
 
 int expval_to_int(exp_val_t val) {
     if (val->type == NUM_VAL) {
-        return val->iv;
+        return val->val.iv;
     } else {
         report_invalid_exp_val("number");
         exit(1);
@@ -492,7 +492,7 @@ int expval_to_int(exp_val_t val) {
 
 proc_t expval_to_proc(exp_val_t val) {
     if (val->type == PROC_VAL) {
-        return val->pv;
+        return val->val.pv;
     } else {
         report_invalid_exp_val("procedure");
         exit(1);

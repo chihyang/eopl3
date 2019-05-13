@@ -36,7 +36,6 @@ typedef struct ast_program_s {
     ast_node_t exp;
 } ast_program_s, *ast_program_t;
 
-
 ast_program_t new_ast_program(ast_node_t exp);
 ast_node_t new_const_node(int num);
 ast_node_t new_var_node(symbol_t id);
