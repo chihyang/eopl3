@@ -97,7 +97,7 @@ typedef struct extend_rec_env_s {
 
 typedef struct continuation_s {
     CONT_TYPE type;
-} continuation_s, *continuation_t;
+} continuation_s;
 
 typedef struct zero1_cont_s {
     CONT_TYPE type;
