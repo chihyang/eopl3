@@ -108,7 +108,7 @@ typedef struct let_cont_s {
     CONT_TYPE type;
     symbol_t var;
     ast_node_t body;
-    env_t *env;
+    env_t env;
     continuation_t cont;
 } let_cont_s, *let_cont_t;
 
@@ -116,14 +116,14 @@ typedef struct if_test_cont_s {
     CONT_TYPE type;
     ast_node_t exp2;
     ast_node_t exp3;
-    env_t *env;
+    env_t env;
     continuation_t cont;
 } if_test_cont_s, *if_test_cont_t;
 
 typedef struct diff1_cont_s {
     CONT_TYPE type;
     ast_node_t exp2;
-    env_t *env;
+    env_t env;
     continuation_t cont;
 } diff1_cont_s, *diff1_cont_t;
 
@@ -136,7 +136,7 @@ typedef struct diff2_cont_s {
 typedef struct rator_cont_s {
     CONT_TYPE type;
     ast_node_t exp;
-    env_t *env;
+    env_t env;
     continuation_t cont;
 } rator_cont_s, *rator_cont_t;
 
@@ -148,13 +148,13 @@ typedef struct rand_cont_s {
 
 typedef struct letrec_cont_s {
     CONT_TYPE type;
-    env_t *env;
+    env_t env;
     continuation_t cont;
 } letrec_cont_s, *letrec_cont_t;
 
 typedef struct let2_cont_s {
     CONT_TYPE type;
-    env_t *env;
+    env_t env;
     continuation_t cont;
 } let2_cont_s, *let2_cont_t;
 
@@ -167,9 +167,23 @@ typedef struct apply_proc_cont_s {
 
 typedef struct apply_proc2_cont_s {
     CONT_TYPE type;
-    env_t *env;
+    env_t env;
     continuation_t cont;
 } apply_proc2_cont_s, *apply_proc2_cont_t;
+
+typedef struct value_of_bounce_s {
+    ast_node_t exp;
+    env_t env;
+    continuation_t cont;
+} value_of_bounce_s, *value_of_bounce_t;
+
+typedef struct bounce_s {
+    BOUNCE_TYPE type;
+    union {
+        exp_val_t final_answer;
+        value_of_bounce_s value_of;
+    } val;
+} bounce_s;
 
 void const_node_free(ast_const_t exp);
 void var_node_free(ast_var_t exp);
@@ -185,6 +199,7 @@ void report_exp_val_malloc_fail(const char *val_type);
 void report_invalid_exp_val(const char *val_type);
 void report_no_binding_found(symbol_t search_var);
 void report_invalid_env(env_t env);
+void report_cont_build_fail(const char* name);
 
 symbol_t symbol_new(const char* name) {
     symbol_t s = malloc(sizeof(symbol_s));
@@ -677,15 +692,231 @@ env_t env_pop(env_t env) {
     }
 }
 
+continuation_t new_zero1_cont(continuation_t cont) {
+    zero1_cont_t c = malloc(sizeof(zero1_cont_s));
+    if (c) {
+        c->type = ZERO1_CONT;
+        c->cont = cont;
+        return (continuation_t)c;
+    } else {
+        report_cont_build_fail("zero1");
+        exit(1);
+    }
+}
+
+continuation_t new_let_cont(symbol_t var, ast_node_t body, env_t env, continuation_t cont) {
+    let_cont_t c = malloc(sizeof(let_cont_s));
+    if (c) {
+        c->type = LET_CONT;
+        c->var = var;
+        c->body = body;
+        c->env = env;
+        c->cont = cont;
+        return (continuation_t)c;
+    } else {
+        report_cont_build_fail("let");
+        exit(1);
+    }
+}
+
+continuation_t new_if_test_cont(ast_node_t exp2, ast_node_t exp3, env_t env, continuation_t cont) {
+    if_test_cont_t c = malloc(sizeof(if_test_cont_s));
+    if (c) {
+        c->type = IF_TEST_CONT;
+        c->exp2 = exp2;
+        c->exp3 = exp3;
+        c->env = env;
+        c->cont = cont;
+        return (continuation_t)c;
+    } else {
+        report_cont_build_fail("if test");
+        exit(1);
+    }
+}
+
+continuation_t new_diff1_cont(ast_node_t exp2, env_t env, continuation_t cont) {
+    diff1_cont_t c = malloc(sizeof(diff1_cont_s));
+    if (c) {
+        c->type = DIFF1_CONT;
+        c->exp2 = exp2;
+        c->env = env;
+        c->cont = cont;
+        return (continuation_t)c;
+    } else {
+        report_cont_build_fail("diff1");
+        exit(1);
+    }
+}
+
+continuation_t new_diff2_cont(exp_val_t val, continuation_t cont) {
+    diff2_cont_t c = malloc(sizeof(diff2_cont_s));
+    if (c) {
+        c->type = DIFF2_CONT;
+        c->val = val;
+        c->cont = cont;
+        return (continuation_t)c;
+    } else {
+        report_cont_build_fail("diff2");
+        exit(1);
+    }
+}
+
+continuation_t new_rator_cont(ast_node_t exp, env_t env, continuation_t cont) {
+    rator_cont_t c = malloc(sizeof(rator_cont_s));
+    if (c) {
+        c->type = RATOR_CONT;
+        c->exp = exp;
+        c->env = env;
+        c->cont = cont;
+        return (continuation_t)c;
+    } else {
+        report_cont_build_fail("rator");
+        exit(1);
+    }
+}
+
+continuation_t new_rand_cont(exp_val_t val, continuation_t cont) {
+    rand_cont_t c = malloc(sizeof(rand_cont_s));
+    if (c) {
+        c->type = RAND_CONT;
+        c->val = val;
+        c->cont = cont;
+        return (continuation_t)c;
+    } else {
+        report_cont_build_fail("rand");
+        exit(1);
+    }
+}
+
+continuation_t new_letrec_cont(env_t env, continuation_t cont) {
+    letrec_cont_t c = malloc(sizeof(letrec_cont_s));
+    if (c) {
+        c->type = LETREC_CONT;
+        c->env = env;
+        c->cont = cont;
+        return (continuation_t)c;
+    } else {
+        report_cont_build_fail("letrec");
+        exit(1);
+    }
+}
+
+continuation_t new_let2_cont(env_t env, continuation_t cont) {
+    let2_cont_t c = malloc(sizeof(let2_cont_s));
+    if (c) {
+        c->type = LET2_CONT;
+        c->env = env;
+        c->cont = cont;
+        return (continuation_t)c;
+    } else {
+        report_cont_build_fail("let2");
+        exit(1);
+    }
+}
+
+continuation_t new_apply_proc_cont(exp_val_t rator, exp_val_t rand, continuation_t cont) {
+    apply_proc_cont_t c = malloc(sizeof(apply_proc_cont_s));
+    if (c) {
+        c->type = APPLY_PROC_CONT;
+        c->rator = rator;
+        c->rand = rand;
+        c->cont = cont;
+        return (continuation_t)c;
+    } else {
+        report_cont_build_fail("apply proc");
+        exit(1);
+    }
+}
+
+continuation_t new_apply_proc2_cont(env_t env, continuation_t cont) {
+    apply_proc2_cont_t c = malloc(sizeof(apply_proc2_cont_s));
+    if (c) {
+        c->type = APPLY_PROC2_CONT;
+        c->env = env;
+        c->cont = cont;
+        return (continuation_t)c;
+    } else {
+        report_cont_build_fail("apply proc2");
+        exit(1);
+    }
+}
+
+void zero1_cont_free(zero1_cont_t cont) {
+    if (cont) {
+        free(cont);
+    }
+}
+
+void let_cont_free(let_cont_t cont) {
+    if (cont) {
+        free(cont);
+    }
+}
+
+void if_test_cont_free(if_test_cont_t cont) {
+    if (cont) {
+        free(cont);
+    }
+}
+
+void diff1_cont_free(diff1_cont_t cont) {
+    if (cont) {
+        free(cont);
+    }
+}
+
+void diff2_cont_free(diff2_cont_t cont) {
+    if (cont) {
+        free(cont);
+    }
+}
+
+void rator_cont_free(rator_cont_t cont) {
+    if (cont) {
+        free(cont);
+    }
+}
+
+void rand_cont_free(rand_cont_t cont) {
+    if (cont) {
+        free(cont);
+    }
+}
+
+void letrec_cont_free(letrec_cont_t cont) {
+    if (cont) {
+        free(cont);
+    }
+}
+
+void let2_cont_free(let2_cont_t cont) {
+    if (cont) {
+        free(cont);
+    }
+}
+
+void apply_proc_cont_free(apply_proc_cont_t cont) {
+    if (cont) {
+        free(cont);
+    }
+}
+
+void apply_proc2_cont_free(apply_proc2_cont_t cont) {
+    if (cont) {
+        free(cont);
+    }
+}
+
 void value_of_program(ast_program_t prgm) {
     env_t e = empty_env();
-    env_t *current_env = &e;
-    continuation_s c = { END_CONT };
-    exp_val_t val = value_of_k(prgm->exp, current_env, &c);
+    continuation_t c = malloc(sizeof(continuation_s));
+    c->type = END_CONT;
+    exp_val_t val = trampoline(value_of_k(prgm->exp, e, c));
     print_exp_val(val);
+    free(c);
     exp_val_free(val);
-    while(*current_env) {
-        *current_env = env_pop(*current_env);
+    while(e) {
+        e = env_pop(e);
     }
 }
 
@@ -789,80 +1020,119 @@ void report_invalid_env(env_t env) {
     fprintf(stderr, "bad environment: %p", env);
 }
 
-exp_val_t apply_cont(continuation_t cont, exp_val_t val) {
+
+void report_cont_build_fail(const char* name) {
+    fprintf(stderr, "failed to create a new %s continuation!\n", name);
+}
+
+bounce_s apply_cont(continuation_t cont, exp_val_t val) {
     switch(cont->type) {
         case END_CONT: {
             printf("End of computation.\n");
-            return val;
+            bounce_s bn = { .type = EXPVAL_BOUNCE, .val.final_answer = val };
+            return bn;
         }
         case ZERO1_CONT: {
             zero1_cont_t zc = (zero1_cont_t)cont;
             if (expval_to_int(val) == 0) {
                 exp_val_free(val);
-                return apply_cont(zc->cont, new_bool_val(TRUE));
+                continuation_t c = zc->cont;
+                zero1_cont_free(zc);
+                return apply_cont(c, new_bool_val(TRUE));
             } else {
                 exp_val_free(val);
-                return apply_cont(zc->cont, new_bool_val(FALSE));
+                continuation_t c = zc->cont;
+                zero1_cont_free(zc);
+                return apply_cont(c, new_bool_val(FALSE));
             }
         }
         case LET_CONT: {
             let_cont_t l1c = (let_cont_t)cont;
-            *l1c->env = extend_env(l1c->var, val, *l1c->env);
-            let2_cont_s l2c = { LET2_CONT, l1c->env, l1c->cont };
-            return value_of_k(l1c->body, l1c->env, (continuation_t)(&l2c));
+            l1c->env = extend_env(l1c->var, val, l1c->env);
+            continuation_t l2c = new_let2_cont(l1c->env, l1c->cont);
+            ast_node_t body = l1c->body;
+            env_t env = l1c->env;
+            let_cont_free(l1c);
+            return value_of_k(body, env, l2c);
         }
         case LET2_CONT: {
             let2_cont_t l2c = (let2_cont_t)cont;
-            *l2c->env = env_pop(*l2c->env);
-            return apply_cont(l2c->cont, val);
+            l2c->env = env_pop(l2c->env);
+            continuation_t c = l2c->cont;
+            let2_cont_free(l2c);
+            return apply_cont(c, val);
         }
         case LETREC_CONT: {
             letrec_cont_t lrc = (letrec_cont_t)cont;
-            *lrc->env = env_pop(*lrc->env);
-            return apply_cont(lrc->cont, val);
+            lrc->env = env_pop(lrc->env);
+            continuation_t c = lrc->cont;
+            letrec_cont_free(lrc);
+            return apply_cont(c, val);
         }
         case IF_TEST_CONT: {
             if_test_cont_t ic = (if_test_cont_t)cont;
             if (expval_to_bool(val)) {
                 exp_val_free(val);
-                return value_of_k(ic->exp2, ic->env, ic->cont);
+                ast_node_t exp2 = ic->exp2;
+                env_t e = ic->env;
+                continuation_t c = ic->cont;
+                if_test_cont_free(ic);
+                return value_of_k(exp2, e, c);
             } else {
                 exp_val_free(val);
-                return value_of_k(ic->exp3, ic->env, ic->cont);
+                ast_node_t exp3 = ic->exp3;
+                env_t e = ic->env;
+                continuation_t c = ic->cont;
+                if_test_cont_free(ic);
+                return value_of_k(exp3, e, c);
             }
         }
         case DIFF1_CONT: {
             diff1_cont_t d1c = (diff1_cont_t)cont;
-            diff2_cont_s d2c = { DIFF2_CONT, val, d1c->cont };
-            return value_of_k(d1c->exp2, d1c->env, (continuation_t)(&d2c));
+            continuation_t d2c = new_diff2_cont(val, d1c->cont);
+            ast_node_t exp2 = d1c->exp2;
+            env_t env = d1c->env;
+            diff1_cont_free(d1c);
+            return value_of_k(exp2, env, d2c);
         }
         case DIFF2_CONT: {
             diff2_cont_t d2c = (diff2_cont_t)cont;
             int diff_val = expval_to_int(d2c->val) - expval_to_int(val);
             exp_val_free(val);
             exp_val_free(d2c->val);
-            return apply_cont(d2c->cont, new_int_val(diff_val));
+            continuation_t c = d2c->cont;
+            diff2_cont_free(d2c);
+            return apply_cont(c, new_int_val(diff_val));
         }
         case RATOR_CONT: {
             rator_cont_t rtc = (rator_cont_t)cont;
-            rand_cont_s rnc = { RAND_CONT, val, rtc->cont };
-            return value_of_k(rtc->exp, rtc->env, (continuation_t)(&rnc));
+            continuation_t rnc = new_rand_cont(val, rtc->cont);
+            ast_node_t exp = rtc->exp;
+            env_t env = rtc->env;
+            rator_cont_free(rtc);
+            return value_of_k(exp, env, rnc);
         }
         case RAND_CONT: {
             rand_cont_t rnc = (rand_cont_t)cont;
-            apply_proc_cont_s apc = { APPLY_PROC_CONT, rnc->val, val, rnc->cont };
-            return apply_procedure_k(expval_to_proc(rnc->val), val, (continuation_t)(&apc));
+            continuation_t apc = new_apply_proc_cont(rnc->val, val, rnc->cont);
+            exp_val_t v = rnc->val;
+            rand_cont_free(rnc);
+            return apply_procedure_k(expval_to_proc(v), val, apc);
         }
         case APPLY_PROC_CONT: {
             apply_proc_cont_t apc = (apply_proc_cont_t)cont;
             exp_val_free(apc->rator);
             exp_val_free(apc->rand);
-            return apply_cont(apc->cont, val);
+            continuation_t c = apc->cont;
+            apply_proc_cont_free(apc);
+            return apply_cont(c, val);
         }
         case APPLY_PROC2_CONT: {
             apply_proc2_cont_t ap2c = (apply_proc2_cont_t)cont;
-            env_pop(*ap2c->env);
-            return apply_cont(ap2c->cont, val);
+            ap2c->env = env_pop(ap2c->env);
+            continuation_t c = ap2c->cont;
+            apply_proc2_cont_free(ap2c);
+            return apply_cont(c, val);
         }
         default: {
             fprintf(stderr, "unknown type of continuation: %d", cont->type);
@@ -871,13 +1141,15 @@ exp_val_t apply_cont(continuation_t cont, exp_val_t val) {
     }
 }
 
-exp_val_t apply_procedure_k(proc_t proc1, exp_val_t val, continuation_t cont) {
+bounce_s apply_procedure_k(proc_t proc1, exp_val_t val, continuation_t cont) {
     env_t env = extend_env(proc1->id, copy_exp_val(val), proc1->env);
-    apply_proc2_cont_s ap2c = { APPLY_PROC2_CONT, &env, cont };
-    return value_of_k(proc1->body, &env, (continuation_t)(&ap2c));
+    continuation_t ap2c = new_apply_proc2_cont(env, cont);
+    value_of_bounce_s vb = { proc1->body, env, (continuation_t)ap2c };
+    bounce_s bnc = { .type = VALUE_OF_BOUNCE, .val.value_of = vb };
+    return bnc;
 }
 
-exp_val_t value_of_k(ast_node_t node, env_t *env, continuation_t cont) {
+bounce_s value_of_k(ast_node_t node, env_t env, continuation_t cont) {
     switch (node->type) {
         case CONST_EXP: {
             ast_const_t exp = (ast_const_t)node;
@@ -885,49 +1157,55 @@ exp_val_t value_of_k(ast_node_t node, env_t *env, continuation_t cont) {
         }
         case VAR_EXP: {
             ast_var_t exp = (ast_var_t)node;
-            return apply_cont(cont, copy_exp_val(apply_env(*env, exp->var)));
+            return apply_cont(cont, copy_exp_val(apply_env(env, exp->var)));
         }
         case PROC_EXP: {
             ast_proc_t exp = (ast_proc_t)node;
-            return apply_cont(cont, new_proc_val(new_proc(exp->var, exp->body, *env)));
+            return apply_cont(cont, new_proc_val(new_proc(exp->var, exp->body, env)));
         }
         case LETREC_EXP: {
             ast_letrec_t exp = (ast_letrec_t)node;
-            *env = extend_env_rec(exp->p_name, exp->p_var, exp->p_body, *env);
-            letrec_cont_s lrc = { LETREC_CONT, env, cont };
-            return value_of_k(exp->letrec_body, env, (continuation_t)(&lrc));
+            env = extend_env_rec(exp->p_name, exp->p_var, exp->p_body, env);
+            continuation_t lrc = new_letrec_cont(env, cont);
+            return value_of_k(exp->letrec_body, env, lrc);
         }
         case ZERO_EXP: {
             ast_zero_t exp = (ast_zero_t)node;
-            zero1_cont_s zc = { ZERO1_CONT, cont };
-            return value_of_k(exp->exp1, env, (continuation_t)(&zc));
+            continuation_t zc = new_zero1_cont(cont);
+            return value_of_k(exp->exp1, env, zc);
         }
         case IF_EXP: {
             ast_if_t exp = (ast_if_t)node;
-            if_test_cont_s ic = { IF_TEST_CONT, exp->exp1, exp->exp2, env, cont };
-            return value_of_k(exp->cond, env, (continuation_t)(&ic));
+            continuation_t ic = new_if_test_cont(exp->exp1, exp->exp2, env, cont);
+            return value_of_k(exp->cond, env, ic);
         }
         case LET_EXP: {
             ast_let_t exp = (ast_let_t)node;
-            let_cont_s lc = { LET_CONT, exp->id, exp->exp2, env, cont };
-            return value_of_k(exp->exp1, env, (continuation_t)(&lc));
+            continuation_t lc = new_let_cont(exp->id, exp->exp2, env, cont);
+            return value_of_k(exp->exp1, env, lc);
         }
         case DIFF_EXP: {
             ast_diff_t exp = (ast_diff_t)node;
-            diff1_cont_s dc = { DIFF1_CONT, exp->exp2, env, cont };
-            return value_of_k(exp->exp1, env, (continuation_t)(&dc));
+            continuation_t dc = new_diff1_cont(exp->exp2, env, cont);
+            return value_of_k(exp->exp1, env, dc);
         }
         case CALL_EXP: {
             ast_call_t exp = (ast_call_t)node;
-            rator_cont_s rc = { RATOR_CONT, exp->rand, env, cont };
-            return value_of_k(exp->rator, env, (continuation_t)(&rc));
+            continuation_t rc = new_rator_cont(exp->rand, env, cont);
+            return value_of_k(exp->rator, env, rc);
         }
         default: {
             fprintf(stderr, "unknown type of expression: %d\n", node->type);
-            return new_int_val(0);
+            exit(1);
         }
     }
-    return new_int_val(0);
+}
+
+exp_val_t trampoline(bounce_s bnc) {
+    while (bnc.type != EXPVAL_BOUNCE) {
+        bnc = value_of_k(bnc.val.value_of.exp, bnc.val.value_of.env, bnc.val.value_of.cont);
+    }
+    return bnc.val.final_answer;
 }
 
 int main(int argc, char *argv[]) {

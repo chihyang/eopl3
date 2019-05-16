@@ -116,6 +116,11 @@ typedef enum {
 typedef struct continuation_s *continuation_t;
 
 /* bounce */
+typedef enum {
+    EXPVAL_BOUNCE = 0x01,
+    VALUE_OF_BOUNCE
+} BOUNCE_TYPE;
+
 typedef struct bounce_s *bounce_t;
 
 /* value-of */
@@ -123,10 +128,10 @@ exp_val_t value_of(ast_node_t node, env_t *env);
 exp_val_t apply_procedure(proc_t proc1, exp_val_t val);
 
 /* value-of/k */
-exp_val_t value_of_k(ast_node_t node, env_t *env, continuation_t cont);
-exp_val_t apply_cont(continuation_t cont, exp_val_t val);
-exp_val_t apply_procedure_k(proc_t proc1, exp_val_t val, continuation_t cont);
-struct exp_val_s trampoline(bounce_t bnc);
+struct bounce_s value_of_k(ast_node_t node, env_t env, continuation_t cont);
+struct bounce_s apply_cont(continuation_t cont, exp_val_t val);
+struct bounce_s apply_procedure_k(proc_t proc1, exp_val_t val, continuation_t cont);
+exp_val_t trampoline(struct bounce_s bnc);
 
 void value_of_program(ast_program_t prgm);
 
