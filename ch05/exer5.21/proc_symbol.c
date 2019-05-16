@@ -29,7 +29,7 @@ symbol_t symbol_lookup(symbol_t table, char *name) {
             sp = table; /* try the next entry */
         }
     }
-    yyerror(table, "symbol table overflow\n");
+    yyerror(NULL, table, NULL, "symbol table overflow\n");
     abort(); /* tried them all, table is full */
 }
 

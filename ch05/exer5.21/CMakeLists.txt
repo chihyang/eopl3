@@ -23,6 +23,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(proc
   proc.c
-  symbol_table.c
+  proc_symbol.c
   ${BISON_PROC_PARSER_OUTPUTS}
   ${FLEX_PROC_SCANNER_OUTPUTS})
