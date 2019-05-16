@@ -1,4 +1,7 @@
 %{
+#define YYERROR_VERBOSE
+
+#include <stdarg.h>
 #include <stdio.h>
 #include "proc.h"
 #include "proc_parser.h"
@@ -79,6 +82,11 @@ call_exp:       '(' expression expression ')'
 
 %%
 
-void yyerror(char *s) {
-    fprintf(stderr, "error: %s\n", s);
+void yyerror(void *lex, symbol_t table, ast_program_t *prgm, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    fprintf(stderr, "error: ");
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, "\n");
+    va_end(ap);
 }

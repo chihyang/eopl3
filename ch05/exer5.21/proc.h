@@ -135,4 +135,7 @@ exp_val_t trampoline(struct bounce_s bnc);
 
 void value_of_program(ast_program_t prgm);
 
+/* error reporter */
+void yyerror(void *lex, symbol_t table, ast_program_t *prgm, const char *fmt, ...);
+
 #endif
