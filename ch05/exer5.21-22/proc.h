@@ -124,7 +124,7 @@ typedef enum {
 typedef struct bounce_s *bounce_t;
 
 /* value-of */
-exp_val_t value_of(ast_node_t node, env_t *env);
+exp_val_t value_of(ast_node_t node, env_t env);
 exp_val_t apply_procedure(proc_t proc1, exp_val_t val);
 void value_of_program(ast_program_t prgm);
 

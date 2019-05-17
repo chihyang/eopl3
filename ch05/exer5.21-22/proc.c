@@ -909,7 +909,7 @@ void apply_proc2_cont_free(apply_proc2_cont_t cont) {
 
 void value_of_program(ast_program_t prgm) {
     env_t e = empty_env();
-    exp_val_t val = value_of(prgm->exp, &e);
+    exp_val_t val = value_of(prgm->exp, e);
     print_exp_val(val);
     exp_val_free(val);
     while(e) {
@@ -930,7 +930,7 @@ void value_of_program_k(ast_program_t prgm) {
     }
 }
 
-exp_val_t value_of(ast_node_t node, env_t *env) {
+exp_val_t value_of(ast_node_t node, env_t env) {
     switch (node->type) {
         case CONST_EXP: {
             ast_const_t exp = (ast_const_t)node;
@@ -938,17 +938,17 @@ exp_val_t value_of(ast_node_t node, env_t *env) {
         }
         case VAR_EXP: {
             ast_var_t exp = (ast_var_t)node;
-            return copy_exp_val(apply_env(*env, exp->var));
+            return copy_exp_val(apply_env(env, exp->var));
         }
         case PROC_EXP: {
             ast_proc_t exp = (ast_proc_t)node;
-            return new_proc_val(new_proc(exp->var, exp->body, *env));
+            return new_proc_val(new_proc(exp->var, exp->body, env));
         }
         case LETREC_EXP: {
             ast_letrec_t exp = (ast_letrec_t)node;
-            *env = extend_env_rec(exp->p_name, exp->p_var, exp->p_body, *env);
+            env = extend_env_rec(exp->p_name, exp->p_var, exp->p_body, env);
             exp_val_t val = value_of(exp->letrec_body, env);
-            *env = env_pop(*env);
+            env = env_pop(env);
             return val;
         }
         case ZERO_EXP: {
@@ -976,9 +976,9 @@ exp_val_t value_of(ast_node_t node, env_t *env) {
         case LET_EXP: {
             ast_let_t exp = (ast_let_t)node;
             exp_val_t val1 = value_of(exp->exp1, env);
-            *env = extend_env(exp->id, val1, *env);
+            env = extend_env(exp->id, val1, env);
             exp_val_t val2 = value_of(exp->exp2, env);
-            *env = env_pop(*env);
+            env = env_pop(env);
             return val2;
         }
         case DIFF_EXP: {
@@ -1008,9 +1008,8 @@ exp_val_t value_of(ast_node_t node, env_t *env) {
 
 exp_val_t apply_procedure(proc_t proc1, exp_val_t val) {
     env_t env = extend_env(proc1->id, copy_exp_val(val), proc1->env);
-    env_t *current_env = &env;
-    exp_val_t call_val = value_of(proc1->body, current_env);
-    env_pop(*current_env);
+    exp_val_t call_val = value_of(proc1->body, env);
+    env_pop(env);
     return call_val;
 }
 
@@ -1224,7 +1223,7 @@ int main(int argc, char *argv[]) {
     if (yylex_init_extra(symtab, &scaninfo) == 0) {
         int v = yyparse(scaninfo, symtab, &prgm);
         if (v == 0) {
-            value_of_program_k(prgm);
+            value_of_program(prgm);
         }
         ast_program_free(prgm);
         yylex_destroy(scaninfo);
