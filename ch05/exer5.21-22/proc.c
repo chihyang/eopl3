@@ -77,10 +77,12 @@ typedef struct exp_val_s {
 
 typedef struct env_s {
     ENV_TYPE type;
+    int ref;
 } env_s;
 
 typedef struct extend_env_s {
     ENV_TYPE type;
+    int ref;
     symbol_t var;
     exp_val_t val;
     env_t env;
@@ -88,6 +90,7 @@ typedef struct extend_env_s {
 
 typedef struct extend_rec_env_s {
     ENV_TYPE type;
+    int ref;
     symbol_t p_name;
     symbol_t p_var;
     ast_node_t p_body;
@@ -469,6 +472,7 @@ proc_t new_proc(symbol_t id, ast_node_t body, env_t env) {
     if (p) {
         p->id = id;
         p->body = body;
+        env->ref += 1;
         p->env = env;
         return p;
     } else {
@@ -478,7 +482,10 @@ proc_t new_proc(symbol_t id, ast_node_t body, env_t env) {
 }
 
 void proc_free(proc_t p) {
-    free(p);
+    if (p) {
+        env_pop(p->env);
+        free(p);
+    }
 }
 
 exp_val_t new_bool_val(boolean_t val) {
@@ -594,6 +601,7 @@ env_t empty_env() {
     env_t env = malloc(sizeof(env_s));
     if (env) {
         env->type = EMPTY_ENV;
+        env->ref = 1;
         return env;
     } else {
         fprintf(stderr, "failed to create a new empty env!\n");
@@ -605,9 +613,11 @@ env_t extend_env(symbol_t var, exp_val_t val, env_t env) {
     extend_env_t e = malloc(sizeof(extend_env_s));
     if (e) {
         e->type = EXTEND_ENV;
+        e->ref = 1;
         e->var = var;
         e->val = val;
         e->env = env;
+        env->ref += 1;
         return (env_t)e;
     } else {
         fprintf(stderr, "failed to create a new extend env!\n");
@@ -619,10 +629,12 @@ env_t extend_env_rec(symbol_t p_name, symbol_t p_var, ast_node_t p_body, env_t e
     extend_rec_env_t e = malloc(sizeof(extend_rec_env_s));
     if (e) {
         e->type = EXTEND_REC_ENV;
+        e->ref = 1;
         e->p_name = p_name;
         e->p_var = p_var;
         e->p_body = p_body;
         e->proc_val = NULL;
+        env->ref += 1;
         e->env = env;
         return (env_t)e;
     } else {
@@ -666,29 +678,42 @@ exp_val_t apply_env(env_t env, symbol_t var) {
 }
 
 env_t env_pop(env_t env) {
-    switch (env->type) {
-        case EMPTY_ENV: {
-            free(env);
-            return NULL;
+    env->ref -= 1;
+    if (env->ref == 1 && env->type == EXTEND_REC_ENV) {
+        extend_rec_env_t e = (extend_rec_env_t)env;
+        if (e->proc_val) {
+            e->proc_val->val.pv->env->ref -= 1;
         }
-        case EXTEND_ENV: {
-            extend_env_t e = (extend_env_t)env;
-            exp_val_free(e->val);
-            env_t next = e->env;
-            free(e);
-            return next;
+    }
+    if (env->ref == 0) {
+        switch (env->type) {
+            case EMPTY_ENV: {
+                free(env);
+                return NULL;
+            }
+            case EXTEND_ENV: {
+                extend_env_t e = (extend_env_t)env;
+                e->env->ref -= 1;
+                exp_val_free(e->val);
+                env_t next = e->env;
+                free(e);
+                return next;
+            }
+            case EXTEND_REC_ENV: {
+                extend_rec_env_t e = (extend_rec_env_t)env;
+                e->env->ref -= 1;
+                exp_val_free(e->proc_val);
+                env_t next = e->env;
+                free(e);
+                return next;
+            }
+            default: {
+                report_invalid_env(env);
+                exit(1);
+            }
         }
-        case EXTEND_REC_ENV: {
-            extend_rec_env_t e = (extend_rec_env_t)env;
-            exp_val_free(e->proc_val);
-            env_t next = e->env;
-            free(e);
-            return next;
-        }
-        default: {
-            report_invalid_env(env);
-            exit(1);
-        }
+    } else {
+        return env;
     }
 }
 
@@ -917,19 +942,6 @@ void value_of_program(ast_program_t prgm) {
     }
 }
 
-void value_of_program_k(ast_program_t prgm) {
-    env_t e = empty_env();
-    continuation_t c = malloc(sizeof(continuation_s));
-    c->type = END_CONT;
-    exp_val_t val = trampoline(value_of_k(prgm->exp, e, c));
-    print_exp_val(val);
-    exp_val_free(val);
-    free(c);
-    while(e) {
-        e = env_pop(e);
-    }
-}
-
 exp_val_t value_of(ast_node_t node, env_t env) {
     switch (node->type) {
         case CONST_EXP: {
@@ -1011,6 +1023,19 @@ exp_val_t apply_procedure(proc_t proc1, exp_val_t val) {
     exp_val_t call_val = value_of(proc1->body, env);
     env_pop(env);
     return call_val;
+}
+
+void value_of_program_k(ast_program_t prgm) {
+    env_t e = empty_env();
+    continuation_t c = malloc(sizeof(continuation_s));
+    c->type = END_CONT;
+    exp_val_t val = trampoline(value_of_k(prgm->exp, e, c));
+    print_exp_val(val);
+    exp_val_free(val);
+    free(c);
+    while(e) {
+        e = env_pop(e);
+    }
 }
 
 void report_exp_val_malloc_fail(const char *val_type) {
@@ -1217,20 +1242,45 @@ exp_val_t trampoline(bounce_s bnc) {
     return bnc.val.final_answer;
 }
 
-int main(int argc, char *argv[]) {
+ast_program_t proc_parse(const char *string) {
     yyscan_t scaninfo = NULL;
     ast_program_t prgm = NULL;
+    YY_BUFFER_STATE bp;
     if (yylex_init_extra(symtab, &scaninfo) == 0) {
+        bp = yy_scan_string(string, scaninfo);
+        yy_switch_to_buffer(bp, scaninfo);
         int v = yyparse(scaninfo, symtab, &prgm);
         if (v == 0) {
-            value_of_program(prgm);
+            yy_flush_buffer(bp, scaninfo);
+            yy_delete_buffer(bp, scaninfo);
+            yylex_destroy(scaninfo);
+            return prgm;
+        } else {
+            exit(1);
         }
-        ast_program_free(prgm);
-        yylex_destroy(scaninfo);
-        symbol_table_free(symtab);
-        return 0;
     } else {
         fprintf(stderr, "Failed to initialize scanner!\n");
         exit(1);
     }
+}
+
+void run(const char *string) {
+    memset(symtab, 0x00, sizeof(symtab));
+    ast_program_t prgm = proc_parse(string);
+    value_of_program_k(prgm);
+    ast_program_free(prgm);
+    symbol_table_free(symtab);
+}
+
+int main(int argc, char *argv[]) {
+    const char *programs[] = {
+        "letrec double (x) = if zero?(x) then 0"
+        " else -((double -(x,1)),-2)"
+        " in (double 6)",
+        "((proc (x) proc (y) -(y,-(0,x)) 3) 4)"
+    };
+    for (int i = 0; i < sizeof(programs)/ sizeof(*programs); ++i) {
+        run(programs[i]);
+    }
+    return 0;
 }
