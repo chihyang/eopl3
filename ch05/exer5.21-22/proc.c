@@ -932,99 +932,7 @@ void apply_proc2_cont_free(apply_proc2_cont_t cont) {
     }
 }
 
-void value_of_program(ast_program_t prgm) {
-    env_t e = empty_env();
-    exp_val_t val = value_of(prgm->exp, e);
-    print_exp_val(val);
-    exp_val_free(val);
-    while(e) {
-        e = env_pop(e);
-    }
-}
-
-exp_val_t value_of(ast_node_t node, env_t env) {
-    switch (node->type) {
-        case CONST_EXP: {
-            ast_const_t exp = (ast_const_t)node;
-            return new_int_val(exp->num);
-        }
-        case VAR_EXP: {
-            ast_var_t exp = (ast_var_t)node;
-            return copy_exp_val(apply_env(env, exp->var));
-        }
-        case PROC_EXP: {
-            ast_proc_t exp = (ast_proc_t)node;
-            return new_proc_val(new_proc(exp->var, exp->body, env));
-        }
-        case LETREC_EXP: {
-            ast_letrec_t exp = (ast_letrec_t)node;
-            env = extend_env_rec(exp->p_name, exp->p_var, exp->p_body, env);
-            exp_val_t val = value_of(exp->letrec_body, env);
-            env = env_pop(env);
-            return val;
-        }
-        case ZERO_EXP: {
-            ast_zero_t exp = (ast_zero_t)node;
-            exp_val_t val1 = value_of(exp->exp1, env);
-            if (expval_to_int(val1) == 0) {
-                exp_val_free(val1);
-                return new_bool_val(TRUE);
-            } else {
-                exp_val_free(val1);
-                return new_bool_val(FALSE);
-            }
-        }
-        case IF_EXP: {
-            ast_if_t exp = (ast_if_t)node;
-            exp_val_t val1 = value_of(exp->cond, env);
-            if (expval_to_bool(val1)) {
-                exp_val_free(val1);
-                return value_of(exp->exp1, env);
-            } else {
-                exp_val_free(val1);
-                return value_of(exp->exp2, env);
-            }
-        }
-        case LET_EXP: {
-            ast_let_t exp = (ast_let_t)node;
-            exp_val_t val1 = value_of(exp->exp1, env);
-            env = extend_env(exp->id, val1, env);
-            exp_val_t val2 = value_of(exp->exp2, env);
-            env = env_pop(env);
-            return val2;
-        }
-        case DIFF_EXP: {
-            ast_diff_t exp = (ast_diff_t)node;
-            exp_val_t val1 = value_of(exp->exp1, env);
-            exp_val_t val2 = value_of(exp->exp2, env);
-            int diff_val = expval_to_int(val1) - expval_to_int(val2);
-            exp_val_free(val2);
-            exp_val_free(val1);
-            return new_int_val(diff_val);
-        }
-        case CALL_EXP: {
-            ast_call_t exp = (ast_call_t)node;
-            exp_val_t rator_val = value_of(exp->rator, env);
-            exp_val_t rand_val = value_of(exp->rand, env);
-            exp_val_t call_val = apply_procedure(expval_to_proc(rator_val), rand_val);
-            exp_val_free(rand_val);
-            exp_val_free(rator_val);
-            return call_val;
-        }
-        default: {
-            fprintf(stderr, "unknown type of expression: %d\n", node->type);
-            exit(1);
-        }
-    }
-}
-
-exp_val_t apply_procedure(proc_t proc1, exp_val_t val) {
-    env_t env = extend_env(proc1->id, copy_exp_val(val), proc1->env);
-    exp_val_t call_val = value_of(proc1->body, env);
-    env_pop(env);
-    return call_val;
-}
-
+/* for exercise 5.21 */
 void value_of_program_k(ast_program_t prgm) {
     env_t e = empty_env();
     continuation_t c = malloc(sizeof(continuation_s));
@@ -1038,25 +946,11 @@ void value_of_program_k(ast_program_t prgm) {
     }
 }
 
-void report_exp_val_malloc_fail(const char *val_type) {
-    fprintf(stderr, "failed to create a new %s exp value!\n", val_type);
-}
-
-void report_invalid_exp_val(const char *val_type) {
-    fprintf(stderr, "not a valid exp val of type %s!\n", val_type);
-}
-
-void report_no_binding_found(symbol_t search_var) {
-    fprintf(stderr, "no binding for %s\n", search_var->name);
-}
-
-void report_invalid_env(env_t env) {
-    fprintf(stderr, "bad environment: %p", env);
-}
-
-
-void report_cont_build_fail(const char* name) {
-    fprintf(stderr, "failed to create a new %s continuation!\n", name);
+exp_val_t trampoline(bounce_s bnc) {
+    while (bnc.type != EXPVAL_BOUNCE) {
+        bnc = value_of_k(bnc.val.value_of.exp, bnc.val.value_of.env, bnc.val.value_of.cont);
+    }
+    return bnc.val.final_answer;
 }
 
 bounce_s apply_cont(continuation_t cont, exp_val_t val) {
@@ -1175,14 +1069,6 @@ bounce_s apply_cont(continuation_t cont, exp_val_t val) {
     }
 }
 
-bounce_s apply_procedure_k(proc_t proc1, exp_val_t val, continuation_t cont) {
-    env_t env = extend_env(proc1->id, copy_exp_val(val), proc1->env);
-    continuation_t ap2c = new_apply_proc2_cont(env, cont);
-    value_of_bounce_s vb = { proc1->body, env, (continuation_t)ap2c };
-    bounce_s bnc = { .type = VALUE_OF_BOUNCE, .val.value_of = vb };
-    return bnc;
-}
-
 bounce_s value_of_k(ast_node_t node, env_t env, continuation_t cont) {
     switch (node->type) {
         case CONST_EXP: {
@@ -1235,11 +1121,106 @@ bounce_s value_of_k(ast_node_t node, env_t env, continuation_t cont) {
     }
 }
 
-exp_val_t trampoline(bounce_s bnc) {
-    while (bnc.type != EXPVAL_BOUNCE) {
-        bnc = value_of_k(bnc.val.value_of.exp, bnc.val.value_of.env, bnc.val.value_of.cont);
+bounce_s apply_procedure_k(proc_t proc1, exp_val_t val, continuation_t cont) {
+    env_t env = extend_env(proc1->id, copy_exp_val(val), proc1->env);
+    continuation_t ap2c = new_apply_proc2_cont(env, cont);
+    value_of_bounce_s vb = { proc1->body, env, (continuation_t)ap2c };
+    bounce_s bnc = { .type = VALUE_OF_BOUNCE, .val.value_of = vb };
+    return bnc;
+}
+
+/* for exercise 5.22 */
+void value_of_program(ast_program_t prgm) {
+    env_t e = empty_env();
+    exp_val_t val = value_of(prgm->exp, e);
+    print_exp_val(val);
+    exp_val_free(val);
+    while(e) {
+        e = env_pop(e);
     }
-    return bnc.val.final_answer;
+}
+
+exp_val_t value_of(ast_node_t node, env_t env) {
+    switch (node->type) {
+        case CONST_EXP: {
+            ast_const_t exp = (ast_const_t)node;
+            return new_int_val(exp->num);
+        }
+        case VAR_EXP: {
+            ast_var_t exp = (ast_var_t)node;
+            return copy_exp_val(apply_env(env, exp->var));
+        }
+        case PROC_EXP: {
+            ast_proc_t exp = (ast_proc_t)node;
+            return new_proc_val(new_proc(exp->var, exp->body, env));
+        }
+        case LETREC_EXP: {
+            ast_letrec_t exp = (ast_letrec_t)node;
+            env = extend_env_rec(exp->p_name, exp->p_var, exp->p_body, env);
+            exp_val_t val = value_of(exp->letrec_body, env);
+            env = env_pop(env);
+            return val;
+        }
+        case ZERO_EXP: {
+            ast_zero_t exp = (ast_zero_t)node;
+            exp_val_t val1 = value_of(exp->exp1, env);
+            if (expval_to_int(val1) == 0) {
+                exp_val_free(val1);
+                return new_bool_val(TRUE);
+            } else {
+                exp_val_free(val1);
+                return new_bool_val(FALSE);
+            }
+        }
+        case IF_EXP: {
+            ast_if_t exp = (ast_if_t)node;
+            exp_val_t val1 = value_of(exp->cond, env);
+            if (expval_to_bool(val1)) {
+                exp_val_free(val1);
+                return value_of(exp->exp1, env);
+            } else {
+                exp_val_free(val1);
+                return value_of(exp->exp2, env);
+            }
+        }
+        case LET_EXP: {
+            ast_let_t exp = (ast_let_t)node;
+            exp_val_t val1 = value_of(exp->exp1, env);
+            env = extend_env(exp->id, val1, env);
+            exp_val_t val2 = value_of(exp->exp2, env);
+            env = env_pop(env);
+            return val2;
+        }
+        case DIFF_EXP: {
+            ast_diff_t exp = (ast_diff_t)node;
+            exp_val_t val1 = value_of(exp->exp1, env);
+            exp_val_t val2 = value_of(exp->exp2, env);
+            int diff_val = expval_to_int(val1) - expval_to_int(val2);
+            exp_val_free(val2);
+            exp_val_free(val1);
+            return new_int_val(diff_val);
+        }
+        case CALL_EXP: {
+            ast_call_t exp = (ast_call_t)node;
+            exp_val_t rator_val = value_of(exp->rator, env);
+            exp_val_t rand_val = value_of(exp->rand, env);
+            exp_val_t call_val = apply_procedure(expval_to_proc(rator_val), rand_val);
+            exp_val_free(rand_val);
+            exp_val_free(rator_val);
+            return call_val;
+        }
+        default: {
+            fprintf(stderr, "unknown type of expression: %d\n", node->type);
+            exit(1);
+        }
+    }
+}
+
+exp_val_t apply_procedure(proc_t proc1, exp_val_t val) {
+    env_t env = extend_env(proc1->id, copy_exp_val(val), proc1->env);
+    exp_val_t call_val = value_of(proc1->body, env);
+    env_pop(env);
+    return call_val;
 }
 
 ast_program_t proc_parse(const char *string) {
@@ -1283,4 +1264,24 @@ int main(int argc, char *argv[]) {
         run(programs[i]);
     }
     return 0;
+}
+
+void report_exp_val_malloc_fail(const char *val_type) {
+    fprintf(stderr, "failed to create a new %s exp value!\n", val_type);
+}
+
+void report_invalid_exp_val(const char *val_type) {
+    fprintf(stderr, "not a valid exp val of type %s!\n", val_type);
+}
+
+void report_no_binding_found(symbol_t search_var) {
+    fprintf(stderr, "no binding for %s\n", search_var->name);
+}
+
+void report_invalid_env(env_t env) {
+    fprintf(stderr, "bad environment: %p", env);
+}
+
+void report_cont_build_fail(const char* name) {
+    fprintf(stderr, "failed to create a new %s continuation!\n", name);
 }
