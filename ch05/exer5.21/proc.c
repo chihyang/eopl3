@@ -909,12 +909,22 @@ void apply_proc2_cont_free(apply_proc2_cont_t cont) {
 
 void value_of_program(ast_program_t prgm) {
     env_t e = empty_env();
+    exp_val_t val = value_of(prgm->exp, &e);
+    print_exp_val(val);
+    exp_val_free(val);
+    while(e) {
+        e = env_pop(e);
+    }
+}
+
+void value_of_program_k(ast_program_t prgm) {
+    env_t e = empty_env();
     continuation_t c = malloc(sizeof(continuation_s));
     c->type = END_CONT;
     exp_val_t val = trampoline(value_of_k(prgm->exp, e, c));
     print_exp_val(val);
-    free(c);
     exp_val_free(val);
+    free(c);
     while(e) {
         e = env_pop(e);
     }
@@ -1214,7 +1224,7 @@ int main(int argc, char *argv[]) {
     if (yylex_init_extra(symtab, &scaninfo) == 0) {
         int v = yyparse(scaninfo, symtab, &prgm);
         if (v == 0) {
-            value_of_program(prgm);
+            value_of_program_k(prgm);
         }
         ast_program_free(prgm);
         yylex_destroy(scaninfo);
