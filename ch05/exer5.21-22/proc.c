@@ -1269,19 +1269,6 @@ void run(const char *string) {
     symbol_table_free(symtab);
 }
 
-int main(int argc, char *argv[]) {
-    const char *programs[] = {
-        "letrec double (x) = if zero?(x) then 0"
-        " else -((double -(x,1)),-2)"
-        " in (double 6)",
-        "((proc (x) proc (y) -(y,-(0,x)) 3) 4)"
-    };
-    for (int i = 0; i < sizeof(programs)/ sizeof(*programs); ++i) {
-        run(programs[i]);
-    }
-    return 0;
-}
-
 void report_exp_val_malloc_fail(const char *val_type) {
     fprintf(stderr, "failed to create a new %s exp value!\n", val_type);
 }
@@ -1300,4 +1287,17 @@ void report_invalid_env(env_t env) {
 
 void report_cont_build_fail(const char* name) {
     fprintf(stderr, "failed to create a new %s continuation!\n", name);
+}
+
+int main(int argc, char *argv[]) {
+    const char *programs[] = {
+        "letrec double (x) = if zero?(x) then 0"
+        " else -((double -(x,1)),-2)"
+        " in (double 6)",
+        "((proc (x) proc (y) -(y,-(0,x)) 3) 4)"
+    };
+    for (int i = 0; i < sizeof(programs)/ sizeof(*programs); ++i) {
+        run(programs[i]);
+    }
+    return 0;
 }
