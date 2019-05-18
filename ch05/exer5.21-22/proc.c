@@ -717,6 +717,17 @@ env_t env_pop(env_t env) {
     }
 }
 
+continuation_t new_end_cont() {
+    continuation_t c = malloc(sizeof(continuation_s));
+    if (c) {
+        c->type = END_CONT;
+        return c;
+    } else {
+        report_cont_build_fail("end");
+        exit(1);
+    }
+}
+
 continuation_t new_zero1_cont(continuation_t cont) {
     zero1_cont_t c = malloc(sizeof(zero1_cont_s));
     if (c) {
@@ -866,6 +877,12 @@ continuation_t new_apply_proc2_cont(env_t env, continuation_t cont) {
     }
 }
 
+void end_cont_free(continuation_t cont) {
+    if (cont) {
+        free(cont);
+    }
+}
+
 void zero1_cont_free(zero1_cont_t cont) {
     if (cont) {
         free(cont);
@@ -935,12 +952,11 @@ void apply_proc2_cont_free(apply_proc2_cont_t cont) {
 /* for exercise 5.21 */
 void value_of_program_k(ast_program_t prgm) {
     env_t e = empty_env();
-    continuation_t c = malloc(sizeof(continuation_s));
-    c->type = END_CONT;
+    continuation_t c = new_end_cont();
     exp_val_t val = trampoline(value_of_k(prgm->exp, e, c));
     print_exp_val(val);
     exp_val_free(val);
-    free(c);
+    end_cont_free(c);
     while(e) {
         e = env_pop(e);
     }
