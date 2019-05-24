@@ -274,7 +274,7 @@
   (set-rhs-cont
    (ref reference?)
    (cont continuation?)))
-;; apply-cont : () -> FinalAnswer
+;; apply-cont : () -> Bounce
 ;; usage      : reads registers
 ;;  cont      : Cont
 ;;  val       : ExpVal
@@ -285,7 +285,7 @@
             ()
             (begin
               (eopl:printf "End of computation.~%")
-              val))
+              #f))
            (zero1-cont
             (cont1)
             (set! cont cont1)
@@ -325,7 +325,8 @@
                   (set! cont cont1)
                   (set! proc1 (expval->proc val))
                   (set! val '())
-                  (apply-procedure/k))
+                  (set! pc apply-procedure/k)
+                  pc)
                 (begin
                   (set! exp (car exps))
                   (set! env env1)
@@ -338,7 +339,8 @@
                   (set! cont cont1)
                   (set! proc1 (expval->proc rator))
                   (set! val (reverse (cons val saved-vals)))
-                  (apply-procedure/k))
+                  (set! pc apply-procedure/k)
+                  pc)
                 (begin
                   (set! cont (rand-cont rator (cons val saved-vals) (cdr cont-exps) env1 cont1))
                   (set! exp (car cont-exps))
@@ -407,17 +409,22 @@
                 assign-exp)))
 
 ;;; ---------------------- Evaluate expression ----------------------
-;; apply-procedure/k : Proc x Listof(ExpVal) x Cont -> Bounce
+;; apply-procedure/k : () -> Bounce
+;; usage             : reads on registers
+;;  proc             : Exp
+;;   val             : Listof(ExpVal)
+;;  cont             : Cont
 (define apply-procedure/k
   (lambda ()
     (cases proc proc1
            (procedure
             (vars body saved-env)
+            (set! pc #f)
             (set! exp body)
             (set! env (extend-env* vars (map newref val) saved-env))
             (value-of/k)))))
-;; value-of/k : () -> FinalAnswer
-;; usage : relies on registers
+;; value-of/k : () -> Bounce
+;; usage : reads on registers
 ;;   exp : Exp
 ;;   env : Env
 ;;  cont : Cont
@@ -477,6 +484,7 @@
 (define cont 'uninitialized)
 (define val 'uninitialized)
 (define proc1 'uninitialized)
+(define pc 'uninitialized)
 ;; value-of-program : Program -> FinalAnswer
 (define value-of-program
   (lambda (prog)
@@ -487,7 +495,8 @@
             (set! exp exp1)
             (set! env (empty-env))
             (set! cont (end-cont))
-            (value-of/k)
+            (set! pc #f)
+            (trampoline (value-of/k))
             (cases exp-val val
                      (num-val
                       (num)
@@ -506,10 +515,17 @@
                       (expval->pair val)))))))
 ;; trampoline : Bounce -> FinalAnswer
 (define trampoline
-  (lambda (bounce)
-    (if (exp-val? bounce)
-        bounce
-        (trampoline (bounce)))))
+  (lambda (pc)
+    (if pc
+        (trampoline (pc))
+        val)))
+;; trace-registers : () -> Unspecified
+(define trace-registers
+  (lambda ()
+    (eopl:printf "#reg   env: ~a...~%" (car env))
+    (eopl:printf "#reg   val: ~a~%" val)
+    (eopl:printf "#reg proc1: (procedure ...)~%")
+    (eopl:printf "#reg    pc: ~a~%~%" pc)))
 
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
