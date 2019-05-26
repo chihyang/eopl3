@@ -531,7 +531,9 @@
             (value-of/k exp1 env (if-test-cont exp2 exp3 env cont)))
            (let-exp
             (vars exps body)
-            (value-of/k (car exps) env (let-cont '() '()  vars (cdr exps) body env cont)))
+            (if (null? vars)
+                (value-of/k body env cont)
+                (value-of/k (car exps) env (let-cont '() '()  vars (cdr exps) body env cont))))
            (letrec-exp
             (p-names p-vars p-bodies letrec-body)
             (value-of/k letrec-body (extend-env-rec p-names p-vars p-bodies env) cont))
@@ -666,3 +668,8 @@
                          else -((times4 -(x,1)), -4)
       in (times4 3)")
  12)
+
+;;; let without binding
+(eqv?
+ (run "let in 3")
+ 3)
