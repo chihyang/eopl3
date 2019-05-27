@@ -80,7 +80,7 @@
              (apply-env (caddr env) search-var)
              (let ((saved-p-vars (car func))
                    (saved-p-body (cadr func)))
-               (newref (proc-val (procedure saved-p-vars saved-p-body env)))))))
+               (proc-val (procedure saved-p-vars saved-p-body env))))))
      (else
       (report-invalid-env env)))))
 ;;; apply-env-rec : Sym x Listof(Sym) x Listof(Listof(Sym)) x Listof(Expression) ->
@@ -184,58 +184,6 @@
      'exp-val
      "Not a valid exp value of type ~s" type)))
 
-;;; ---------------------- Store (from section 4.2) ----------------------
-;; empty-store : () -> Sto
-(define empty-store (lambda () '()))
-;; usage : A scheme variable containing the current state of the
-;; store. Initially set to a dummy value.
-(define the-store 'uninitialized)
-;; get-store : () -> Sto
-(define get-store
-  (lambda () the-store))
-;; initialize-store! : () -> Unspecified
-;; usage : (initialize-store!) sets the store to the empty store
-(define initialize-store!
-  (lambda ()
-    (set! the-store (empty-store))))
-;; reference? : SchemeVal -> Bool
-(define reference?
-  (lambda (v)
-    (integer? v)))
-;; newref : ExpVal -> Ref
-(define newref
-  (lambda (val)
-    (let ((next-ref (length the-store)))
-      (set! the-store (append the-store (list val)))
-      next-ref)))
-;; deref : Ref -> ExpVal
-(define deref
-  (lambda (ref)
-    (list-ref the-store ref)))
-;; setref! : Ref x ExpVal -> Unspecified
-;; usage : sets the-store to a state like the original, but with position ref
-;; containing val
-(define setref!
-  (lambda (ref val)
-    (set! the-store
-      (letrec ((setref-inner
-                ;; usage : returns a list like store1, except that position ref1
-                ;; contains val.
-                (lambda (store1 ref1)
-                  (cond [(null? store1)
-                         (report-invalid-reference ref the-store)]
-                        [(zero? ref1)
-                         (cons val (cdr store1))]
-                        [else
-                         (cons (car store1)
-                               (setref-inner (cdr store1) (- ref1 1)))]))))
-        (setref-inner the-store ref)))))
-(define report-invalid-reference
-  (lambda (ref store)
-    (eopl:error
-     'exp-val
-     "Not a valid reference ~a for store ~a" ref store)))
-
 ;;; ---------------------- Continuation ----------------------
 ;; FinalAnswer = ExpVal
 ;; Cont = ExpVal -> FinalAnswer
@@ -270,9 +218,6 @@
    (saved-rands (list-of exp-val?))
    (cont-exps (list-of expression?))
    (env environment?)
-   (cont continuation?))
-  (set-rhs-cont
-   (ref reference?)
    (cont continuation?)))
 ;; apply-cont : () -> FinalAnswer
 ;; usage      : reads registers
@@ -280,6 +225,7 @@
 ;;  val       : ExpVal
 (define apply-cont
   (lambda ()
+    (print-cont cont val)
     (cases continuation cont
            (end-cont
             ()
@@ -295,7 +241,7 @@
             (var body saved-env cont1)
             (set! cont cont1)
             (set! exp body)
-            (set! env (extend-env var (newref val) saved-env))
+            (set! env (extend-env var val saved-env))
             (value-of/k))
            (if-test-cont
             (exp2 exp3 env1 cont1)
@@ -343,14 +289,7 @@
                   (set! cont (rand-cont rator (cons val saved-vals) (cdr cont-exps) env1 cont1))
                   (set! exp (car cont-exps))
                   (set! env env1)
-                  (value-of/k))))
-           (set-rhs-cont
-            (ref cont1)
-            (begin
-              (setref! ref val)
-              (set! cont cont1)
-              (set! val (num-val 27))
-              (apply-cont))))))
+                  (value-of/k)))))))
 
 ;;; ---------------------- Syntax for the IMPLICIT-REFERENCE-CPS language ----------------------
 ;;; Program    ::= Expression
@@ -402,9 +341,7 @@
     (expression ("proc" "(" (separated-list identifier ",") ")" expression)
                 proc-exp)
     (expression ("(" expression (arbno expression) ")")
-                call-exp)
-    (expression ("set" identifier "=" expression)
-                assign-exp)))
+                call-exp)))
 
 ;;; ---------------------- Evaluate expression ----------------------
 ;; apply-procedure/k : () -> FinalAnswer
@@ -418,7 +355,7 @@
            (procedure
             (vars body saved-env)
             (set! exp body)
-            (set! env (extend-env* vars (map newref val) saved-env))
+            (set! env (extend-env* vars val saved-env))
             (value-of/k)))))
 ;; value-of/k : () -> FinalAnswer
 ;; usage : reads on registers
@@ -427,6 +364,7 @@
 ;;  cont : Cont
 (define value-of/k
   (lambda ()
+    (print-value-of/k exp env cont)
     (cases expression exp
            (const-exp
             (num)
@@ -434,7 +372,7 @@
             (apply-cont))
            (var-exp
             (var)
-            (set! val (deref (apply-env env var)))
+            (set! val (apply-env env var))
             (apply-cont))
            (diff-exp
             (exp1 exp2)
@@ -469,13 +407,7 @@
             (rator rand)
             (set! cont (rator-cont rand env cont))
             (set! exp rator)
-            (value-of/k))
-           (assign-exp
-            (var exp1)
-            (let ((ref (apply-env env var)))
-              (set! cont (set-rhs-cont ref cont))
-              (set! exp exp1)
-              (value-of/k))))))
+            (value-of/k)))))
 (define exp 'uninitialized)
 (define env 'uninitialized)
 (define cont 'uninitialized)
@@ -484,7 +416,6 @@
 ;; value-of-program : Program -> FinalAnswer
 (define value-of-program
   (lambda (prog)
-    (initialize-store!)
     (cases program prog
            (a-program
             (exp1)
@@ -509,6 +440,111 @@
                       (val1 val2)
                       (expval->pair val)))))))
 
+;;; ---------------------- print utility ----------------------
+;; print-env : Env -> Unspecified
+(define print-env
+  (lambda (env)
+    (letrec ((print-env-inner
+              (lambda (env)
+                (cond [(empty-env? env)
+                       (eopl:printf "")]
+                      [(eqv? (car env) 'extend-env)
+                       (begin
+                         (eopl:printf "(~s ~s)" (cadr env) (caddr env))
+                         (if (empty-env? (cadddr env))
+                             (eopl:printf "")
+                             (eopl:printf " "))
+                         (print-env-inner (cadddr env)))]
+                      [(eqv? (car env) 'extend-env-rec)
+                       (begin
+                         (eopl:printf "(rec ~s ...)" (cadr env))
+                         (if (empty-env? (caddr env))
+                             (eopl:printf "")
+                             (eopl:printf " "))
+                         (print-env-inner (caddr env)))]))))
+      (eopl:printf "(")
+      (print-env-inner env)
+      (eopl:printf ")"))))
+;; print-cont : Cont x ExpVal -> Unspecified
+(define print-cont
+  (lambda (cont val)
+    (cases continuation cont
+           (end-cont
+            ()
+            '())
+           (zero1-cont
+            (cont)
+            (eopl:printf "= send value <<~s>> to continuation.~%" val))
+           (let-exp-cont
+            (var body env cont)
+            (eopl:printf "= start working on let body.~%"))
+           (if-test-cont
+            (exp2 exp3 env cont)
+            (eopl:printf "= start working on if body.~%"))
+           (diff1-cont
+            (exp2 env cont)
+            (eopl:printf "= start working on second operand of diff.~%"))
+           (diff2-cont
+            (val1 cont)
+            (let* ((num1 (expval->num val1))
+                   (num2 (expval->num val))
+                   (diff-val (- num1 num2)))
+              (eopl:printf "= ~s-~s is ~s, send that to the continuation.~%"
+                           num1 num2 diff-val)))
+           (rator-cont
+            (exps env cont)
+            (if (null? exps)
+                (begin
+                  (eopl:printf "= start procedure call.~%"))
+                (begin
+                  (eopl:printf "= start working on first call operand.~%"))))
+           (rand-cont
+            (rator saved-vals cont-exps env cont)
+            (if (null? cont-exps)
+                (eopl:printf "= start procedure call with vals ~s.~%" saved-vals)
+                (eopl:printf "= start working on ~sth operand.~%" (+ 1 (length saved-vals))))))))
+;; print-value-of/k : Exp x Env x Cont -> Unspecified
+(define print-value-of/k
+  (lambda (exp env cont)
+    (cases expression exp
+           (const-exp
+            (num)
+            (eopl:printf "= send value <<~s>> to continuation.~%" num))
+           (var-exp
+            (var)
+            (eopl:printf "= send value of var <<~s>> to continuation.~%" var))
+           (diff-exp
+            (exp1 exp2)
+            (eopl:printf "= start working on first operand.~%"))
+           (zero?-exp
+            (exp1)
+            (eopl:printf "= start working on first operand.~%"))
+           (if-exp
+            (exp1 exp2 exp3)
+            (eopl:printf "= start working on condition operand.~%"))
+           (let-exp
+            (var exp1 body)
+            (eopl:printf "= start working on val operand.~%"))
+           (letrec-exp
+            (p-names p-vars p-bodies letrec-body)
+            (eopl:printf "= start working on letrec body.~%"))
+           (proc-exp
+            (vars body)
+            (begin
+              (eopl:printf "= send value of procedure ")
+              (eopl:printf "(procedure ~s ... ρ=" vars)
+              (print-env env)
+              (eopl:printf ")")
+              (eopl:printf " to continuation.~%")))
+           (call-exp
+            (rator rand)
+            (eopl:printf "= start working on operator of call.~%")))
+    (eopl:printf "(value-of/k~% ")
+    (eopl:pretty-print exp)
+    (eopl:printf " ρ~% ")
+    (eopl:pretty-print cont)
+    (eopl:printf ")~%")))
+
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
 (define list-the-datatypes
@@ -528,65 +564,7 @@
     (value-of-program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-(eqv?
- (run "letrec double (x) = if zero?(x) then 0
-                       else -((double -(x,1)),-2)
-       in (double 6)")
- 12)
-
-;; tests from exercise 3.21
-(eqv?
- (run "((proc (x) proc (y) -(y,-(0,x)) 3) 4)")
- 7)
-(eqv?
- (run "(proc (x, y) -(y,-(0,x)) 3 4)")
- 7)
-
-;; tests from exercise 3.32
-(eqv?
- (run "letrec
-         even(x) = if zero?(x) then 1 else (odd -(x,1))
-         odd(x)  = if zero?(x) then 0 else (even -(x,1))
-       in (odd 13)")
- 1)
-(eqv?
- (run "let x = 3 in
-       letrec
-         even(x) = if zero?(x) then 1 else (odd -(x,1))
-         odd(x)  = if zero?(x) then 0 else (even -(x,1))
-       in let y = x in (even y)")
- 0)
-
-;; tests from exercise 4.17 and 4.18
-(eqv?
- (run "let x = 22
-        in let f = proc (z)
-                    let zz = -(z,x)
-                    in zz
-           in -((f 66), (f 55))")
- 11)
-(eqv?
- (run "letrec times4(x) = if zero?(x) then 0
-                         else -((times4 -(x,1)), -4)
-      in (times4 3)")
- 12)
-(eqv?
- (run "let x = 0
-      in letrec even()
-                 = if zero? (x)
-                   then 1
-                   else let d = set x = -(x, 1) in
-                         (odd)
-                odd()
-                 = if zero? (x)
-                   then 0
-                   else let d = set x = -(x, 1) in
-                         (even)
-      in let d = set x = 13
-         in (odd)")
- 1)
-
-;; test sub-env for argument evaluation
-(eqv?
- (run "let x = 8 in (proc (x, y) -(x, y) let x = 3 in x -(x, 2))")
- -3)
+(run "letrec fact(x) = if zero?(x) then 1 else *(x, (fact -(x,1)))
+      in (fact 4)")
+(run "letrec fact-iter-acc(n, a) = if zero?(n) then a else (fact-iter-acc -(n,1) *(n, a))
+      in (fact-iter-acc 4 1)")
