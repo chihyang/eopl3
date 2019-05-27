@@ -209,6 +209,13 @@
   (diff2-cont
    (val1 exp-val?)
    (cont continuation?))
+  (mul1-cont
+   (exp2 expression?)
+   (env environment?)
+   (cont continuation?))
+  (mul2-cont
+   (val1 exp-val?)
+   (cont continuation?))
   (rator-cont
    (exps (list-of expression?))
    (env environment?)
@@ -264,6 +271,19 @@
               (set! cont cont1)
               (set! val (num-val (- num1 num2)))
               (apply-cont)))
+           (mul1-cont
+            (exp2 env1 cont1)
+            (set! cont (mul2-cont val cont1))
+            (set! env env1)
+            (set! exp exp2)
+            (value-of/k))
+           (mul2-cont
+            (val1 cont1)
+            (let ((num1 (expval->num val1))
+                  (num2 (expval->num val)))
+              (set! cont cont1)
+              (set! val (num-val (* num1 num2)))
+              (apply-cont)))
            (rator-cont
             (exps env1 cont1)
             (if (null? exps)
@@ -291,13 +311,15 @@
                   (set! env env1)
                   (value-of/k)))))))
 
-;;; ---------------------- Syntax for the IMPLICIT-REFERENCE-CPS language ----------------------
+;;; ---------------------- Syntax for the PROC-CPS language ----------------------
 ;;; Program    ::= Expression
 ;;;                a-program (exp1)
 ;;; Expression ::= Number
 ;;;                const-exp (num)
 ;;; Expression ::= -(Expression , Expression)
 ;;;                diff-exp (exp1 exp2)
+;;; Expression ::= *(Expression , Expression)
+;;;                mul-exp (exp1 exp2)
 ;;; Expression ::= zero? (Expression)
 ;;;                zero?-exp (exp1)
 ;;; Expression ::= if Expression then Expression else Expression
@@ -315,7 +337,7 @@
 ;;; Parse Expression
 (define let-scanner-spec
   '((white-sp (whitespace) skip)
-    (identifier (letter (arbno (or letter digit))) symbol)
+    (identifier (letter (arbno (or letter digit "-"))) symbol)
     (number ((or (concat digit (arbno digit))
                  (concat "-" digit (arbno digit))
                  (concat (arbno digit) "." digit (arbno digit))
@@ -328,6 +350,8 @@
                 const-exp)
     (expression ("-" "(" expression "," expression ")")
                 diff-exp)
+    (expression ("*" "(" expression "," expression ")")
+                mul-exp)
     (expression ("zero?" "(" expression ")")
                 zero?-exp)
     (expression ("if" expression "then" expression "else" expression)
@@ -377,6 +401,11 @@
            (diff-exp
             (exp1 exp2)
             (set! cont (diff1-cont exp2 env cont))
+            (set! exp exp1)
+            (value-of/k))
+           (mul-exp
+            (exp1 exp2)
+            (set! cont (mul1-cont exp2 env cont))
             (set! exp exp1)
             (value-of/k))
            (zero?-exp
@@ -491,6 +520,16 @@
                    (diff-val (- num1 num2)))
               (eopl:printf "= ~s-~s is ~s, send that to the continuation.~%"
                            num1 num2 diff-val)))
+           (mul1-cont
+            (exp2 env cont)
+            (eopl:printf "= start working on second operand of multiply.~%"))
+           (mul2-cont
+            (val1 cont)
+            (let* ((num1 (expval->num val1))
+                   (num2 (expval->num val))
+                   (mul-val (* num1 num2)))
+              (eopl:printf "= ~s*~s is ~s, send that to the continuation.~%"
+                           num1 num2 mul-val)))
            (rator-cont
             (exps env cont)
             (if (null? exps)
@@ -514,6 +553,9 @@
             (var)
             (eopl:printf "= send value of var <<~s>> to continuation.~%" var))
            (diff-exp
+            (exp1 exp2)
+            (eopl:printf "= start working on first operand.~%"))
+           (mul-exp
             (exp1 exp2)
             (eopl:printf "= start working on first operand.~%"))
            (zero?-exp
