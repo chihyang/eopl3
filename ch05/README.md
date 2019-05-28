@@ -74,3 +74,30 @@ things on the stack is created and destroyed automatically. That's why they are
 called automatic variables. Because these variables' accessibility is limited to
 their scope (unless you refer to them by a returned pointer), their resources
 can be freed at exit time. This is some kind of 'garbage collection'.
+
+# Exercise 5.32
+
+> Improve your solution to the preceding exercise by minimizing the number of
+> global registers used. You can get away with fewer than 5. You may use no data
+> structures other than those already used by the interpreter.
+
+Notice that `exp` and `val` are never used at the same time, we can use the same
+register for them. The only thing we need to note is the set order between
+`cont`, `env` and `val`. Because `cont` and `env` are somewhat special (they
+record the process in the whole computation), it's not easy to put them into the
+same register. It is the same for trampoline register `pc`. As for procedure
+register `proc1`, because it is used together with `val` and `pc` as below, it's
+not easy to eliminate it. If we don't use trampoline, there are just four
+registers; with trampoline, we need five:
+
+``` scheme
+(define apply-procedure/k
+  (lambda ()
+    (cases proc proc1
+           (procedure
+            (vars body saved-env)
+            (set! pc #f)
+            (set! env (extend-env* vars (map newref val) saved-env))
+            (set! val body)
+            (value-of/k)))))
+```
