@@ -369,6 +369,22 @@
                         val))))))))
 
 ;;; ---------------------- print utility ----------------------
+;; expval->schemeval : ExpVal -> SchemeVal
+(define expval->schemeval
+  (lambda (v)
+    (cases exp-val v
+           (num-val
+            (num)
+            num)
+           (bool-val
+            (bool)
+            bool)
+           (proc-val
+            (p)
+            (cases proc p
+                   (procedure
+                    (var saved-env body)
+                    `(λ (,var) ...)))))))
 ;; print-env : Env -> Unspecified
 (define print-env
   (lambda (env)
@@ -378,14 +394,17 @@
                        (eopl:printf "")]
                       [(eqv? (car env) 'extend-env)
                        (begin
-                         (eopl:printf "(~s ~s)" (cadr env) (caddr env))
+                         (eopl:printf
+                          "[~s ~s]"
+                          (cadr env)
+                          (expval->schemeval (caddr env)))
                          (if (empty-env? (cadddr env))
                              (eopl:printf "")
                              (eopl:printf " "))
                          (print-env-inner (cadddr env)))]
                       [(eqv? (car env) 'extend-env-rec)
                        (begin
-                         (eopl:printf "(rec ~s ...)" (cadr env))
+                         (eopl:printf "[rec ~s]" (caadr env))
                          (if (empty-env? (caddr env))
                              (eopl:printf "")
                              (eopl:printf " "))
@@ -482,7 +501,9 @@
             (eopl:printf "= start working on operator of call.~%")))
     (eopl:printf "(value-of/k~% ")
     (eopl:pretty-print exp)
-    (eopl:printf " ρ~% ")
+    (eopl:printf " ρ=")
+    (print-env env)
+    (eopl:printf "~%")
     (eopl:pretty-print cont)
     (eopl:printf ")~%")))
 

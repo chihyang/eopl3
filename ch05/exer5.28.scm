@@ -470,6 +470,28 @@
                       (expval->pair val)))))))
 
 ;;; ---------------------- print utility ----------------------
+;; expval->schemeval : ExpVal -> SchemeVal
+(define expval->schemeval
+  (lambda (v)
+    (cases exp-val v
+           (num-val
+            (num)
+            num)
+           (bool-val
+            (bool)
+            bool)
+           (null-val
+            ()
+            '())
+           (pair-val
+            (val1 val2)
+            (expval->pair v))
+           (proc-val
+            (p)
+            (cases proc p
+                   (procedure
+                    (var saved-env body)
+                    `(λ (,var) ...)))))))
 ;; print-env : Env -> Unspecified
 (define print-env
   (lambda (env)
@@ -479,14 +501,17 @@
                        (eopl:printf "")]
                       [(eqv? (car env) 'extend-env)
                        (begin
-                         (eopl:printf "(~s ~s)" (cadr env) (caddr env))
+                         (eopl:printf
+                          "[~s ~s]"
+                          (cadr env)
+                          (expval->schemeval (caddr env)))
                          (if (empty-env? (cadddr env))
                              (eopl:printf "")
                              (eopl:printf " "))
                          (print-env-inner (cadddr env)))]
                       [(eqv? (car env) 'extend-env-rec)
                        (begin
-                         (eopl:printf "(rec ~s ...)" (cadr env))
+                         (eopl:printf "[rec ~s]" (caadr env))
                          (if (empty-env? (caddr env))
                              (eopl:printf "")
                              (eopl:printf " "))

@@ -280,6 +280,7 @@
 ;;  val       : ExpVal
 (define apply-cont
   (lambda ()
+    (trace-registers)
     (cases continuation cont
            (end-cont
             ()
@@ -430,6 +431,7 @@
 ;;  cont : Cont
 (define value-of/k
   (lambda ()
+    (trace-registers)
     (cases expression exp
            (const-exp
             (num)
@@ -519,12 +521,75 @@
     (if pc
         (trampoline (pc))
         val)))
+;; expval->schemeval : ExpVal -> SchemeVal
+(define expval->schemeval
+  (lambda (v)
+    (cases exp-val v
+           (num-val
+            (num)
+            num)
+           (bool-val
+            (bool)
+            bool)
+           (null-val
+            ()
+            '())
+           (pair-val
+            (val1 val2)
+            (expval->pair v))
+           (proc-val
+            (p)
+            (cases proc p
+                   (procedure
+                    (var saved-env body)
+                    `(λ ,var ...)))))))
+;; print-env : Env -> Unspecified
+(define print-env
+  (lambda (env)
+    (letrec ((print-env-inner
+              (lambda (env)
+                (cond [(empty-env? env)
+                       (eopl:printf "")]
+                      [(eqv? (car env) 'extend-env)
+                       (begin
+                         (eopl:printf
+                          "[~s ~s]"
+                          (cadr env)
+                          (expval->schemeval (deref (caddr env))))
+                         (if (empty-env? (cadddr env))
+                             (eopl:printf "")
+                             (eopl:printf " "))
+                         (print-env-inner (cadddr env)))]
+                      [(eqv? (car env) 'extend-env-rec)
+                       (begin
+                         (eopl:printf "[rec ~s]" (caadr env))
+                         (if (empty-env? (caddr env))
+                             (eopl:printf "")
+                             (eopl:printf " "))
+                         (print-env-inner (caddr env)))]))))
+      (eopl:printf "(")
+      (print-env-inner env)
+      (eopl:printf ")"))))
 ;; trace-registers : () -> Unspecified
 (define trace-registers
   (lambda ()
-    (eopl:printf "#reg   env: ~a...~%" (car env))
-    (eopl:printf "#reg   val: ~a~%" val)
-    (eopl:printf "#reg proc1: (procedure ...)~%")
+    (eopl:printf "#reg   env: ")
+    (if (symbol? env)
+        (eopl:printf "~a" env)
+        (print-env env))
+    (eopl:printf "~%")
+    (eopl:printf "#reg   val: ~a~%"
+                 (cond [(exp-val? val) (expval->schemeval val)]
+                       [((list-of exp-val?) val)
+                        (map expval->schemeval val)]
+                       [else val]))
+    (eopl:printf "#reg proc1: ~s~%"
+                 (if (symbol? proc1)
+                     proc1
+                     (cases proc proc1
+                            (procedure
+                             (vars body saved-env)
+                             `(λ ,vars ...)))))
     (eopl:printf "#reg    pc: ~a~%~%" pc)))
 
 ;;; ---------------------- Sllgen operations ----------------------
