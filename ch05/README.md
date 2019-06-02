@@ -81,8 +81,8 @@ can be freed at exit time. This is some kind of 'garbage collection'.
 > global registers used. You can get away with fewer than 5. You may use no data
 > structures other than those already used by the interpreter.
 
-Notice that `exp` and `val` are never used at the same time, we can use the same
-register for them. The only thing we need to note is the set order between
+Noticing that `exp` and `val` are never used at the same time, we can use the
+same register for them. The only thing we need to note is the set order between
 `cont`, `env` and `val`. Because `cont` and `env` are somewhat special (they
 record the process in the whole computation), it's not easy to put them into the
 same register. It is the same for trampoline register `pc`. As for procedure

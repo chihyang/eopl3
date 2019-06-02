@@ -1294,7 +1294,8 @@ int main(int argc, char *argv[]) {
         "letrec double (x) = if zero?(x) then 0"
         " else -((double -(x,1)),-2)"
         " in (double 6)",
-        "((proc (x) proc (y) -(y,-(0,x)) 3) 4)"
+        "((proc (x) proc (y) -(y,-(0,x)) 3) 4)",
+        "(((proc (x) proc (y) proc (z) -(z,-(0,-(y,-(0,x)))) 3) 4) 5)",
     };
     for (int i = 0; i < sizeof(programs)/ sizeof(*programs); ++i) {
         run(programs[i]);
