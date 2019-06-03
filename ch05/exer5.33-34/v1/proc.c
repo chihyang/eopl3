@@ -1267,6 +1267,9 @@ int main(int argc, char *argv[]) {
         "letrec double (x) = if zero?(x) then 0"
         " else -((double -(x,1)),-2)"
         " in (double 6)",
+        "letrec double (x) = if zero?(x) then 0"
+        " else -((double -(x,1)),-2)"
+        " in double",
         "(((proc (x) proc (y) proc (z) -(z,-(0,-(y,-(0,x)))) 3) 4) 5)",
         "-(let f = proc (x) proc (y) proc (z) -(z,-(0,-(y,-(0,x)))) in (((f 3) 4) 5), 3)",
         "let f = letrec g (x) = if zero?(x) then 0 else -((g -(x, 1)),-2) in g in (f 2)",
