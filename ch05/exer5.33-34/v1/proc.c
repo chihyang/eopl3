@@ -185,6 +185,7 @@ void if_node_free(ast_if_t exp);
 void let_node_free(ast_let_t exp);
 void diff_node_free(ast_diff_t exp);
 void call_node_free(ast_call_t exp);
+env_t env_copy(env_t env);
 void report_ast_malloc_fail(const char* node_name);
 void report_exp_val_malloc_fail(const char *val_type);
 void report_invalid_exp_val(const char *val_type);
@@ -460,8 +461,7 @@ proc_t new_proc(symbol_t id, ast_node_t body, env_t env) {
     if (p) {
         p->id = id;
         p->body = body;
-        env->ref += 1;
-        p->env = env;
+        p->env = env_copy(env);
         return p;
     } else {
         report_exp_val_malloc_fail("procedure");
@@ -471,8 +471,8 @@ proc_t new_proc(symbol_t id, ast_node_t body, env_t env) {
 
 void proc_free(proc_t p) {
     if (p) {
-        env_t e = env_pop(p->env);
-        while (e->ref == 0) {
+        env_t e = p->env;
+        while (e) {
             e = env_pop(e);
         }
         free(p);
@@ -678,18 +678,6 @@ env_t extend_rec_env_free(extend_rec_env_t e) {
         env_t next = e->env;
         free(e);
         return next;
-    } else if (e->ref == 2) {
-        e->ref -= 1;
-        if (e->proc_val) {
-            e->proc_val->val.pv->env->ref -= 1;
-            e->env->ref -= 1;
-            exp_val_free(e->proc_val);
-            env_t next = e->env;
-            free(e);
-            return next;
-        } else {
-            return (env_t) e;
-        }
     } else {
         e->ref -= 1;
         return (env_t) e;
@@ -727,6 +715,22 @@ exp_val_t apply_env(env_t env, symbol_t var) {
             report_invalid_env(env);
             exit(1);
         }
+    }
+}
+
+env_t env_copy(env_t env) {
+    if (env->type == EMPTY_ENV) {
+        return empty_env();
+    } else if (env->type == EXTEND_ENV) {
+        extend_env_t e = (extend_env_t)env;
+        exp_val_t val = copy_exp_val(e->val);
+        return (env_t)extend_env(e->var, val, env_copy(e->env));
+    } else if (env->type == EXTEND_REC_ENV) {
+        extend_rec_env_t e = (extend_rec_env_t)env;
+        return (env_t)extend_env_rec(e->p_name, e->p_var, e->p_body, env_copy(e->env));
+    } else {
+        report_invalid_env(env);
+        return NULL;
     }
 }
 
@@ -780,6 +784,7 @@ continuation_t new_let_cont(symbol_t var, ast_node_t body, env_t env, continuati
         c->var = var;
         c->body = body;
         c->env = env;
+        env->ref += 1;
         c->cont = cont;
         return (continuation_t)c;
     } else {
@@ -795,6 +800,7 @@ continuation_t new_if_test_cont(ast_node_t exp2, ast_node_t exp3, env_t env, con
         c->exp2 = exp2;
         c->exp3 = exp3;
         c->env = env;
+        env->ref += 1;
         c->cont = cont;
         return (continuation_t)c;
     } else {
@@ -809,6 +815,7 @@ continuation_t new_diff1_cont(ast_node_t exp2, env_t env, continuation_t cont) {
         c->type = DIFF1_CONT;
         c->exp2 = exp2;
         c->env = env;
+        env->ref += 1;
         c->cont = cont;
         return (continuation_t)c;
     } else {
@@ -836,6 +843,7 @@ continuation_t new_rator_cont(ast_node_t exp, env_t env, continuation_t cont) {
         c->type = RATOR_CONT;
         c->exp = exp;
         c->env = env;
+        env->ref += 1;
         c->cont = cont;
         return (continuation_t)c;
     } else {
@@ -862,6 +870,7 @@ continuation_t new_letrec_cont(env_t env, continuation_t cont) {
     if (c) {
         c->type = LETREC_CONT;
         c->env = env;
+        env->ref += 1;
         c->cont = cont;
         return (continuation_t)c;
     } else {
@@ -875,6 +884,7 @@ continuation_t new_let2_cont(env_t env, continuation_t cont) {
     if (c) {
         c->type = LET2_CONT;
         c->env = env;
+        env->ref += 1;
         c->cont = cont;
         return (continuation_t)c;
     } else {
@@ -890,6 +900,7 @@ continuation_t new_apply_proc_cont(exp_val_t rator, exp_val_t rand, env_t env, c
         c->rator = rator;
         c->rand = rand;
         c->env = env;
+        env->ref += 1;
         c->cont = cont;
         return (continuation_t)c;
     } else {
@@ -903,6 +914,7 @@ continuation_t new_apply_proc2_cont(env_t env, continuation_t cont) {
     if (c) {
         c->type = APPLY_PROC2_CONT;
         c->env = env;
+        env->ref += 1;
         c->cont = cont;
         return (continuation_t)c;
     } else {
@@ -925,18 +937,21 @@ void zero1_cont_free(zero1_cont_t cont) {
 
 void let_cont_free(let_cont_t cont) {
     if (cont) {
+        env_pop(cont->env);
         free(cont);
     }
 }
 
 void if_test_cont_free(if_test_cont_t cont) {
     if (cont) {
+        env_pop(cont->env);
         free(cont);
     }
 }
 
 void diff1_cont_free(diff1_cont_t cont) {
     if (cont) {
+        env_pop(cont->env);
         free(cont);
     }
 }
@@ -949,6 +964,7 @@ void diff2_cont_free(diff2_cont_t cont) {
 
 void rator_cont_free(rator_cont_t cont) {
     if (cont) {
+        env_pop(cont->env);
         free(cont);
     }
 }
@@ -961,24 +977,28 @@ void rand_cont_free(rand_cont_t cont) {
 
 void letrec_cont_free(letrec_cont_t cont) {
     if (cont) {
+        env_pop(cont->env);
         free(cont);
     }
 }
 
 void let2_cont_free(let2_cont_t cont) {
     if (cont) {
+        env_pop(cont->env);
         free(cont);
     }
 }
 
 void apply_proc_cont_free(apply_proc_cont_t cont) {
     if (cont) {
+        env_pop(cont->env);
         free(cont);
     }
 }
 
 void apply_proc2_cont_free(apply_proc2_cont_t cont) {
     if (cont) {
+        env_pop(cont->env);
         free(cont);
     }
 }
@@ -993,17 +1013,16 @@ static bounce_s bc;
 
 /* for exercise 5.33 and 5.34 */
 void value_of_program_k(ast_program_t prgm) {
+    env_t e = empty_env();
     cont = new_end_cont();
-    env = empty_env();
+    env = e;
     exp = prgm->exp;
     bc = NULL;
     trampoline();
     print_exp_val(val);
     exp_val_free(val);
     end_cont_free(cont);
-    while (env) {
-        env = env_pop(env);
-    }
+    env_pop(e);
 }
 
 void trampoline() {
