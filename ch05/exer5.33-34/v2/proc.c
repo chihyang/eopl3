@@ -1011,6 +1011,7 @@ static ast_node_t exp;
 static proc_t proc1;
 static exp_val_t val;
 static bounce_s bc;
+void compute_value();
 
 /* for exercise 5.33 and 5.34 */
 void value_of_program_k(ast_program_t prgm) {
@@ -1027,191 +1028,193 @@ void value_of_program_k(ast_program_t prgm) {
 }
 
 void trampoline() {
-    value_of_k();
+    compute_value();
     while (bc != NULL) {
         bc();
     }
 }
 
-void apply_cont() {
-    switch(cont->type) {
-        case END_CONT: {
-            printf("End of computation.\n");
-            bc = NULL;
-            return;
-        }
-        case ZERO1_CONT: {
-            zero1_cont_t zc = (zero1_cont_t)cont;
-            if (expval_to_int(val) == 0) {
-                exp_val_free(val);
-                cont = zc->cont;
-                zero1_cont_free(zc);
-                val = new_bool_val(TRUE);
-                return apply_cont();
-            } else {
-                exp_val_free(val);
-                cont = zc->cont;
-                val = new_bool_val(FALSE);
-                zero1_cont_free(zc);
-                return apply_cont();
+void compute_value() {
+VALUE_OF_K: {
+        switch (exp->type) {
+            case CONST_EXP: {
+                ast_const_t cexp = (ast_const_t)exp;
+                val = new_int_val(cexp->num);
+                goto APPLY_CONT;
             }
-        }
-        case LET_CONT: {
-            let_cont_t l1c = (let_cont_t)cont;
-            env = extend_env(l1c->var, val, l1c->env);
-            cont = new_let2_cont(env, l1c->cont);
-            exp = l1c->body;
-            let_cont_free(l1c);
-            return value_of_k();
-        }
-        case LET2_CONT: {
-            let2_cont_t l2c = (let2_cont_t)cont;
-            l2c->env = env_pop(l2c->env);
-            env = l2c->env;
-            cont = l2c->cont;
-            let2_cont_free(l2c);
-            return apply_cont();
-        }
-        case LETREC_CONT: {
-            letrec_cont_t lrc = (letrec_cont_t)cont;
-            lrc->env = env_pop(lrc->env);
-            env = lrc->env;
-            cont = lrc->cont;
-            letrec_cont_free(lrc);
-            return apply_cont();
-        }
-        case IF_TEST_CONT: {
-            if_test_cont_t ic = (if_test_cont_t)cont;
-            if (expval_to_bool(val)) {
-                exp_val_free(val);
-                cont = ic->cont;
-                env = ic->env;
-                exp = ic->exp2;
-                if_test_cont_free(ic);
-                return value_of_k();
-            } else {
-                exp_val_free(val);
-                cont = ic->cont;
-                env = ic->env;
-                exp = ic->exp3;
-                if_test_cont_free(ic);
-                return value_of_k();
+            case VAR_EXP: {
+                ast_var_t vexp = (ast_var_t)exp;
+                val = copy_exp_val(apply_env(env, vexp->var));
+                goto APPLY_CONT;
             }
-        }
-        case DIFF1_CONT: {
-            diff1_cont_t d1c = (diff1_cont_t)cont;
-            cont = new_diff2_cont(val, d1c->cont);
-            env = d1c->env;
-            exp = d1c->exp2;
-            diff1_cont_free(d1c);
-            return value_of_k();
-        }
-        case DIFF2_CONT: {
-            diff2_cont_t d2c = (diff2_cont_t)cont;
-            int diff_val = expval_to_int(d2c->val) - expval_to_int(val);
-            cont = d2c->cont;
-            exp_val_free(val);
-            exp_val_free(d2c->val);
-            val = new_int_val(diff_val);
-            diff2_cont_free(d2c);
-            return apply_cont();
-        }
-        case RATOR_CONT: {
-            rator_cont_t rtc = (rator_cont_t)cont;
-            cont = new_rand_cont(val, rtc->cont);
-            env = rtc->env;
-            exp = rtc->exp;
-            rator_cont_free(rtc);
-            return value_of_k();
-        }
-        case RAND_CONT: {
-            rand_cont_t rnc = (rand_cont_t)cont;
-            cont = new_apply_proc_cont(rnc->val, val, env, rnc->cont);
-            proc1 = expval_to_proc(rnc->val);
-            bc = apply_procedure_k;
-            rand_cont_free(rnc);
-            return;
-        }
-        case APPLY_PROC_CONT: {
-            apply_proc_cont_t apc = (apply_proc_cont_t)cont;
-            exp_val_free(apc->rator);
-            exp_val_free(apc->rand);
-            cont = apc->cont;
-            env = apc->env;
-            apply_proc_cont_free(apc);
-            return apply_cont();
-        }
-        case APPLY_PROC2_CONT: {
-            apply_proc2_cont_t ap2c = (apply_proc2_cont_t)cont;
-            env = env_pop(ap2c->env);
-            cont = ap2c->cont;
-            apply_proc2_cont_free(ap2c);
-            return apply_cont();
-        }
-        default: {
-            fprintf(stderr, "unknown type of continuation: %d", cont->type);
-            exit(1);
+            case PROC_EXP: {
+                ast_proc_t pexp = (ast_proc_t)exp;
+                val = new_proc_val(new_proc(pexp->var, pexp->body, env));
+                goto APPLY_CONT;
+            }
+            case LETREC_EXP: {
+                ast_letrec_t lexp = (ast_letrec_t)exp;
+                env = extend_env_rec(lexp->p_name, lexp->p_var, lexp->p_body, env);
+                cont = new_letrec_cont(env, cont);
+                exp = lexp->letrec_body;
+                goto VALUE_OF_K;
+            }
+            case ZERO_EXP: {
+                ast_zero_t zexp = (ast_zero_t)exp;
+                cont = new_zero1_cont(cont);
+                exp = zexp->exp1;
+                goto VALUE_OF_K;
+            }
+            case IF_EXP: {
+                ast_if_t iexp = (ast_if_t)exp;
+                cont = new_if_test_cont(iexp->exp1, iexp->exp2, env, cont);
+                exp = iexp->cond;
+                goto VALUE_OF_K;
+            }
+            case LET_EXP: {
+                ast_let_t lexp = (ast_let_t)exp;
+                cont = new_let_cont(lexp->id, lexp->exp2, env, cont);
+                exp = lexp->exp1;
+                goto VALUE_OF_K;
+            }
+            case DIFF_EXP: {
+                ast_diff_t dexp = (ast_diff_t)exp;
+                cont = new_diff1_cont(dexp->exp2, env, cont);
+                exp = dexp->exp1;
+                goto VALUE_OF_K;
+            }
+            case CALL_EXP: {
+                ast_call_t cexp = (ast_call_t)exp;
+                cont = new_rator_cont(cexp->rand, env, cont);
+                exp = cexp->rator;
+                goto VALUE_OF_K;
+            }
+            default: {
+                fprintf(stderr, "unknown type of expression: %d\n", exp->type);
+                exit(1);
+            }
         }
     }
-}
 
-void value_of_k() {
-    switch (exp->type) {
-        case CONST_EXP: {
-            ast_const_t cexp = (ast_const_t)exp;
-            val = new_int_val(cexp->num);
-            return apply_cont();
-        }
-        case VAR_EXP: {
-            ast_var_t vexp = (ast_var_t)exp;
-            val = copy_exp_val(apply_env(env, vexp->var));
-            return apply_cont();
-        }
-        case PROC_EXP: {
-            ast_proc_t pexp = (ast_proc_t)exp;
-            val = new_proc_val(new_proc(pexp->var, pexp->body, env));
-            return apply_cont();
-        }
-        case LETREC_EXP: {
-            ast_letrec_t lexp = (ast_letrec_t)exp;
-            env = extend_env_rec(lexp->p_name, lexp->p_var, lexp->p_body, env);
-            cont = new_letrec_cont(env, cont);
-            exp = lexp->letrec_body;
-            return value_of_k();
-        }
-        case ZERO_EXP: {
-            ast_zero_t zexp = (ast_zero_t)exp;
-            cont = new_zero1_cont(cont);
-            exp = zexp->exp1;
-            return value_of_k();
-        }
-        case IF_EXP: {
-            ast_if_t iexp = (ast_if_t)exp;
-            cont = new_if_test_cont(iexp->exp1, iexp->exp2, env, cont);
-            exp = iexp->cond;
-            return value_of_k();
-        }
-        case LET_EXP: {
-            ast_let_t lexp = (ast_let_t)exp;
-            cont = new_let_cont(lexp->id, lexp->exp2, env, cont);
-            exp = lexp->exp1;
-            return value_of_k();
-        }
-        case DIFF_EXP: {
-            ast_diff_t dexp = (ast_diff_t)exp;
-            cont = new_diff1_cont(dexp->exp2, env, cont);
-            exp = dexp->exp1;
-            return value_of_k();
-        }
-        case CALL_EXP: {
-            ast_call_t cexp = (ast_call_t)exp;
-            cont = new_rator_cont(cexp->rand, env, cont);
-            exp = cexp->rator;
-            return value_of_k();
-        }
-        default: {
-            fprintf(stderr, "unknown type of expression: %d\n", exp->type);
-            exit(1);
+APPLY_CONT: {
+        switch(cont->type) {
+            case END_CONT: {
+                printf("End of computation.\n");
+                bc = NULL;
+                return;
+            }
+            case ZERO1_CONT: {
+                zero1_cont_t zc = (zero1_cont_t)cont;
+                if (expval_to_int(val) == 0) {
+                    exp_val_free(val);
+                    cont = zc->cont;
+                    zero1_cont_free(zc);
+                    val = new_bool_val(TRUE);
+                    goto APPLY_CONT;
+                } else {
+                    exp_val_free(val);
+                    cont = zc->cont;
+                    val = new_bool_val(FALSE);
+                    zero1_cont_free(zc);
+                    goto APPLY_CONT;
+                }
+            }
+            case LET_CONT: {
+                let_cont_t l1c = (let_cont_t)cont;
+                env = extend_env(l1c->var, val, l1c->env);
+                cont = new_let2_cont(env, l1c->cont);
+                exp = l1c->body;
+                let_cont_free(l1c);
+                goto VALUE_OF_K;
+            }
+            case LET2_CONT: {
+                let2_cont_t l2c = (let2_cont_t)cont;
+                l2c->env = env_pop(l2c->env);
+                env = l2c->env;
+                cont = l2c->cont;
+                let2_cont_free(l2c);
+                goto APPLY_CONT;
+            }
+            case LETREC_CONT: {
+                letrec_cont_t lrc = (letrec_cont_t)cont;
+                lrc->env = env_pop(lrc->env);
+                env = lrc->env;
+                cont = lrc->cont;
+                letrec_cont_free(lrc);
+                goto APPLY_CONT;
+            }
+            case IF_TEST_CONT: {
+                if_test_cont_t ic = (if_test_cont_t)cont;
+                if (expval_to_bool(val)) {
+                    exp_val_free(val);
+                    cont = ic->cont;
+                    env = ic->env;
+                    exp = ic->exp2;
+                    if_test_cont_free(ic);
+                    goto VALUE_OF_K;
+                } else {
+                    exp_val_free(val);
+                    cont = ic->cont;
+                    env = ic->env;
+                    exp = ic->exp3;
+                    if_test_cont_free(ic);
+                    goto VALUE_OF_K;
+                }
+            }
+            case DIFF1_CONT: {
+                diff1_cont_t d1c = (diff1_cont_t)cont;
+                cont = new_diff2_cont(val, d1c->cont);
+                env = d1c->env;
+                exp = d1c->exp2;
+                diff1_cont_free(d1c);
+                goto VALUE_OF_K;
+            }
+            case DIFF2_CONT: {
+                diff2_cont_t d2c = (diff2_cont_t)cont;
+                int diff_val = expval_to_int(d2c->val) - expval_to_int(val);
+                cont = d2c->cont;
+                exp_val_free(val);
+                exp_val_free(d2c->val);
+                val = new_int_val(diff_val);
+                diff2_cont_free(d2c);
+                goto APPLY_CONT;
+            }
+            case RATOR_CONT: {
+                rator_cont_t rtc = (rator_cont_t)cont;
+                cont = new_rand_cont(val, rtc->cont);
+                env = rtc->env;
+                exp = rtc->exp;
+                rator_cont_free(rtc);
+                goto VALUE_OF_K;
+            }
+            case RAND_CONT: {
+                rand_cont_t rnc = (rand_cont_t)cont;
+                cont = new_apply_proc_cont(rnc->val, val, env, rnc->cont);
+                proc1 = expval_to_proc(rnc->val);
+                bc = apply_procedure_k;
+                rand_cont_free(rnc);
+                return;
+            }
+            case APPLY_PROC_CONT: {
+                apply_proc_cont_t apc = (apply_proc_cont_t)cont;
+                exp_val_free(apc->rator);
+                exp_val_free(apc->rand);
+                cont = apc->cont;
+                env = apc->env;
+                apply_proc_cont_free(apc);
+                goto APPLY_CONT;
+            }
+            case APPLY_PROC2_CONT: {
+                apply_proc2_cont_t ap2c = (apply_proc2_cont_t)cont;
+                env = env_pop(ap2c->env);
+                cont = ap2c->cont;
+                apply_proc2_cont_free(ap2c);
+                goto APPLY_CONT;
+            }
+            default: {
+                fprintf(stderr, "unknown type of continuation: %d", cont->type);
+                exit(1);
+            }
         }
     }
 }
@@ -1220,7 +1223,7 @@ void apply_procedure_k() {
     env = extend_env(proc1->id, copy_exp_val(val), proc1->env);
     cont = new_apply_proc2_cont(env, cont);
     exp = proc1->body;
-    value_of_k();
+    compute_value();
 }
 
 ast_program_t proc_parse(const char *string) {
