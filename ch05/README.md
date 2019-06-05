@@ -101,3 +101,23 @@ registers; with trampoline, we need five:
             (set! val body)
             (value-of/k)))))
 ```
+
+# Exercise 5.33
+
+> Translate the interpreter of this section into an imperative language.  Do
+> this twice: once using zero-argument procedure calls in the host language, and
+> once replacing each zero-argument procedure call by a `goto`. Howdo these
+> alternatives perform as the computation gets longer?
+
+Every time I thought my reference counting (RC) worked, I could find some more
+tests to cause memory leak or corruption. The problem is that I can't properly
+free environment used by a closure, especially for the procedure produced by
+`letrec`. Here is the original idea: for `EXTEND_REC_ENV`, if RC reaches 2, the
+whole environment and the procedure saved in it is freed (`2` is thought to be
+the RC of the reference to the environment per se plus the reference by the
+procedure saved in it). But I can find a situation where environment is not
+referred to anymore while two or more values exist at the same time. In such
+case the environment in the procedure cannot be freed too early. More cases
+could be found to make the simple RC fail. So I gave up the endeavor: I use
+value copy for every data types (except for continuation): procedure, expressed
+value, and environment. This is ineffective but quite enough for small tests.
