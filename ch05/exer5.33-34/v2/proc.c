@@ -187,6 +187,7 @@ void let_node_free(ast_let_t exp);
 void diff_node_free(ast_diff_t exp);
 void call_node_free(ast_call_t exp);
 env_t env_copy(env_t env);
+env_t env_copy_iter(env_t env);
 void report_ast_malloc_fail(const char* node_name);
 void report_exp_val_malloc_fail(const char *val_type);
 void report_invalid_exp_val(const char *val_type);
@@ -462,7 +463,7 @@ proc_t new_proc(symbol_t id, ast_node_t body, env_t env) {
     if (p) {
         p->id = id;
         p->body = body;
-        p->env = env_copy(env);
+        p->env = env_copy_iter(env);
         return p;
     } else {
         report_exp_val_malloc_fail("procedure");
@@ -733,6 +734,78 @@ env_t env_copy(env_t env) {
         report_invalid_env(env);
         return NULL;
     }
+}
+
+env_t env_copy_iter(env_t env) {
+    /* register */
+    env_t r_cpy_env = env;
+    env_t env_head = NULL;
+    env_t *env_tail = &env_head;
+    while (r_cpy_env->type != EMPTY_ENV) {
+        if (r_cpy_env->type == EXTEND_ENV) {
+            extend_env_t e = (extend_env_t)r_cpy_env;
+            extend_env_t ec = (extend_env_t)malloc(sizeof(*e));
+            if (ec) {
+                ec->type = EXTEND_ENV;
+                ec->ref = 1;
+                ec->var = e->var;
+                ec->val = copy_exp_val(e->val);
+                ec->env = NULL;
+                if (*env_tail == NULL) {
+                    *env_tail = (env_t)ec;
+                    env_tail = &(((extend_env_t)*env_tail)->env);
+                } else if ((*env_tail)->type == EXTEND_REC_ENV) {
+                    ((extend_env_t)*env_tail)->env = (env_t)ec;
+                    env_tail = &(((extend_env_t)*env_tail)->env);
+                } else {
+                    ((extend_rec_env_t)*env_tail)->env = (env_t)ec;
+                    env_tail = &(((extend_rec_env_t)*env_tail)->env);
+                }
+                r_cpy_env = e->env;
+            } else {
+                fprintf(stderr, "failed to create a new extend env!\n");
+                exit(1);
+            }
+        } else if (r_cpy_env->type == EXTEND_REC_ENV) {
+            extend_rec_env_t e = (extend_rec_env_t)r_cpy_env;
+            extend_rec_env_t ec = (extend_rec_env_t)malloc(sizeof(*e));
+            if (ec) {
+                ec->type = EXTEND_REC_ENV;
+                ec->ref = 1;
+                ec->p_name = e->p_name;
+                ec->p_var = e->p_var;
+                ec->p_body = e->p_body;
+                ec->proc_val = NULL;
+                ec->env = NULL;
+                if (*env_tail == NULL) {
+                    *env_tail = (env_t)ec;
+                    env_tail = &(((extend_rec_env_t)*env_tail)->env);
+                } else if ((*env_tail)->type == EXTEND_REC_ENV) {
+                    ((extend_env_t)*env_tail)->env = (env_t)ec;
+                    env_tail = &(((extend_env_t)*env_tail)->env);
+                } else {
+                    ((extend_rec_env_t)*env_tail)->env = (env_t)ec;
+                    env_tail = &(((extend_rec_env_t)*env_tail)->env);
+                }
+                r_cpy_env = e->env;
+            } else {
+                fprintf(stderr, "failed to create a new extend rec env!\n");
+                exit(1);
+            }
+        } else {
+            report_invalid_env(r_cpy_env);
+            return NULL;
+        }
+    }
+    r_cpy_env = empty_env();
+    if (*env_tail == NULL) {
+        *env_tail = r_cpy_env;
+    } else if ((*env_tail)->type == EXTEND_REC_ENV) {
+        ((extend_env_t)*env_tail)->env = r_cpy_env;
+    } else {
+        ((extend_rec_env_t)*env_tail)->env = r_cpy_env;
+    }
+    return env_head;
 }
 
 env_t env_pop(env_t env) {
