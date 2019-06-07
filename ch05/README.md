@@ -120,4 +120,6 @@ referred to anymore while two or more values exist at the same time. In such
 case the environment in the procedure cannot be freed too early. More cases
 could be found to make the simple RC fail. So I gave up the endeavor: I use
 value copy for every data types except continuation and ast. This is ineffective
-but quite enough for small tests.
+but quite enough for small tests. As a comparison, I put similar tests in
+exercise 5.21 but leave the interpreter unchanged. Run the program with
+`valgrind` to see the problem.

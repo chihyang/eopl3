@@ -1291,11 +1291,25 @@ void report_cont_build_fail(const char* name) {
 
 int main(int argc, char *argv[]) {
     const char *programs[] = {
+        "3",
+        "-(3,2)",
+        "let x = 3 in x",
+        "let x = 3 in -(3, x)",
+        "proc (x) -(x, 1)",
+        "(proc (x) -(x, 1) 3)",
+        "let f = proc (x) -(x, 1) in (f 3)",
+        "let x = 3 in let f = proc (x) -(x, 1) in (f x)",
+        "((proc (x) proc (y) -(y,-(0,x)) 3) 4)",
         "letrec double (x) = if zero?(x) then 0"
         " else -((double -(x,1)),-2)"
-        " in (double 6)",
-        "((proc (x) proc (y) -(y,-(0,x)) 3) 4)",
+        " in (double 1000)",
+        "letrec double (x) = if zero?(x) then 0"
+        " else -((double -(x,1)),-2)"
+        " in double",
         "(((proc (x) proc (y) proc (z) -(z,-(0,-(y,-(0,x)))) 3) 4) 5)",
+        "-(let f = proc (x) proc (y) proc (z) -(z,-(0,-(y,-(0,x)))) in (((f 3) 4) 5), 3)",
+        "let f = letrec g (x) = if zero?(x) then 0 else -((g -(x, 1)),-2) in g in (f 2)",
+        "-(2, let y = 13 in letrec g (x) = if zero?(x) then 0 else -((g -(x, 1)),-2) in (g y))",
     };
     for (int i = 0; i < sizeof(programs)/ sizeof(*programs); ++i) {
         run(programs[i]);
