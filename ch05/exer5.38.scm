@@ -269,6 +269,13 @@
   (diff2-cont
    (val1 exp-val?)
    (cont continuation?))
+  (div1-cont
+   (exp2 expression?)
+   (env environment?)
+   (cont continuation?))
+  (div2-cont
+   (val1 exp-val?)
+   (cont continuation?))
   (rator-cont
    (exps (list-of expression?))
    (env environment?)
@@ -350,6 +357,18 @@
             (let ((num1 (expval->num val1))
                   (num2 (expval->num val)))
               (apply-cont cont enp-cont (num-val (- num1 num2)))))
+           (div1-cont
+            (exp2 env cont)
+            (value-of/k exp2 env (div2-cont val cont) enp-cont))
+           (div2-cont
+            (val1 cont)
+            (let ((num1 (expval->num val1))
+                  (num2 (expval->num val)))
+              (if (eqv? num2 0)
+                  (begin
+                    (eopl:printf "Divide zero!~%")
+                    (apply-handler enp-cont val1))
+                  (apply-cont cont enp-cont (num-val (/ num1 num2))))))
            (rator-cont
             (exps env cont)
             (if (null? exps)
@@ -517,6 +536,8 @@
                 list-exp)
     (expression ("-" "(" expression "," expression ")")
                 diff-exp)
+    (expression ("/" "(" expression "," expression ")")
+                div-exp)
     (expression ("zero?" "(" expression ")")
                 zero?-exp)
     (expression ("if" expression "then" expression "else" expression)
@@ -574,9 +595,12 @@
            (diff-exp
             (exp1 exp2)
             (value-of/k exp1 env (diff1-cont exp2 env cont) enp-cont))
+           (div-exp
+            (exp1 exp2)
+            (value-of/k exp1 env (div1-cont exp2 env cont) enp-cont))
            (zero?-exp
-            (exp1)
-            (value-of/k exp1 env (zero1-cont cont) enp-cont))
+              (exp1)
+              (value-of/k exp1 env (zero1-cont cont) enp-cont))
            (if-exp
             (exp1 exp2 exp3)
             (value-of/k exp1 env (if-test-cont exp2 exp3 env cont) enp-cont))
@@ -806,3 +830,15 @@
    in try (index 5 list(2, 3))
       catch (x) raise x")
  #f)
+
+(check-eqv?
+ (run "/(4,0)")
+ #f)
+
+(check-eqv?
+ (run "try /(4,0) catch (x) x")
+ 4)
+
+(check-eqv?
+ (run "/(8,4)")
+ 2)
