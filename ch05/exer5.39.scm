@@ -831,3 +831,21 @@
    catch (y)
      y")
  101)
+
+(check-eqv?
+ (run
+  "try
+     let x = 3 in
+       -(3, -(2, raise x))
+   catch (y)
+     -(y, 3)")
+ 1)
+
+(check-eqv?
+ (run
+  "try
+     let x = 3 in
+       -(3, -(2, x))
+   catch (y)
+     -(y, 3)")
+ 4)
