@@ -123,3 +123,36 @@ value copy for every data types except continuation and ast. This is ineffective
 but quite enough for small tests. As a comparison, I put similar tests in
 exercise 5.21 but leave the interpreter unchanged. Run the program with
 `valgrind` to see the problem.
+
+# Exercise 5.40
+
+> Give the exception handlers in the defined language the ability to either
+> return or resume. Do this by passing the continuation fromthe `raise`
+> exception as a second argument. This may require adding continuations as a new
+> kind of expressed value. Devise suitable syntax for invoking a continuation on
+> a value.
+
+To be `recoverable-try` or `try ... catch (var, cont) ...`, which is better? As
+one can see, in the first version, programmers can only resume the exception
+after the exception handler is evaluated, while the second version gives
+programmers ability to resume their work at any time they want. Sounds great?
+Consider the program below:
+
+``` scheme
+let p = 3 in
+  begin
+     try
+       let x = 3 in
+         raise -(3, -(2, x))
+     catch (y, cont)
+       set p = cont;
+     resume p with 3
+  end
+```
+
+Does it terminate? Run it in exercise 5.40.v2.scm to see the result. Even
+without running it, we can see the code above violates designer's purpose for
+`try ... catch (var, cont)`. Unfortunately some users would definitely try to do
+so if such a feature existed: they don't use `try` for exception handling but
+for saving a continuation and use it later! A feature with unexpected feature
+does not seem a good one.
