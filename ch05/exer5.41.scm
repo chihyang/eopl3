@@ -26,25 +26,25 @@
 (define apply-env
   (lambda (env search-var)
     (cond
-      ((eqv? (car env) 'empty-env)
-       (report-no-binding-found search-var))
-      ((eqv? (car env) 'extend-env)
-       (let ((saved-var (cadr env))
-             (saved-val (caddr env))
-             (saved-env (cadddr env)))
-         (if (eqv? search-var saved-var)
-             saved-val
-             (apply-env saved-env search-var))))
-      ((eqv? (car env) 'extend-env-rec)
-       (let ((saved-p-name (cadr env))
-             (saved-p-var (caddr env))
-             (saved-p-body (cadddr env))
-             (saved-env (car (cddddr env))))
-         (if (eqv? search-var saved-p-name)
-             (proc-val (procedure saved-p-var saved-p-body env))
-             (apply-env saved-env search-var))))
-      (else
-       (report-invalid-env env)))))
+     ((eqv? (car env) 'empty-env)
+      (report-no-binding-found search-var))
+     ((eqv? (car env) 'extend-env)
+      (let ((saved-var (cadr env))
+            (saved-val (caddr env))
+            (saved-env (cadddr env)))
+        (if (eqv? search-var saved-var)
+            saved-val
+            (apply-env saved-env search-var))))
+     ((eqv? (car env) 'extend-env-rec)
+      (let ((saved-p-name (cadr env))
+            (saved-p-var (caddr env))
+            (saved-p-body (cadddr env))
+            (saved-env (car (cddddr env))))
+        (if (eqv? search-var saved-p-name)
+            (proc-val (procedure saved-p-var saved-p-body env))
+            (apply-env saved-env search-var))))
+     (else
+      (report-invalid-env env)))))
 (define report-no-binding-found
   (lambda (search-var)
     (eopl:error 'apply-env "No binding for ~s" search-var)))
@@ -405,8 +405,7 @@
     (expression ("try" expression "catch" "(" identifier ")" expression)
                 try-exp)
     (expression ("raise" expression)
-                raise-exp)
-))
+                raise-exp)))
 
 ;;; ---------------------- Evaluate expression ----------------------
 ;; value-of/k : Exp x Env x Cont -> FinalAnswer
@@ -476,22 +475,24 @@
            (a-program
             (exp)
             (let ((val (value-of/k exp (empty-env) (end-cont))))
-              (cases exp-val val
-                     (num-val
-                      (num)
-                      num)
-                     (bool-val
-                      (bool)
-                      bool)
-                     (proc-val
-                      (val)
-                      val)
+              (if (exp-val? val)
+                  (cases exp-val val
+                         (num-val
+                          (num)
+                          num)
+                         (bool-val
+                          (bool)
+                          bool)
+                         (proc-val
+                          (val)
+                          val)
                          (null-val
                           ()
                           '())
                          (pair-val
                           (val1 val2)
-                          (expval->pair val))))))))
+                          (expval->pair val)))
+                  val))))))
 
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
@@ -568,3 +569,18 @@
            catch (x) -1
    in ((index 5) list(2, 3))")
  -1)
+
+(check-eqv?
+ (run
+  "let index = proc (n)
+        letrec inner (lst)
+          = if null? (lst)
+            then raise 99
+            else if zero?(-(car(lst), n))
+                 then 0
+                 else -((inner cdr(lst)), -1)
+        in proc (lst)
+           try (inner lst)
+           catch (x) -1
+   in raise ((index 5) list(2, 3))")
+ #f)
