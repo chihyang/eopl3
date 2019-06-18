@@ -75,32 +75,28 @@
        (apply-cont cont
                    (bool-val
                     (zero? (expval->num val)))))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; let-exp-cont : Var x Exp x Env x Cont -> Cont
 (define let-exp-cont
   (lambda (var body env cont)
     (cons
      (lambda (val)
        (value-of/k body (extend-env var val env) cont))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; cons1-cont : Exp x Env x Cont -> Cont
 (define cons1-cont
   (lambda (exp2 env cont)
     (cons
      (lambda (val)
        (value-of/k exp2 env (cons2-cont val cont)))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; cons2-cont : Val x Cont -> Cont
 (define cons2-cont
   (lambda (val1 cont)
     (cons
      (lambda (val)
        (apply-cont cont (pair-val val1 val)))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; car-cont : Cont -> Cont
 (define car-cont
   (lambda (cont)
@@ -111,8 +107,7 @@
                (first rest)
                (apply-cont cont first))
               (else (report-invalid-exp-value 'pair-val))))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; null1-cont : Cont -> Cont
 (define null1-cont
   (lambda (cont)
@@ -123,24 +118,21 @@
                ()
                (apply-cont cont (bool-val #t)))
               (else (apply-cont cont (bool-val #f)))))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; list1-cont : Exp x Env x Cont -> Cont
 (define list1-cont
   (lambda (exps env cont)
     (cons
      (lambda (val)
        (value-of/k exps env (list2-cont val cont)))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; list2-cont : ExpVal x Cont -> Cont
 (define list2-cont
   (lambda (first-val cont)
     (cons
      (lambda (val)
        (apply-cont cont (pair-val first-val val)))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; cdr-cont : Cont -> Cont
 (define cdr-cont
   (lambda (cont)
@@ -151,8 +143,7 @@
                (first rest)
                (apply-cont cont rest))
               (else (report-invalid-exp-value 'pair-val))))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; if-test-cont : Exp x Exp x Env x Cont -> Cont
 (define if-test-cont
   (lambda (exp2 exp3 env cont)
@@ -161,16 +152,14 @@
        (if (expval->bool val)
            (value-of/k exp2 env cont)
            (value-of/k exp3 env cont)))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; diff1-cont : Exp x Env x Cont -> Cont
 (define diff1-cont
   (lambda (exp2 env cont)
     (cons
      (lambda (val)
        (value-of/k exp2 env (diff2-cont val cont)))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; diff2-cont : ExpVal x Cont -> Cont
 (define diff2-cont
   (lambda (val1 cont)
@@ -179,16 +168,14 @@
        (let ((num1 (expval->num val1))
              (num2 (expval->num val2)))
          (apply-cont cont (num-val (- num1 num2)))))
-     (lambda (val2)
-       (apply-handler cont val2)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; rand-cont : Exp x Env x Cont -> Cont
 (define rator-cont
   (lambda (rand env cont)
     (cons
      (lambda (val)
        (value-of/k rand env (rand-cont val cont)))
-     (lambda (val)
-       (apply-handler val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; rand-cont : ExpVal x Cont -> Cont
 (define rand-cont
   (lambda (rator cont)
@@ -196,8 +183,7 @@
      (lambda (val)
        (let ((proc1 (expval->proc rator)))
          (apply-procedure/k proc1 val cont)))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; let2-exp-cont : Var x Var x Exp x Exp x Env x Cont -> Cont
 (define let2-exp-cont
   (lambda (var1 var2 exp2 body env cont)
@@ -206,8 +192,7 @@
        (value-of/k
         exp2 env
         (let-exp-cont var2 body (extend-env var1 val1 env) cont)))
-     (lambda (val1)
-       (apply-handler cont val1)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; try-cont : Var x Exp x Env x Cont -> Cont
 (define try-cont
   (lambda (var handler-exp env cont)
@@ -222,8 +207,7 @@
     (cons
      (lambda (val)
        (apply-handler cont val))
-     (lambda (val)
-       (apply-handler cont val)))))
+     (lambda (val) ((cdr cont) val)))))
 ;; apply-cont : Cont x ExpVal -> FinalAnswer
 (define apply-cont
   (lambda (cont v)
@@ -584,3 +568,12 @@
            catch (x) -1
    in raise ((index 5) list(2, 3))")
  #f)
+
+(check-eqv?
+ (run
+  "try
+     let x = 3 in
+       -(3, -(2, raise x))
+   catch (y)
+     -(y, 3)")
+ 0)
