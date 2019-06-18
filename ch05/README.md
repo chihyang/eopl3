@@ -156,3 +156,372 @@ without running it, we can see the code above violates designer's purpose for
 so if such a feature existed: they don't use `try` for exception handling but
 for saving a continuation and use it later! A feature with unexpected feature
 does not seem a good one.
+
+# Exercise 5.41
+
+> We have shown how to implement exceptions using a data structure
+> representation of continuations. We can’t immediately apply the recipe of
+> section 2.2.3 to get a procedural representation, because we now have two
+> observers: `apply-handler` and `apply-cont`. Implement the continuations of
+> this section as a pair of procedures: a one-argument procedure representing
+> the action of the continuation under `apply-cont`, and a zero-argument
+> procedure representing its action under apply-handler.
+
+The most direct and quite understandable way for me to solve this exercise is
+below:
+
+``` racket
+(define end-cont
+  (lambda ()
+    (cons
+     (lambda (val)
+       (begin
+         (eopl:printf "End of computation.~%")
+         val))
+     (lambda (val)
+       (begin
+         (report-uncaught-exception)
+         #f)))))
+
+(define try-cont
+  (lambda (var handler-exp env cont)
+    (cons
+     (lambda (val)
+       (apply-cont cont val))
+     (lambda (val)
+       (value-of/k handler-exp (extend-env var val env) cont)))))
+
+(define raise1-cont
+  (lambda (cont)
+    (cons
+     (lambda (val)
+       (apply-handler cont val))
+     (lambda (val)
+       (apply-handler cont val)))))
+
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (lambda (val)
+       (value-of/k exp2 env (diff2-cont val cont)))
+     (lambda (val) (apply-handler cont val)))))
+
+;; constructor of other continuations ...
+
+(define apply-cont
+  (lambda (cont v)
+    ((car cont) v)))
+
+(define apply-handler
+  (lambda (cont v)
+    ((cdr cont) v)))
+```
+
+But a zero-argument procedure to represent observer for `apply-handler`? Who
+knows what it is? Then I found one
+[solution](https://github.com/EFanZh/EOPL-Exercises/blob/11667f1e84a1a3e300c2182630b56db3e3d9246a/solutions/exercise-5.41.rkt#L119):
+
+``` racket
+(define (diff1-cont exp2 env cont)
+  (cons (lambda (val)
+          (value-of/k exp2 env (diff2-cont val cont)))
+        (cdr cont)))
+;; other continuations ...
+```
+
+This, of course, is not a procedure of zero-argument. But it reminds me of the
+relation between `apply-handler` and continuation constructors. It is easy to
+notice that `apply-handler` calls `cdr` of a continuation, on the other hand a
+continuation constructor for `apply-handler` just calls `apply-hanlder` (except
+`try-cont` and `end-cont`), so we can try to replace the constructor body of a
+continuation by replacing call to `apply-handler`:
+
+``` racket
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (lambda (val)
+       (value-of/k exp2 env (diff2-cont val cont)))
+     (lambda (val) ((lambda (cont1 v) ((cdr cont1) v)) ? val)))))
+```
+
+Now we meet the first problem: how do we replace the `?` in constructor? i.e.,
+how do we refer to a `diff1-cont` in its constructor? There seems to be nothing
+like `this` pointer in Scheme ... But, hold on, do we really need it? What is
+`(cdr cont1)` in the expression above? It is `cont` in `(lambda (exp2 env cont)
+...)`. So we can write the expression above as:
+
+``` racket
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (lambda (val)
+       (value-of/k exp2 env (diff2-cont val cont)))
+     (lambda (val) ((lambda (cont1 v) ((cdr cont) v)) ? val)))))
+```
+
+Now we don't need `cont1` anymore! Since `cont1` is a free variable in `(lambda
+(cont1 v) (cont v))`, we don't even need to pass it! Thus the expression
+becomes:
+
+``` racket
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (lambda (val)
+       (value-of/k exp2 env (diff2-cont val cont)))
+     (lambda (val) ((lambda (v) ((cdr cont) v)) val)))))
+```
+
+It's even easier to replace `v` with `val`:
+
+``` racket
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (lambda (val)
+       (value-of/k exp2 env (diff2-cont val cont)))
+     (lambda (val) ((lambda (v) ((cdr cont) val)))))))
+```
+
+Then we don't need `v` anymore:
+
+``` racket
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (lambda (val)
+       (value-of/k exp2 env (diff2-cont val cont)))
+     (lambda (val) ((lambda () ((cdr cont) val)) val)))))
+```
+
+We can unwrap the call to `(lambda () ...)`:
+
+``` racket
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (lambda (val)
+       (value-of/k exp2 env (diff2-cont val cont)))
+     (lambda (val) ((cdr cont) val)))))
+```
+
+Now let's compare the constructor above and `apply-handler`:
+
+``` racket
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (...)
+     (lambda (val) ((cdr cont) val)))))
+
+(define apply-handler
+  (lambda (cont val) ((cdr cont) val)))
+```
+
+Notice the similarity between observer and constructor? In fact, *we can write
+every continuation's exception constructor like this, except `end-cont` and
+`try-cont`*. Keep this in mind because it is the key for the conversion below.
+
+Now let's consider the requirement in exercise 5.41 again: a zero-argument
+procedure. If `(cdr cont)` is a zero-argument procedure for any continuation
+`cont`, then how do we pass a value to it? We can't. But since it is a
+procedure, we can call it like this: `((cdr cont))`, if the result is a
+procedure accepting one value, we can use it to process our `val`. Thus the body
+of `apply-handler` becomes:
+
+``` racket
+(define apply-handler
+  (lambda (cont val) (((cdr cont)) val)))
+```
+
+Because every continuation except `end-cont` and `try-cont` has the same body as
+`apply-handler`, we can also write them as:
+
+``` racket
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (...)
+     (lambda (val) (((cdr cont)) val)))))
+```
+
+Since every continuation's constructor for `apply-handler` is a zero-argument
+procedure, we have to remove the parameter `val`. Because we don't have `val`,
+we don't need to pass it, saving one call and making the expression become:
+
+``` racket
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (...)
+     (lambda () ((cdr cont))))))
+```
+
+Now it's time for `end-cont` and `try-cont`. Since they are the final receivers
+for `val`, their constructors become:
+
+``` racket
+(define end-cont
+  (lambda ()
+    (cons
+     (lambda (val)
+       (begin
+         (eopl:printf "End of computation.~%")
+         val))
+     (lambda ()
+       (lambda (val)
+         (begin
+           (report-uncaught-exception)
+           #f))))))
+
+(define try-cont
+  (lambda (var handler-exp env cont)
+    (cons
+     (lambda (val)
+       (apply-cont cont val))
+     (lambda ()
+       (lambda (val)
+         (value-of/k handler-exp (extend-env var val env) cont))))))
+```
+
+This is where the zero-argument procedure reveals itself:
+
+``` racket
+(define end-cont
+  (lambda ()
+    (cons
+     (lambda (val)
+       (begin
+         (eopl:printf "End of computation.~%")
+         val))
+     (lambda ()
+       (lambda (val)
+         (begin
+           (report-uncaught-exception)
+           #f))))))
+
+(define try-cont
+  (lambda (var handler-exp env cont)
+    (cons
+     (lambda (val)
+       (apply-cont cont val))
+     (lambda ()
+       (lambda (val)
+         (value-of/k handler-exp (extend-env var val env) cont))))))
+
+(define raise1-cont
+  (lambda (cont)
+    (cons
+     (lambda (val)
+       (apply-handler cont val))
+     (lambda () ((cdr cont))))))
+
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (lambda (val)
+       (value-of/k exp2 env (diff2-cont val cont)))
+     (lambda () ((cdr cont))))))
+
+;; constructor of other continuations, just like diff1-cont ...
+
+(define apply-handler
+  (lambda (cont v)
+    (((cdr cont)) v)))
+```
+
+But is this the end? Try this:
+
+``` racket
+(define end-cont
+  (lambda ()
+    (cons
+     (lambda (val)
+       (begin
+         (eopl:printf "End of computation.~%")
+         val))
+     (lambda ()
+       (lambda ()
+         (lambda (val)
+           (begin
+             (report-uncaught-exception)
+             #f)))))))
+
+(define try-cont
+  (lambda (var handler-exp env cont)
+    (cons
+     (lambda (val)
+       (apply-cont cont val))
+     (lambda ()
+       (lambda ()
+         (lambda (val)
+           (value-of/k handler-exp (extend-env var val env) cont)))))))
+
+(define raise1-cont
+  (lambda (cont)
+    (cons
+     (lambda (val)
+       (apply-handler cont val))
+     (lambda () (lambda () (((cdr cont))))))))
+
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (lambda (val)
+       (value-of/k exp2 env (diff2-cont val cont)))
+     (lambda () (lambda () (((cdr cont))))))))
+
+;; constructor of other continuations, just like diff1-cont ...
+
+(define apply-handler
+  (lambda (cont v)
+    ((((cdr cont))) v)))
+```
+
+and this:
+
+``` racket
+(define end-cont
+  (lambda ()
+    (cons
+     (lambda (val)
+       (begin
+         (eopl:printf "End of computation.~%")
+         val))
+     (lambda (val)
+       (begin
+         (report-uncaught-exception)
+         #f)))))
+
+(define try-cont
+  (lambda (var handler-exp env cont)
+    (cons
+     (lambda (val)
+       (apply-cont cont val))
+     (lambda (val)
+       (value-of/k handler-exp (extend-env var val env) cont)))))
+
+(define raise1-cont
+  (lambda (cont)
+    (cons
+     (lambda (val)
+       (apply-handler cont val))
+     (cdr cont))))
+
+(define diff1-cont
+  (lambda (exp2 env cont)
+    (cons
+     (lambda (val)
+       (value-of/k exp2 env (diff2-cont val cont)))
+     (cdr cont))))
+
+;; constructor of other continuations, just like diff1-cont ...
+
+(define apply-handler
+  (lambda (cont v)
+    ((cdr cont) v)))
+```
+
+The final one is the solution from
+[EFanZh](https://github.com/EFanZh/EOPL-Exercises/blob/11667f1e84a1a3e300c2182630b56db3e3d9246a/solutions/exercise-5.41.rkt).
