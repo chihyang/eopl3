@@ -281,7 +281,7 @@ It's even easier to replace `v` with `val`:
     (cons
      (lambda (val)
        (value-of/k exp2 env (diff2-cont val cont)))
-     (lambda (val) ((lambda (v) ((cdr cont) val)))))))
+     (lambda (val) ((lambda (v) ((cdr cont) val)) val)))))
 ```
 
 Then we don't need `v` anymore:
@@ -292,7 +292,7 @@ Then we don't need `v` anymore:
     (cons
      (lambda (val)
        (value-of/k exp2 env (diff2-cont val cont)))
-     (lambda (val) ((lambda () ((cdr cont) val)) val)))))
+     (lambda (val) ((lambda () ((cdr cont) val)))))))
 ```
 
 We can unwrap the call to `(lambda () ...)`:
