@@ -748,7 +748,7 @@
  0)
 
 ;;; error: unavailable to mimic recoverable-try because cont variable is
-;;; evaluated before it is set
+;;; evaluated BEFORE it is set
 (check-eqv?
  (run
   "letcc final-cnt in

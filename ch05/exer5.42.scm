@@ -759,7 +759,8 @@
      3)")
  0)
 
-;;; letcc to mimic recoverable-try
+;;; letcc to mimic recoverable-try, this trick works because cont exp2 is
+;;; evaluated AFTER value exp1 in throw exp1 to exp2
 (check-eqv?
  (run
   "letcc final-cnt in
