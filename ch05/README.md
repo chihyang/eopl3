@@ -544,7 +544,7 @@ The final one is the solution from
 > ```
 >
 > Add `call-with-current-continuation` to the language. Then write a translator
-> that takes the language with letcc and throw and translates it into the
+> that takes the language with `letcc` and `throw` and translates it into the
 > language without `letcc` and `throw`, but with
 > `call-with-current-continuation`.
 
