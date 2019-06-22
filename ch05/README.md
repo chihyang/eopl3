@@ -584,8 +584,8 @@ for `call/cc` could be written as:
 
 Another question: why do we need `call/cc`, and why must it be `call/cc`?
 Apparently, with `call/cc` we need only one special form to use continuation,
-with `letcc` and `throw` we need two. In case you understand its usage,, one is
-better than two. Why must it be `call/cc`? i.e., why must `call/cc`'s argument
+with `letcc` and `throw` we need two. In case you understand its usage, one is
+better than two. Why must it be `call/cc`, i.e., why must `call/cc`'s argument
 be a procedure that accepts another procedure (or say, continuation)? Can't we
-pass continuation directly to `call/cc`? Yes we can, but in that case we have to
-use some workarounds (like `let`) to use continuation more freely.
+pass continuation directly to `call/cc`? Yes, we can, but in that case we have
+to use some other workarounds (like `let`) to use continuation more freely.
