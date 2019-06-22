@@ -576,8 +576,10 @@ for `call/cc` could be written as:
 
 ``` racket
 (value-of/k (call/cc-exp exp) env cont)
-    = (apply-procedure/k (expval->proc (value-of/k exp env (call/cc-cont cont)))
-        (cont-val cont) env cont)
+    = (apply-procedure/k
+        (expval->proc (value-of/k exp env (call/cc-cont cont)))
+        (cont-val cont)
+        cont)
 ```
 
 Another question: why do we need `call/cc`, and why must it be `call/cc`?
