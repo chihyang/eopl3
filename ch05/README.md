@@ -526,11 +526,13 @@ and this:
 The final one is the solution from
 [EFanZh](https://github.com/EFanZh/EOPL-Exercises/blob/11667f1e84a1a3e300c2182630b56db3e3d9246a/solutions/exercise-5.41.rkt).
 
-> Exercise 5.44 An alternative to `letcc` and `throw` of the preceding exercises
-> is to add a single procedure to the language. This procedure, which in Scheme
-> is called `call-with-current-continuation`, takes a one-argument procedure,
-> `p`, and passes to `p` a procedure that when invoked with one argument, passes
-> that argument to the current continuation, `cont`. We could define
+# Exercise 5.44
+
+> An alternative to `letcc` and `throw` of the preceding exercises is to add a
+> single procedure to the language. This procedure, which in Scheme is called
+> `call-with-current-continuation`, takes a one-argument procedure, `p`, and
+> passes to `p` a procedure that when invoked with one argument, passes that
+> argument to the current continuation, `cont`. We could define
 > `call-with-current-continuation` in terms of `letcc` and `throw` as follows:
 >
 > ``` racket
