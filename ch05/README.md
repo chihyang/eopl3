@@ -16,7 +16,7 @@ snapshot could be composed of one of the following:
 
 Hence our new data type *Bounce* has the following variants:
 
-``` scheme
+``` racket
 (define-datatype bounce bounce?
   (a-expval
    (val exp-val?))
@@ -90,7 +90,7 @@ register `proc1`, because it is used together with `val` and `pc` as below, it's
 not easy to eliminate it. If we don't use trampoline, there are just four
 registers; with trampoline, we need five:
 
-``` scheme
+``` racket
 (define apply-procedure/k
   (lambda ()
     (cases proc proc1
@@ -138,7 +138,7 @@ after the exception handler is evaluated, while the second version gives
 programmers ability to resume their work at any time they want. Sounds great?
 Consider the program below:
 
-``` scheme
+``` racket
 let p = 3 in
   begin
      try
@@ -525,3 +525,62 @@ and this:
 
 The final one is the solution from
 [EFanZh](https://github.com/EFanZh/EOPL-Exercises/blob/11667f1e84a1a3e300c2182630b56db3e3d9246a/solutions/exercise-5.41.rkt).
+
+> Exercise 5.44 An alternative to `letcc` and `throw` of the preceding exercises
+> is to add a single procedure to the language. This procedure, which in Scheme
+> is called `call-with-current-continuation`, takes a one-argument procedure,
+> `p`, and passes to `p` a procedure that when invoked with one argument, passes
+> that argument to the current continuation, `cont`. We could define
+> `call-with-current-continuation` in terms of `letcc` and `throw` as follows:
+>
+> ``` racket
+> let call-with-current-continuation
+>       = proc (p)
+>           letcc cont
+>           in (p proc (v) throw v to cont)
+> in ...
+> ```
+>
+> Add `call-with-current-continuation` to the language. Then write a translator
+> that takes the language with letcc and throw and translates it into the
+> language without `letcc` and `throw`, but with
+> `call-with-current-continuation`.
+
+In exercise 5.43, `throw` is replaced with a `call-exp`, then the expression
+above could be written as:
+
+``` racket
+let call-with-current-continuation
+      = proc (p)
+          letcc cont
+          in (p proc (v) (cont v))
+in ...
+```
+
+The procedure, `proc (v) (cont v)`, is a wrapper on continuation. Because we
+have made a continuation behave similarly to a procedure, the wrapper above is
+not necessary:
+
+``` racket
+let call-with-current-continuation
+      = proc (p)
+          letcc cont
+          in (p cont)
+in ...
+```
+
+Thus the influence of concrete syntax tree is almost eliminated, and the rule
+for `call/cc` could be written as:
+
+``` racket
+(value-of/k (call/cc-exp exp) env cont)
+    = (apply-procedure/k (expval->proc (value-of/k exp env (call/cc-cont cont))) env cont)
+```
+
+Another question: why do we need `call/cc`, and why must it be `call/cc`?
+Apparently, with `call/cc` we need only one special form to use continuation,
+with `letcc` and `throw` we need two. In case you understand its usage,, one is
+better than two. Why must it be `call/cc`? i.e., why must `call/cc`'s argument
+be a procedure that accepts another procedure (or say, continuation)? Can't we
+pass continuation directly to `call/cc`? Yes we can, but in that case we have to
+use some workarounds (like `let`) to use continuation more freely.
