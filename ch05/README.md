@@ -2,7 +2,7 @@ Notes on chapter 5
 ==================
 
 # Exercise 5.18
-> The trampoline systemin figure 5.7 uses a procedural representation of a
+> The trampoline system in figure 5.7 uses a procedural representation of a
 > *Bounce*. Replace this by a data structure representation.
 
 What is a *snapshot* for our interpreter? At any time, we either evaluate an
@@ -38,7 +38,8 @@ last variant above is not necessary here. In exercise 5.19, we would see the
 usage of the last variant.
 
 This note is inspired by
-[this](https://github.com/chenyukang/eopl/blob/master/ch5/18.scm#L279) solution.
+[this](https://github.com/chenyukang/eopl/blob/0406ff23b993bfe020294fa70d2597b1ce4f9b78/ch5/18.scm#L279)
+solution.
 
 # Exercise 5.21
 
@@ -127,7 +128,7 @@ exercise 5.21 but leave the interpreter unchanged. Run the program with
 # Exercise 5.40
 
 > Give the exception handlers in the defined language the ability to either
-> return or resume. Do this by passing the continuation fromthe `raise`
+> return or resume. Do this by passing the continuation from the `raise`
 > exception as a second argument. This may require adding continuations as a new
 > kind of expressed value. Devise suitable syntax for invoking a continuation on
 > a value.
@@ -150,12 +151,12 @@ let p = 3 in
   end
 ```
 
-Does it terminate? Run it in exercise 5.40.v2.scm to see the result. Even
-without running it, we can see the code above violates designer's purpose for
-`try ... catch (var, cont)`. Unfortunately some users would definitely try to do
-so if such a feature existed: they don't use `try` for exception handling but
-for saving a continuation and use it later! A feature with unexpected feature
-does not seem a good one.
+Does it terminate? Run it in [`exer5.40.v2.scm`](exer5.40.v2.scm) to see the
+result. Even without running it, we can see the code above violates designer's
+purpose for `try ... catch (var, cont)`. Unfortunately some users would
+definitely try to do so if such a feature existed: they don't use `try` for
+exception handling but for saving a continuation and use it later! A feature
+with unexpected feature does not seem a good one.
 
 # Exercise 5.41
 
