@@ -334,7 +334,7 @@
    (env environment?)
    (cont continuation?))
   (call/cc-cont
-   (saved-val exp-val?)))
+   (saved-cont continuation?)))
 ;; apply-cont : Cont x ExpVal -> Bounce
 (define apply-cont
   (lambda (cont val)
@@ -444,13 +444,10 @@
             (exp env cont)
             (value-of/k exp env cont))
            (call/cc-cont
-            (saved-val)
-            (cases exp-val val
-                   (proc-val
-                    (proc)
-                    (apply-procedure/k proc (list saved-val) cont))
-                   (else
-                    (apply-cont (expval->cont saved-val) val)))))))
+            (saved-cont)
+            (apply-procedure/k (expval->proc val)
+                               (list (cont-val saved-cont))
+                               saved-cont)))))
 
 ;;; ---------------------- Syntax for the IMPLICIT-REFERENCE-CPS language ----------------------
 ;;; Program    ::= Expression
@@ -698,7 +695,7 @@
               (value-of/k exp1 env (set-rhs-cont ref cont))))
            (call/cc-exp
             (exp1)
-            (value-of/k exp1 env (call/cc-cont (cont-val cont))))
+            (value-of/k exp1 env (call/cc-cont cont)))
            (else
             (report-invalid-tranlated-expression exp)))))
 ;; value-of-program : Program -> FinalAnswer
@@ -853,6 +850,14 @@
 (check-eqv?
  (run "let in 3")
  3)
+;;; normal call/cc
+(check-equal?
+ (run "call/cc(proc (f) proc (v) f)")
+ (procedure '(v) (var-exp 'f) '(extend-env f 0 (empty-env))))
+
+(check-equal?
+ (run "call/cc(proc (f) -((f 3), 2))")
+ 3)
 
 ;;; call/cc to mimic try
 (check-eqv?
@@ -868,7 +873,7 @@
   "call/cc(proc (cnt) -((cnt let x = 3 in -(3, -(2, x))), 3))")
  4)
 
-;;; translation
+;;; translation (letcc would be replaced by call/cc, but result keeps unchanged)
 (check-eqv?
  (run
   "letcc final-cnt in
