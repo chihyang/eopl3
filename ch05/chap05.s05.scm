@@ -824,6 +824,8 @@
     (initialize-store!)
     (initialize-scheduler! timeslice)
     (toggle-debug-mode debug?)
+    (when debug?
+      (eopl:printf "~%Begin a new computation.~%"))
     (cases program prog
            (a-program
             (exp)
