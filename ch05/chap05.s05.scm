@@ -619,23 +619,36 @@
 ;;; ---------------------- Queue For THREAD ----------------------
 ;;; empty-queue : () -> Queue
 (define empty-queue
-  (lambda () '()))
+  (lambda ()
+    '(() . ())))
 ;;; enqueue : Queue x SchemeVal -> Queue
 (define enqueue
   (lambda (queue val)
+    (cons (car queue)
+          (cons val (cdr queue)))
     (append queue (list val))))
 ;;; empty? : Queue -> Bool
 (define empty?
-  (lambda (q) (null? q)))
+  (lambda (q)
+    (and (null? (car q)) (null? (cdr q)))))
 ;;; dequeue : Queue x Proc -> Unspecified
 (define dequeue
   (lambda (q f)
     (if (empty? q)
         (report-empty-queue)
-        (f (car q) (cdr q)))))
+        (let ((front (car q))
+              (back (cdr q)))
+          (if (null? front)
+              (let ((first (car back))
+                    (rest (cons (reverse (cdr back)) '())))
+                (f first rest))
+              (let ((first (car front))
+                    (rest (cons (cdr front) back)))
+                (f first rest)))))))
 ;;; report-empty-queue : () -> Unspecified
 (define report-empty-queue
   (lambda ()
+    'dequeue
     (eopl:error "Attemp to dequeue an empty queue!")))
 
 ;;; ---------------------- Syntax for the THREAD language ----------------------
