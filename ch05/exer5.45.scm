@@ -365,6 +365,8 @@
   (signal-cont
    (saved-cont continuation?))
   (print-cont
+   (saved-cont continuation?))
+  (yield-cont
    (saved-cont continuation?)))
 ;; apply-cont : Cont x ExpVal -> Bounce
 (define apply-cont
@@ -506,7 +508,15 @@
                   (saved-cont)
                   (begin
                     (print-expval val)
-                    (apply-cont saved-cont (num-val 33)))))))))
+                    (apply-cont saved-cont (num-val 33))))
+                 (yield-cont
+                  (saved-cont)
+                  (begin
+                    (when (debug-mode?)
+                      (eopl:printf "Force switch thread with yield.~%"))
+                    (place-on-ready-queue!
+                     (lambda () (apply-cont saved-cont val)))
+                    (run-next-thread))))))))
 ;;; wait-for-mutex : Mutex x Thread -> FinalAnswer
 (define wait-for-mutex
   (lambda (m th)
@@ -696,6 +706,8 @@
 ;;;                signal-exp (exp1)
 ;;; Expression ::= print (Expression)
 ;;;                print (exp1)
+;;; Expression ::= yield ()
+;;;                yield ()
 ;;; Parse Expression
 (define let-scanner-spec
   '((white-sp (whitespace) skip)
@@ -751,7 +763,9 @@
     (expression ("signal" "(" expression ")")
                 signal-exp)
     (expression ("print" "(" expression ")")
-                print-exp)))
+                print-exp)
+    (expression ("yield" "(" ")")
+                yield-exp)))
 
 ;;; ---------------------- Evaluate expression ----------------------
 ;; value-of/k : Exp x Env x Cont -> Bounce
@@ -830,7 +844,10 @@
             (value-of/k exp1 env (signal-cont cont)))
            (print-exp
             (exp1)
-            (value-of/k exp1 env (print-cont cont))))))
+            (value-of/k exp1 env (print-cont cont)))
+           (yield-exp
+            ()
+            (apply-cont (yield-cont cont) (num-val 99))))))
 ;; value-of-program : Int x Program -> FinalAnswer
 (define value-of-program
   (lambda (timeslice prog debug?)
@@ -1048,3 +1065,18 @@
                end"
      #:debug? #t
      #:time-slice 3)
+
+;;; two-thread print
+(check-eqv?
+ (run "letrec noisy (l) = if null? (l) then 0
+                         else begin yield(); print (car(l)); (noisy cdr(l)) end
+       in
+        begin
+          spawn(proc (d) (noisy list(1,2,3,4,5)));
+          spawn(proc (d) (noisy list(6,7,8,9,10)));
+          print(yield());
+          33
+        end"
+      #:debug? #t
+      #:time-slice 50)
+ 33)

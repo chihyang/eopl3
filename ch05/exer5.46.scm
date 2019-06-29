@@ -365,6 +365,8 @@
   (signal-cont
    (saved-cont continuation?))
   (print-cont
+   (saved-cont continuation?))
+  (yield-cont
    (saved-cont continuation?)))
 ;; apply-cont : Cont x ExpVal -> Bounce
 (define apply-cont
@@ -374,7 +376,7 @@
     (if (time-expired?)
         (begin
           (place-on-ready-queue!
-           (lambda () (apply-cont cont val)))
+           (cons the-max-time-slice (lambda () (apply-cont cont val))))
           (run-next-thread))
         (begin
           (decrease-timer!)
@@ -475,11 +477,13 @@
                   (saved-cont)
                   (let ((proc1 (expval->proc val)))
                     (place-on-ready-queue!
-                     (lambda ()
-                       (apply-procedure/k
-                        proc1
-                        (list (num-val 28))
-                        (end-subthread-cont))))
+                     (cons
+                      the-max-time-slice
+                      (lambda ()
+                        (apply-procedure/k
+                         proc1
+                         (list (num-val 28))
+                         (end-subthread-cont)))))
                     (apply-cont saved-cont (num-val 73))))
                  (end-mainthread-cont
                   ()
@@ -496,17 +500,28 @@
                   (saved-cont)
                   (wait-for-mutex
                    (expval->mutex val)
-                   (lambda () (apply-cont saved-cont (num-val 52)))))
+                   (cons the-max-time-slice
+                         (lambda () (apply-cont saved-cont (num-val 52))))))
                  (signal-cont
                   (saved-cont)
                   (signal-mutex
                    (expval->mutex val)
-                   (lambda () (apply-cont saved-cont (num-val 53)))))
+                   (cons the-max-time-slice
+                         (lambda () (apply-cont saved-cont (num-val 53))))))
                  (print-cont
                   (saved-cont)
                   (begin
                     (print-expval val)
-                    (apply-cont saved-cont (num-val 33)))))))))
+                    (apply-cont saved-cont (num-val 33))))
+                 (yield-cont
+                  (saved-cont)
+                  (begin
+                    (when (debug-mode?)
+                      (eopl:printf "Force switch thread with yield.~%"))
+                    (place-on-ready-queue!
+                     (cons the-time-remaining
+                           (lambda () (apply-cont saved-cont val))))
+                    (run-next-thread))))))))
 ;;; wait-for-mutex : Mutex x Thread -> FinalAnswer
 (define wait-for-mutex
   (lambda (m th)
@@ -520,7 +535,7 @@
                   (run-next-thread))
                 (begin
                   (setref! ref-to-closed? #t)
-                  (th)))))))
+                  ((cdr th))))))))
 ;;; signal-mutex : Mutex x Thread -> FinalAnswer
 (define signal-mutex
   (lambda (m th)
@@ -533,7 +548,7 @@
                   (if (empty? wait-queue)
                       (begin
                         (setref! ref-to-closed? #f)
-                        (th))
+                        ((cdr th)))
                       (begin
                         (dequeue
                          wait-queue
@@ -541,8 +556,8 @@
                            (place-on-ready-queue!
                             first-waiting-th)
                            (setref! ref-to-wait-queue other-waiting-ths)))
-                        (th)))
-                  (th)))))))
+                        ((cdr th))))
+                  ((cdr th))))))))
 
 ;;; ---------------------- Mutex Interface ----------------------
 (define-datatype mutex mutex?
@@ -594,8 +609,8 @@
           (dequeue the-ready-queue
                    (lambda (first-ready-thread other-ready-thread)
                      (set! the-ready-queue other-ready-thread)
-                     (set! the-time-remaining the-max-time-slice)
-                     (first-ready-thread)))))))
+                     (set! the-time-remaining (car first-ready-thread))
+                     ((cdr first-ready-thread))))))))
 ;;; set-final-answer! : ExpVal -> Unspecified
 ;;; usage : sets the final answer
 (define set-final-answer!
@@ -696,6 +711,8 @@
 ;;;                signal-exp (exp1)
 ;;; Expression ::= print (Expression)
 ;;;                print (exp1)
+;;; Expression ::= yield ()
+;;;                yield ()
 ;;; Parse Expression
 (define let-scanner-spec
   '((white-sp (whitespace) skip)
@@ -751,7 +768,9 @@
     (expression ("signal" "(" expression ")")
                 signal-exp)
     (expression ("print" "(" expression ")")
-                print-exp)))
+                print-exp)
+    (expression ("yield" "(" ")")
+                yield-exp)))
 
 ;;; ---------------------- Evaluate expression ----------------------
 ;; value-of/k : Exp x Env x Cont -> Bounce
@@ -830,7 +849,10 @@
             (value-of/k exp1 env (signal-cont cont)))
            (print-exp
             (exp1)
-            (value-of/k exp1 env (print-cont cont))))))
+            (value-of/k exp1 env (print-cont cont)))
+           (yield-exp
+            ()
+            (apply-cont (yield-cont cont) (num-val 99))))))
 ;; value-of-program : Int x Program -> FinalAnswer
 (define value-of-program
   (lambda (timeslice prog debug?)
@@ -1048,3 +1070,18 @@
                end"
      #:debug? #t
      #:time-slice 3)
+
+;;; two-thread print
+(check-eqv?
+ (run "letrec noisy (l) = if null? (l) then 0
+                         else begin yield(); print (car(l)); (noisy cdr(l)) end
+       in
+        begin
+          spawn(proc (d) (noisy list(1,2,3,4,5)));
+          spawn(proc (d) (noisy list(6,7,8,9,10)));
+          print(yield());
+          33
+        end"
+      #:debug? #t
+      #:time-slice 50)
+ 33)
