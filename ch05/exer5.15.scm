@@ -541,61 +541,78 @@
     (value-of-program (scan&parse exp))))
 
 ;;; ---------------------- Test ----------------------
-(eqv?
+(require rackunit)
+(require racket/base)
+;;; checked-run : String -> Int | Bool | Proc | '() | List | Pair | String (for exception)
+(define checked-run
+  (lambda (str)
+    (with-handlers
+        [(exn:fail? (lambda (en) (exn-message en)))]
+      (run str))))
+(check-eqv?
  (run "letrec double (x) = if zero?(x) then 0
                        else -((double -(x,1)),-2)
        in (double 6)")
  12)
-(eqv?
+(check-eqv?
  (run "let x = 3 f = proc(x) -(x, -3) in (f 3)")
  6)
-(eqv?
+(check-eqv?
  (run "let x = 3 f = proc(x) -(x, -3) y = 4 in -(x, y)")
  -1)
 ;; tests from exercise 3.16
-(equal?
+(check-equal?
  (run "let x = 4 in cons(x, cons(cons(-(x,1), emptylist), emptylist))")
  '(4 (3)))
-(eqv?
+(check-eqv?
  (run "null?(cdr(let x = 4 in
                  cons(x, cons(cons(-(x,1),
                                    emptylist),
                               emptylist))))")
  #f)
-(equal?
+(check-equal?
  (run
   "let x = 4 in list(x, -(x,1), -(x,3))")
  '(4 3 1))
-(eqv?
+(check-eqv?
  (run "let x = 30
          in let x = -(x,1)
                 y = -(x,2)
            in -(x,y)")
  1)
 ;; error
-(run "let x = 30
+(check-equal?
+ (checked-run "let x = 30
          in let x = -(x,1)
                 x = -(x,2)
            in -(x,x)")
+ "extend-env*: Duplicate identifier x")
+
 ;; tests from exercise 3.21
-(eqv?
+(check-eqv?
  (run "((proc (x) proc (y) -(y,-(0,x)) 3) 4)")
  7)
-(eqv?
+(check-eqv?
  (run "(proc (x, y) -(y,-(0,x)) 3 4)")
  7)
 ;; error
-(run "(proc (x, x) -(y,-(0,x)) 3 4)")
-(run "(proc (x, y) -(y,-(0,x)) 3)")
-(run "(proc (x, y) -(y,-(0,x)) 3 4 5)")
+(check-equal?
+ (checked-run "(proc (x, x) -(y,-(0,x)) 3 4)")
+ "extend-env*: Duplicate identifier x")
+(check-equal?
+ (checked-run "(proc (x, y) -(y,-(0,x)) 3)")
+ "extend-env*: Argument number is less than parameter number")
+(check-equal?
+ (checked-run "(proc (x, y) -(y,-(0,x)) 3 4 5)")
+ "extend-env*: Argument number is greater than parameter number")
 ;; tests from exercise 3.32
-(eqv?
+(check-eqv?
  (run "letrec
          even(x) = if zero?(x) then 1 else (odd -(x,1))
          odd(x)  = if zero?(x) then 0 else (even -(x,1))
        in (odd 13)")
  1)
-(eqv?
+(check-eqv?
  (run "let x = 3 in
        letrec
          even(x) = if zero?(x) then 1 else (odd -(x,1))
@@ -604,6 +621,6 @@
  0)
 
 ;;; let without binding
-(eqv?
+(check-eqv?
  (run "let in 3")
  3)
