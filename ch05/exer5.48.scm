@@ -376,7 +376,7 @@
     (if (time-expired?)
         (begin
           (place-on-ready-queue!
-           (cons the-max-time-slice (lambda () (apply-cont cont val))))
+           (cont-thread the-max-time-slice cont val))
           (run-next-thread))
         (begin
           (decrease-timer!)
@@ -477,13 +477,11 @@
                   (saved-cont)
                   (let ((proc1 (expval->proc val)))
                     (place-on-ready-queue!
-                     (cons
+                     (proc-thread
                       the-max-time-slice
-                      (lambda ()
-                        (apply-procedure/k
-                         proc1
-                         (list (num-val 28))
-                         (end-subthread-cont)))))
+                      proc1
+                      (list (num-val 28))
+                      (end-subthread-cont)))
                     (apply-cont saved-cont (num-val 73))))
                  (end-mainthread-cont
                   ()
@@ -500,14 +498,18 @@
                   (saved-cont)
                   (wait-for-mutex
                    (expval->mutex val)
-                   (cons the-max-time-slice
-                         (lambda () (apply-cont saved-cont (num-val 52))))))
+                   (cont-thread
+                    the-max-time-slice
+                    saved-cont
+                    (num-val 52))))
                  (signal-cont
                   (saved-cont)
                   (signal-mutex
                    (expval->mutex val)
-                   (cons the-max-time-slice
-                         (lambda () (apply-cont saved-cont (num-val 53))))))
+                   (cont-thread
+                    the-max-time-slice
+                    saved-cont
+                    (num-val 53))))
                  (print-cont
                   (saved-cont)
                   (begin
@@ -520,11 +522,9 @@
                       (eopl:printf "Force switch thread with yield.~%"))
                     (if (time-expired?)
                         (place-on-ready-queue!
-                         (cons the-time-remaining
-                               (lambda () (apply-cont saved-cont val))))
+                         (cont-thread the-time-remaining saved-cont val))
                         (place-on-ready-queue!
-                         (cons the-max-time-slice
-                               (lambda () (apply-cont saved-cont val)))))
+                         (cont-thread the-max-time-slice saved-cont val)))
                     (run-next-thread))))))))
 ;;; wait-for-mutex : Mutex x Thread -> FinalAnswer
 (define wait-for-mutex
@@ -539,7 +539,7 @@
                   (run-next-thread))
                 (begin
                   (setref! ref-to-closed? #t)
-                  ((cdr th))))))))
+                  (apply-thread th)))))))
 ;;; signal-mutex : Mutex x Thread -> FinalAnswer
 (define signal-mutex
   (lambda (m th)
@@ -552,7 +552,7 @@
                   (if (empty? wait-queue)
                       (begin
                         (setref! ref-to-closed? #f)
-                        ((cdr th)))
+                        (apply-thread th))
                       (begin
                         (dequeue
                          wait-queue
@@ -560,8 +560,8 @@
                            (place-on-ready-queue!
                             first-waiting-th)
                            (setref! ref-to-wait-queue other-waiting-ths)))
-                        ((cdr th))))
-                  ((cdr th))))))))
+                        (apply-thread th)))
+                  (apply-thread th)))))))
 
 ;;; ---------------------- Mutex Interface ----------------------
 (define-datatype mutex mutex?
@@ -574,6 +574,36 @@
     (a-mutex
      (newref #f)
      (newref (empty-queue)))))
+
+;;; ---------------------- Thread ----------------------
+(define-datatype thread thread?
+  (cont-thread
+   (times-slice integer?)
+   (saved-cont continuation?)
+   (saved-val exp-val?))
+  (proc-thread
+   (time-slice integer?)
+   (proc1 proc?)
+   (vals (list-of exp-val?))
+   (saved-cont continuation?)))
+(define apply-thread
+  (lambda (th)
+    (cases thread th
+           (cont-thread
+            (t c v)
+            (apply-cont c v))
+           (proc-thread
+            (t p v c)
+            (apply-procedure/k p v c)))))
+(define thread-time-slice
+  (lambda (th)
+    (cases thread th
+           (cont-thread
+            (t c v)
+            t)
+           (proc-thread
+            (t p v c)
+            t))))
 
 ;;; ---------------------- Thread Interface ----------------------
 ;;; the ready queue
@@ -613,8 +643,8 @@
           (dequeue the-ready-queue
                    (lambda (first-ready-thread other-ready-thread)
                      (set! the-ready-queue other-ready-thread)
-                     (set! the-time-remaining (car first-ready-thread))
-                     ((cdr first-ready-thread))))))))
+                     (set! the-time-remaining (thread-time-slice first-ready-thread))
+                     (apply-thread first-ready-thread)))))))
 ;;; set-final-answer! : ExpVal -> Unspecified
 ;;; usage : sets the final answer
 (define set-final-answer!
@@ -630,10 +660,6 @@
 (define decrease-timer!
   (lambda ()
     (set! the-time-remaining (- the-time-remaining 1))))
-;;; thread? : SchemeVal -> Bool
-(define thread?
-  (lambda (val)
-    (procedure? val)))
 
 ;;; ---------------------- Queue For THREAD ----------------------
 ;;; empty-queue : () -> Queue
