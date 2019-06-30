@@ -1066,7 +1066,7 @@
      #:debug? #t
      #:time-slice 3)
 
-;;; two-thread print
+;;; two-thread print with yield
 (check-eqv?
  (run "letrec noisy (l) = if null? (l) then 0
                          else begin yield(); print (car(l)); (noisy cdr(l)) end

@@ -489,7 +489,7 @@
                   ()
                   (when (debug-mode?)
                     (eopl:printf "Main thread exit.~%"))
-                  (set! the-final-answer val)
+                  (set-final-answer! val)
                   (run-next-thread))
                  (end-subthread-cont
                   ()
@@ -518,9 +518,13 @@
                   (begin
                     (when (debug-mode?)
                       (eopl:printf "Force switch thread with yield.~%"))
-                    (place-on-ready-queue!
-                     (cons the-time-remaining
-                           (lambda () (apply-cont saved-cont val))))
+                    (if (time-expired?)
+                        (place-on-ready-queue!
+                         (cons the-time-remaining
+                               (lambda () (apply-cont saved-cont val))))
+                        (place-on-ready-queue!
+                         (cons the-max-time-slice
+                               (lambda () (apply-cont saved-cont val)))))
                     (run-next-thread))))))))
 ;;; wait-for-mutex : Mutex x Thread -> FinalAnswer
 (define wait-for-mutex
@@ -869,9 +873,9 @@
 ;; trampoline : Bounce -> FinalAnswer
 (define trampoline
   (lambda (bounce)
-    (if (exp-val? bounce)
-        bounce
-        (trampoline (bounce)))))
+    (if (procedure? bounce)
+        (trampoline (bounce))
+        bounce)))
 ;; toggle-debug-mode : Bool -> Bool
 (define toggle-debug-mode
   (lambda (dbg)
@@ -1071,7 +1075,7 @@
      #:debug? #t
      #:time-slice 3)
 
-;;; two-thread print
+;;; two-thread print with yield
 (check-eqv?
  (run "letrec noisy (l) = if null? (l) then 0
                          else begin yield(); print (car(l)); (noisy cdr(l)) end
