@@ -902,6 +902,13 @@
 
 ;;; ---------------------- Test ----------------------
 (require rackunit)
+(require racket/base)
+;;; checked-run : String -> Int | Bool | Proc | '() | List | Pair | String (for exception)
+(define checked-run
+  (lambda (str)
+    (with-handlers
+        [(exn:fail? (lambda (en) (exn-message en)))]
+      (run str))))
 (check-eqv?
  (run "letrec double (x) = if zero?(x) then 0
                        else -((double -(x,1)),-2)
@@ -1090,3 +1097,48 @@
       #:debug? #t
       #:time-slice 50)
  33)
+
+;;; deadlock 1: wait twice in the same thread, result is 'uninitialized, because
+;;; program exits before it gets its final value
+(check-equal?
+ (checked-run "let x = 0
+      in let mut1 = mutex()
+         in begin
+             wait(mut1);
+             wait(mut1)
+            end")
+ "cases: not a exp-val: uninitialized")
+
+;;; deadlock 2: both threads are waiting for the release of mutex held by each
+;;; other, resulting some parts of two subthreads not executing
+(check-eqv?
+ (run "let x = 0
+      in let mut1 = mutex()
+             mut2 = mutex()
+         in let func1 = proc()
+                          begin
+                            wait(mut2);
+                            print(6);
+                            print(5);
+                            print(4);
+                            print(3);
+                            wait(mut1);
+                            print(1);
+                            signal(mut1);
+                            signal(mut2)
+                          end
+                func2 = proc()
+                          begin
+                            wait(mut1);
+                            wait(mut2);
+                            print(2);
+                            signal(mut2);
+                            signal(mut1)
+                          end
+            in begin
+                spawn(proc(d) (func1));
+                spawn(proc(d) (func2))
+               end"
+      #:debug? #f
+      #:time-slice 9)
+ 73)
