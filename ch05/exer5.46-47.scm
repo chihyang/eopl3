@@ -1,4 +1,5 @@
 #lang eopl
+(provide (all-defined-out))
 ;;; ---------------------- Environment(from section 3.2) ----------------------
 (define member?
   (lambda (sym lst)
