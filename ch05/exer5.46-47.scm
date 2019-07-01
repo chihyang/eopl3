@@ -1098,8 +1098,8 @@
       #:time-slice 50)
  33)
 
-;;; deadlock 1: wait twice in the same thread, result is 'uninitialized, because
-;;; program exits before it gets its final value
+;;; exercise 5.47, deadlock 1: wait twice in the same thread, result is
+;;; 'uninitialized, because program exits before it gets its final value
 (check-equal?
  (checked-run "let x = 0
       in let mut1 = mutex()
@@ -1109,8 +1109,8 @@
             end")
  "cases: not a exp-val: uninitialized")
 
-;;; deadlock 2: both threads are waiting for the release of mutex held by each
-;;; other, resulting some parts of two subthreads not executing
+;;; exercise 5.47, deadlock 2: both threads are waiting for the release of mutex
+;;; held by each other, resulting some parts of two subthreads not executing
 (check-eqv?
  (run "let x = 0
       in let mut1 = mutex()
