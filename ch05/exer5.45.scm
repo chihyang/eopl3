@@ -635,8 +635,7 @@
 (define enqueue
   (lambda (queue val)
     (cons (car queue)
-          (cons val (cdr queue)))
-    (append queue (list val))))
+          (cons val (cdr queue)))))
 ;;; empty? : Queue -> Bool
 (define empty?
   (lambda (q)
