@@ -478,6 +478,8 @@
                   (saved-cont)
                   (let ((proc1 (expval->proc val))
                         (th-id the-thread-number))
+                    (when (debug-mode?)
+                      (eopl:printf "Create new thread ~a.~%" th-id))
                     (set! the-thread-number (+ th-id 1))
                     (place-on-ready-queue!
                      (proc-thread
