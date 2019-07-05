@@ -531,9 +531,9 @@
                                    the-running-thread-id))
                     (if (time-expired?)
                         (place-on-ready-queue!
-                         (cont-thread the-time-remaining the-running-thread-id saved-cont val))
+                         (cont-thread the-max-time-slice the-running-thread-id saved-cont val))
                         (place-on-ready-queue!
-                         (cont-thread the-max-time-slice the-running-thread-id saved-cont val)))
+                         (cont-thread the-time-remaining the-running-thread-id saved-cont val)))
                     (run-next-thread))))))))
 ;;; wait-for-mutex : Mutex x Thread -> FinalAnswer
 (define wait-for-mutex
@@ -602,9 +602,13 @@
     (cases thread th
            (cont-thread
             (t i c v)
+            (when (debug-mode?)
+              (eopl:printf "Resume thread ~a.~%" the-running-thread-id))
             (apply-cont c v))
            (proc-thread
             (t i p v c)
+            (when (debug-mode?)
+              (eopl:printf "Start thread ~a.~%" the-running-thread-id))
             (apply-procedure/k p v c)))))
 (define thread-id
   (lambda (th)
@@ -712,8 +716,9 @@
         (let ((front (car q))
               (back (cdr q)))
           (if (null? front)
-              (let ((first (car back))
-                    (rest (cons (reverse (cdr back)) '())))
+              (let* ((new-front (reverse back))
+                     (first (car new-front))
+                     (rest (cons (cdr new-front) '())))
                 (f first rest))
               (let ((first (car front))
                     (rest (cons (cdr front) back)))

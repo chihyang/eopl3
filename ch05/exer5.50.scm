@@ -577,9 +577,9 @@
                       (eopl:printf "Force switch thread with yield.~%"))
                     (if (time-expired?)
                         (place-on-ready-queue!
-                         (cont-thread the-time-remaining saved-cont val))
+                         (cont-thread the-max-time-slice saved-cont val))
                         (place-on-ready-queue!
-                         (cont-thread the-max-time-slice saved-cont val)))
+                         (cont-thread the-time-remaining saved-cont val)))
                     (run-next-thread))))))))
 ;;; wait-for-mutex : () -> FinalAnswer
 (define wait-for-mutex
@@ -745,8 +745,9 @@
         (let ((front (car q))
               (back (cdr q)))
           (if (null? front)
-              (let ((first (car back))
-                    (rest (cons (reverse (cdr back)) '())))
+              (let* ((new-front (reverse back))
+                     (first (car new-front))
+                     (rest (cons (cdr new-front) '())))
                 (f first rest))
               (let ((first (car front))
                     (rest (cons (cdr front) back)))
