@@ -727,15 +727,14 @@
     (let ((found-th '()))
       (letrec ((remove!
                 (lambda (lst)
-                  (cond [(null? the-blocking-threads)
+                  (cond [(null? lst)
                          '()]
-                        [(eq? (thread-id (car the-blocking-threads)) id)
-                         (set! found-th (car the-blocking-threads))
-                         (cdr the-blocking-threads)]
+                        [(eq? (thread-id (car lst)) id)
+                         (set! found-th (car lst))
+                         (cdr lst)]
                         [else
                          (cons
-                          (car the-blocking-threads)
-                          (remove! (cdr the-blocking-threads)))]))))
+                          (car lst) (remove! (cdr lst)))]))))
         (set! the-blocking-threads (remove! the-blocking-threads))
         found-th))))
 ;;; place-on-blocking-list! : thread -> unspecified
