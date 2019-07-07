@@ -367,6 +367,8 @@
   (print-cont
    (saved-cont continuation?))
   (yield-cont
+   (saved-cont continuation?))
+  (kill-cont
    (saved-cont continuation?)))
 ;; apply-cont : Cont x ExpVal -> Bounce
 (define apply-cont
@@ -498,7 +500,8 @@
                  (end-subthread-cont
                   ()
                   (when (debug-mode?)
-                    (eopl:printf "Subthread exit.~%"))
+                    (eopl:printf "Subthread ~a exit.~%"
+                                 the-running-thread-id))
                   (run-next-thread))
                  (wait-cont
                   (saved-cont)
@@ -534,7 +537,15 @@
                          (cont-thread the-max-time-slice the-running-thread-id saved-cont val))
                         (place-on-ready-queue!
                          (cont-thread the-time-remaining the-running-thread-id saved-cont val)))
-                    (run-next-thread))))))))
+                    (run-next-thread)))
+                 (kill-cont
+                  (saved-cont)
+                  (let ((killed? (kill-thread (expval->num val))))
+                    (when (debug-mode?)
+                      (eopl:printf "Thread ~a ~a.~%"
+                                   (expval->num val)
+                                   (if killed? "killed" "not found")))
+                    (apply-cont saved-cont (bool-val killed?)))))))))
 ;;; wait-for-mutex : Mutex x Thread -> FinalAnswer
 (define wait-for-mutex
   (lambda (m th)
@@ -543,6 +554,9 @@
             (ref-to-closed? ref-to-wait-queue)
             (if (deref ref-to-closed?)
                 (begin
+                  (when (debug-mode?)
+                    (eopl:printf "Put thread ~a into wait queue.~%"
+                                 (thread-id th)))
                   (setref! ref-to-wait-queue
                            (enqueue (deref ref-to-wait-queue) th))
                   (run-next-thread))
@@ -571,6 +585,35 @@
                            (setref! ref-to-wait-queue other-waiting-ths)))
                         (apply-thread th)))
                   (apply-thread th)))))))
+;;; kill-thread : Int -> Bool
+(define kill-thread
+  (lambda (id)
+    (if (remove-thread-from-ready-queue! id)
+        #t
+        (or-list (remove-thread-from-wait-queues! id)))))
+(define remove-thread-from-ready-queue!
+  (lambda (id)
+    (let ((queue-and-result
+           (queue-remove-if
+            the-ready-queue
+            (lambda (th) (eq? (thread-id th) id)))))
+      (set! the-ready-queue (car queue-and-result))
+      (cdr queue-and-result))))
+(define remove-thread-from-wait-queues!
+  (lambda (id)
+    (map (lambda (queue-ref)
+           (let ((queue-and-result
+                  (queue-remove-if
+                   (deref queue-ref)
+                   (lambda (th) (eq? (thread-id th) id)))))
+             (setref! queue-ref (car queue-and-result))
+             (cdr queue-and-result)))
+         the-waiting-queues)))
+(define or-list
+  (lambda (lst)
+    (cond [(null? lst) #f]
+          [(car lst) #t]
+          [else (or-list (cdr lst))])))
 
 ;;; ---------------------- Mutex Interface ----------------------
 (define-datatype mutex mutex?
@@ -580,9 +623,12 @@
 ;;; new-mutex : () -> Mutex
 (define new-mutex
   (lambda ()
-    (a-mutex
-     (newref #f)
-     (newref (empty-queue)))))
+    (let ((close-ref (newref #f))
+          (queue-ref (newref (empty-queue))))
+      (set! the-waiting-queues (cons queue-ref the-waiting-queues))
+      (a-mutex
+       close-ref
+       queue-ref))))
 
 ;;; ---------------------- Thread ----------------------
 (define-datatype thread thread?
@@ -636,6 +682,8 @@
 (define the-thread-number 'unspecified)
 ;;; the ready queue
 (define the-ready-queue 'unspecified)
+;;; the waiting queue reference list
+(define the-waiting-queues 'unspecified)
 ;;; the value of the main thread, if done
 (define the-final-answer 'unspecified)
 ;;; the number of steps that each thread may run
@@ -649,6 +697,7 @@
     (set! the-running-thread-id 0)
     (set! the-thread-number 1)
     (set! the-ready-queue (empty-queue))
+    (set! the-waiting-queues '())
     (set! the-final-answer 'uninitialized)
     (set! the-max-time-slice ticks)
     (set! the-time-remaining the-max-time-slice)))
@@ -723,11 +772,28 @@
               (let ((first (car front))
                     (rest (cons (cdr front) back)))
                 (f first rest)))))))
+;;;  queue->list : Queue -> List
 (define queue->list
   (lambda (q)
     (if (empty? q)
         '()
         (append (car q) (reverse (cdr q))))))
+;;; queue-remove-if : Queue x Proc -> (Queue . Bool)
+(define queue-remove-if
+  (lambda (q f)
+    (letrec ((found? #f)
+             (remove-if
+              (lambda (lst)
+                (cond [(null? lst)
+                       '()]
+                      [(f (car lst))
+                       (set! found? #t)
+                       (remove-if (cdr lst))]
+                      [else
+                       (cons (car lst)
+                             (remove-if (cdr lst)))]))))
+      (let ((new-queue (remove-if (queue->list q))))
+        (cons (cons new-queue '()) found?)))))
 ;;; report-empty-queue : () -> Unspecified
 (define report-empty-queue
   (lambda ()
@@ -781,6 +847,8 @@
 ;;;                print (exp1)
 ;;; Expression ::= yield ()
 ;;;                yield ()
+;;; Expression ::= kill (Expression)
+;;;                kill-exp (exp1)
 ;;; Parse Expression
 (define let-scanner-spec
   '((white-sp (whitespace) skip)
@@ -839,7 +907,9 @@
     (expression ("print" "(" expression ")")
                 print-exp)
     (expression ("yield" "(" ")")
-                yield-exp)))
+                yield-exp)
+    (expression ("kill" "(" expression ")")
+                kill-exp)))
 
 ;;; ---------------------- Evaluate expression ----------------------
 ;; value-of/k : Exp x Env x Cont -> Bounce
@@ -921,7 +991,10 @@
             (value-of/k exp1 env (print-cont cont)))
            (yield-exp
             ()
-            (apply-cont (yield-cont cont) (num-val 99))))))
+            (apply-cont (yield-cont cont) (num-val 99)))
+           (kill-exp
+            (exp1)
+            (value-of/k exp1 env (kill-cont cont))))))
 ;; value-of-program : Int x Program -> FinalAnswer
 (define value-of-program
   (lambda (timeslice prog debug?)
@@ -1070,7 +1143,7 @@
           print(100);
           33
         end"
-      #:debug? #t)
+      #:debug? #f)
  33)
 
 ;;; producer and consumer
@@ -1098,7 +1171,7 @@
                   print(300);
                   (consumer)
                  end"
-      #:debug? #t)
+      #:debug? #f)
  44)
 
 ;;; unsafe counter, the final value of x is uncertain
@@ -1137,7 +1210,7 @@
                 spawn((incr_x 300));
                 x
                end"
-     #:debug? #t
+     #:debug? #f
      #:time-slice 3)
 
 ;;; two-thread print with yield
@@ -1151,6 +1224,93 @@
           print(yield());
           33
         end"
-      #:debug? #t
+      #:debug? #f
       #:time-slice 50)
  33)
+
+;;; kill test in ready queue
+(check-eqv?
+ (run "letrec noisy (l) = if null? (l) then 0
+                         else begin print (car(l)); (noisy cdr(l)) end
+       in
+       let th1 = spawn(proc (d) (noisy list(1,2,3,4,5)))
+           th2 = spawn(proc (d) (noisy list(6,7,8,9,10)))
+           th3 = spawn(proc (d) (noisy list(11,12,13,14,15)))
+       in begin
+        print(yield());
+        kill(th2)
+       end"
+      #:debug? #f
+      #:time-slice 50)
+ #t)
+
+(check-eqv?
+ (run "letrec noisy (l) = if null? (l) then 0
+                         else begin print (car(l)); (noisy cdr(l)) end
+       in
+       let th1 = spawn(proc (d) (noisy list(1,2,3,4,5)))
+           th2 = spawn(proc (d) (noisy list(6,7,8,9,10)))
+           th3 = spawn(proc (d) (noisy list(11,12,13,14,15)))
+       in begin
+        print(yield());
+        kill(th2)
+       end"
+      #:debug? #f
+      #:time-slice 100)
+ #f)
+
+(check-eqv?
+ (run "letrec noisy (l) = if null? (l) then 0
+                         else begin print (car(l)); (noisy cdr(l)) end
+       in
+       let th1 = spawn(proc (d) (noisy list(1,2,3,4,5)))
+           th2 = spawn(proc (d) (noisy list(6,7,8,9,10)))
+           th3 = spawn(proc (d) (noisy list(11,12,13,14,15)))
+       in begin
+        print(yield());
+        kill(th2)
+       end"
+      #:debug? #f
+      #:time-slice 3)
+ #t)
+
+(check-eqv?
+ (run "letrec noisy (l) = if null? (l) then 0
+                         else begin print (car(l)); (noisy cdr(l)) end
+       in
+       let th1 = spawn(proc (d) (noisy list(1,2,3,4,5)))
+           th2 = spawn(proc (d) (noisy list(6,7,8,9,10)))
+           th3 = spawn(proc (d) (noisy list(11,12,13,14,15)))
+       in begin
+        print(yield());
+        kill(1000)
+       end"
+      #:debug? #f
+      #:time-slice 3)
+ #f)
+
+;;; kill test in wait queue
+(check-eqv?
+ (run "let x = 0
+      in let mut = mutex()
+         in let incr_x = proc (id)
+                           proc (dummy)
+                             begin
+                              wait(mut);
+                              if zero?(-(x, 1)) then kill (x)
+                              else 0;
+                              set x = -(x,-1);
+                              signal(mut);
+                              x
+                             end
+            in
+            let th1 = spawn((incr_x 100))
+                th2 = spawn((incr_x 200))
+                th3 = spawn((incr_x 300))
+            in begin
+                yield();
+                kill(th3)
+               end"
+      #:debug? #f
+      #:time-slice 3)
+ #t)
