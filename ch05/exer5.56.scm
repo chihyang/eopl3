@@ -378,7 +378,7 @@
   (send2-cont
    (saved-val exp-val?)
    (saved-cont continuation?))
-  (recv-cont
+  (receive-cont
    (var identifier?)
    (exp1 expression?)
    (saved-env environment?)
@@ -567,7 +567,7 @@
                  (send2-cont
                   (saved-val saved-cont)
                   (send-to (expval->num saved-val) val saved-cont))
-                 (recv-cont
+                 (receive-cont
                   (var exp1 saved-env saved-cont)
                   (value-of/k exp1 (extend-env var (newref val) saved-env) saved-cont)))))))
 ;;; wait-for-mutex : Mutex x Thread -> FinalAnswer
@@ -613,10 +613,10 @@
       (if (null? wait-th)
           (apply-cont saved-cont (bool-val #f))
           (begin
-            (place-on-ready-queue! (recv wait-th val))
+            (place-on-ready-queue! (receive wait-th val))
             (apply-cont saved-cont (bool-val #t)))))))
 ;;; signal-mutex : Thread -> Thread
-(define recv
+(define receive
   (lambda (th val)
     (cases thread th
            (cont-thread
@@ -872,8 +872,8 @@
 ;;;                yield ()
 ;;; Expression ::= send (Expression, Expression)
 ;;;                send-exp(exp1, exp2)
-;;; Expression ::= recv id in Expression
-;;;                recv-exp(var exp1)
+;;; Expression ::= receive id in Expression
+;;;                receive-exp(var exp1)
 ;;; Parse Expression
 (define let-scanner-spec
   '((white-sp (whitespace) skip)
@@ -935,8 +935,8 @@
                 yield-exp)
     (expression ("send" "(" expression "," expression ")")
                 send-exp)
-    (expression ("recv" identifier "in" expression)
-                recv-exp)))
+    (expression ("receive" identifier "in" expression)
+                receive-exp)))
 
 ;;; ---------------------- Evaluate expression ----------------------
 ;; value-of/k : Exp x Env x Cont -> Bounce
@@ -1022,12 +1022,12 @@
            (send-exp
             (exp1 exp2)
             (value-of/k exp1 env (send1-cont exp2 env cont)))
-           (recv-exp
+           (receive-exp
             (var exp1)
             (place-on-blocking-list!
              (cont-thread the-time-remaining
                           the-running-thread-id
-                          (recv-cont var exp1 env cont)
+                          (receive-cont var exp1 env cont)
                           (bool-val #t)
                           the-current-store))
             (run-next-thread)))))
@@ -1193,10 +1193,10 @@
                                   (wait4 -(k,1))
                                 end
                 in (wait4 5)
-           in let consumer = proc () recv buffer in buffer
+           in let consumer = proc () receive buffer in buffer
               in begin
-                  yield();
                   spawn(proc (d) (producer 44));
+                  yield();
                   print(300);
                   (consumer)
                  end"
@@ -1244,7 +1244,7 @@
  (run "let x = 0
        in let incr_x = proc (dummy)
                            proc (id)
-                              recv x in
+                              receive x in
                                begin
                                 print(dummy);
                                 set x = -(x, -1);
@@ -1259,7 +1259,7 @@
               begin
                yield();
                send(th1, 0);
-               recv x in x
+               receive x in x
               end"
       #:debug? #f
       #:time-slice 30)
