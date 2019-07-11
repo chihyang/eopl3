@@ -1,7 +1,7 @@
 #lang eopl
 (require rackunit)
 
-;;; 6
+;;; 1
 (define p (lambda (v1 v2) (+ v1 v2)))
 (define p/k (lambda (v1 v2 c) (c (+ v1 v2))))
 (define q (lambda (v1) (- v1 1)))

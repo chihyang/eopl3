@@ -1,7 +1,7 @@
 #lang eopl
 (require rackunit)
 
-;;; 6
+;;; 2
 (define f (lambda (v1 v2) (+ v1 v2)))
 (define f/k (lambda (v1 v2 c) (c (+ v1 v2))))
 (define g (lambda (v1 v2) (- v1 v2)))
