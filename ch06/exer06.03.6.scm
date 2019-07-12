@@ -39,3 +39,12 @@
     ((lambda (x cont) (cont x))
      v1
      (lambda (v2) v2)))))
+;; another transform
+(check-eqv?
+ (let ((x (let ((y 8)) (p y)))) x)
+ (let ((y 8)
+       (cont (lambda (v1)
+               (let ((x v1)
+                     (cont (lambda (v2) v2)))
+                 (cont x)))))
+   (p/k y cont)))
