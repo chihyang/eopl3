@@ -26,11 +26,6 @@
       (eopl:printf "This sentence should appear only once.~%")
       val)))
 
-(define remove-first1-cont
-  (lambda (v c)
-    (lambda (val)
-      (c (cons v val)))))
-
 (require rackunit)
 (check-equal?
  (remove-first/k 6 '() (end-cont))
