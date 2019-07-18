@@ -72,16 +72,16 @@
         (if (eqv? search-var saved-var)
             saved-val
             (apply-env saved-env search-var))))
-      ((eqv? (car env) 'extend-env-rec)
-       (let ((func (apply-env-rec search-var
-                                  (car (cadr env))
-                                  (cadr (cadr env))
-                                  (caddr (cadr env)))))
-         (if (null? func)
-             (apply-env (caddr env) search-var)
-             (let ((saved-p-vars (car func))
-                   (saved-p-body (cadr func)))
-               (proc-val (procedure saved-p-vars saved-p-body env))))))
+     ((eqv? (car env) 'extend-env-rec)
+      (let ((func (apply-env-rec search-var
+                                 (car (cadr env))
+                                 (cadr (cadr env))
+                                 (caddr (cadr env)))))
+        (if (null? func)
+            (apply-env (caddr env) search-var)
+            (let ((saved-p-vars (car func))
+                  (saved-p-body (cadr func)))
+              (proc-val (procedure saved-p-vars saved-p-body env))))))
      (else
       (report-invalid-env env)))))
 ;;; apply-env-rec : Sym x Listof(Sym) x Listof(Listof(Sym)) x Listof(Expression) ->
@@ -115,39 +115,42 @@
 ;; end-cont : () -> Cont
 (define end-cont
   (lambda ()
-    (cons
-     (lambda (val)
-       (begin
-         (eopl:printf "End of computation.~%")
-         val))
-     (lambda ()
-       (lambda (val)
-         (begin
-           (report-uncaught-exception)
-           #f))))))
-;;; how to inline a recursive continuation?
+    (lambda (val)
+      (begin
+        (eopl:printf "End of computation.~%")
+        val))))
+;; end-enp-cont : () -> Unspecified
+(define end-enp-cont
+  (lambda ()
+    (lambda (val)
+      (begin
+        (report-uncaught-exception)
+        #f))))
+;;; is it possible to inline a recursive continuation without using Y
+;;; combinator?
 (define let-cont
-  (lambda (saved-vars saved-vals cont-vars cont-exps body env cont)
-    (cons
-     (lambda (val)
-       (if (null? cont-exps)
-           (let ((l-vars (reverse (cons (car cont-vars) saved-vars)))
-                 (l-vals (reverse (cons val saved-vals))))
-             (value-of/k body
-                         (extend-env* l-vars
-                                      l-vals
-                                      env)
-                         cont))
-           (value-of/k (car cont-exps)
-                       env
-                       (let-cont (cons (car cont-vars) saved-vars)
-                                 (cons val saved-vals)
-                                 (cdr cont-vars)
-                                 (cdr cont-exps)
-                                 body
-                                 env
-                                 cont))))
-     (lambda () ((cdr cont))))))
+  (lambda (saved-vars saved-vals cont-vars cont-exps body env cont enp-cont)
+    (lambda (val)
+      (if (null? cont-exps)
+          (let ((l-vars (reverse (cons (car cont-vars) saved-vars)))
+                (l-vals (reverse (cons val saved-vals))))
+            (value-of/k body
+                        (extend-env* l-vars
+                                     l-vals
+                                     env)
+                        cont
+                        enp-cont))
+          (value-of/k (car cont-exps)
+                      env
+                      (let-cont (cons (car cont-vars) saved-vars)
+                                (cons val saved-vals)
+                                (cdr cont-vars)
+                                (cdr cont-exps)
+                                body
+                                env
+                                cont
+                                enp-cont)
+                      enp-cont)))))
 (define report-uncaught-exception
   (lambda ()
     (eopl:printf "Uncaught exception!~%")))
@@ -159,13 +162,13 @@
    (var identifier?)
    (body expression?)
    (saved-env environment?)))
-;; apply-procedure/k : Proc x ExpVal x Cont -> ExpVal
+;; apply-procedure/k : Proc x ExpVal x Cont x Cont -> ExpVal
 (define apply-procedure/k
-  (lambda (proc1 val cont)
+  (lambda (proc1 val cont enp-cont)
     (cases proc proc1
            (procedure
             (var body saved-env)
-            (value-of/k body (extend-env var val saved-env) cont)))))
+            (value-of/k body (extend-env var val saved-env) cont enp-cont)))))
 (define-datatype exp-val exp-val?
   (num-val
    (val number?))
@@ -320,169 +323,152 @@
                 raise-exp)))
 
 ;;; ---------------------- Evaluate expression ----------------------
-;; value-of/k : Exp x Env x Cont -> FinalAnswer
+;; value-of/k : Exp x Env x Cont x Cont -> FinalAnswer
 (define value-of/k
-  (lambda (exp env cont)
+  (lambda (exp env cont enp-cont)
     (cases expression exp
            (const-exp
             (num)
-            ((car cont) (num-val num)))
+            (cont (num-val num)))
            (emptylist-exp
             ()
-            ((car cont) (null-val)))
+            (cont (null-val)))
            (cons-exp
             (exp1 exp2)
             (value-of/k exp1
                         env
-                        (cons
-                         (lambda (val)
-                           (value-of/k exp2
-                                       env
-                                       (cons
-                                        (lambda (val2)
-                                          ((car cont) (pair-val val val2)))
-                                        (lambda () ((cdr cont))))))
-                         (lambda () ((cdr cont))))))
+                        (lambda (val)
+                          (value-of/k exp2
+                                      env
+                                      (lambda (val2)
+                                        (cont (pair-val val val2)))
+                                      enp-cont))
+                        enp-cont))
            (car-exp
             (exp1)
             (value-of/k exp1
                         env
-                        (cons
-                         (lambda (val)
-                           (cases exp-val val
-                                  (pair-val
-                                   (first rest)
-                                   ((car cont) first))
-                                  (else (report-invalid-exp-value 'pair-val))))
-                         (lambda () ((cdr cont))))))
+                        (lambda (val)
+                          (cases exp-val val
+                                 (pair-val
+                                  (first rest)
+                                  (cont first))
+                                 (else (report-invalid-exp-value 'pair-val))))
+                        enp-cont))
            (cdr-exp
             (exp1)
             (value-of/k exp1
                         env
-                        (cons
-                         (lambda (val)
-                           (cases exp-val val
-                                  (pair-val
-                                   (first rest)
-                                   ((car cont) rest))
-                                  (else (report-invalid-exp-value 'pair-val))))
-                         (lambda () ((cdr cont))))))
+                        (lambda (val)
+                          (cases exp-val val
+                                 (pair-val
+                                  (first rest)
+                                  (cont rest))
+                                 (else (report-invalid-exp-value 'pair-val))))
+                        enp-cont))
            (null?-exp
             (exp1)
             (value-of/k exp1
                         env
-                        (cons
-                         (lambda (val)
-                           (cases exp-val val
-                                  (null-val
-                                   ()
-                                   ((car cont) (bool-val #t)))
-                                  (else ((car cont) (bool-val #f)))))
-                         (lambda () ((cdr cont))))))
+                        (lambda (val)
+                          (cases exp-val val
+                                 (null-val
+                                  ()
+                                  (cont (bool-val #t)))
+                                 (else (cont (bool-val #f)))))
+                        enp-cont))
            (list-exp
             (exps)
             (if (null? exps)
-                ((car cont) (null-val))
+                (cont (null-val))
                 (value-of/k (car exps)
                             env
-                            (cons
-                             (lambda (val)
-                               (value-of/k (list-exp (cdr exps))
-                                           env
-                                           (cons
-                                            (lambda (val2)
-                                              ((car cont) (pair-val val val2)))
-                                            (lambda () ((cdr cont))))))
-                             (lambda () ((cdr cont)))))))
+                            (lambda (val)
+                              (value-of/k (list-exp (cdr exps))
+                                          env
+                                          (lambda (val2)
+                                            (cont (pair-val val val2)))
+                                          enp-cont))
+                            enp-cont)))
            (var-exp
             (var)
-            ((car cont) (apply-env env var)))
+            (cont (apply-env env var)))
            (diff-exp
             (exp1 exp2)
             (value-of/k exp1
                         env
-                        (cons
-                         (lambda (val1)
-                           (value-of/k exp2
-                                       env
-                                       (cons
-                                        (lambda (val2)
-                                          (let ((num1 (expval->num val1))
-                                                (num2 (expval->num val2)))
-                                            ((car cont) (num-val (- num1 num2)))))
-                                        (lambda () ((cdr cont))))))
-                         (lambda () ((cdr cont))))))
+                        (lambda (val1)
+                          (value-of/k exp2
+                                      env
+                                      (lambda (val2)
+                                        (let ((num1 (expval->num val1))
+                                              (num2 (expval->num val2)))
+                                          (cont (num-val (- num1 num2)))))
+                                      enp-cont))
+                        enp-cont))
            (zero?-exp
             (exp1)
             (value-of/k exp1
                         env
-                        (cons
-                         (lambda (val)
-                           ((car cont) (bool-val
-                                        (zero? (expval->num val)))))
-                         (lambda () ((cdr cont))))))
+                        (lambda (val)
+                          (cont (bool-val
+                                 (zero? (expval->num val)))))
+                        enp-cont))
            (if-exp
             (exp1 exp2 exp3)
             (value-of/k exp1
                         env
-                        (cons
-                         (lambda (val)
-                           (if (expval->bool val)
-                               (value-of/k exp2 env cont)
-                               (value-of/k exp3 env cont)))
-                         (lambda () ((cdr cont))))))
+                        (lambda (val)
+                          (if (expval->bool val)
+                              (value-of/k exp2 env cont enp-cont)
+                              (value-of/k exp3 env cont enp-cont)))
+                        enp-cont))
            (let-exp
             (vars exps body)
             (if (null? exps)
                 (value-of/k body env cont)
                 (value-of/k (car exps)
                             env
-                            (let-cont '() '() vars (cdr exps) body env cont))))
+                            (let-cont '() '() vars (cdr exps) body env cont enp-cont)
+                            enp-cont)))
            (letrec-exp
             (p-names p-vars p-bodies letrec-body)
-            (value-of/k letrec-body (extend-env-rec p-names p-vars p-bodies env) cont))
+            (value-of/k letrec-body (extend-env-rec p-names p-vars p-bodies env) cont enp-cont))
            (proc-exp
             (var body)
-            ((car cont) (proc-val (procedure var body env))))
+            (cont (proc-val (procedure var body env))))
            (call-exp
             (rator rand)
             (value-of/k rator
                         env
-                        (cons
-                         (lambda (val)
-                           (value-of/k rand
-                                       env
-                                       (cons
-                                        (lambda (val2)
-                                          (let ((proc1 (expval->proc val)))
-                                            (apply-procedure/k proc1 val2 cont)))
-                                        (lambda () ((cdr cont))))))
-                         (lambda () ((cdr cont))))))
+                        (lambda (val)
+                          (value-of/k rand
+                                      env
+                                      (lambda (val2)
+                                        (let ((proc1 (expval->proc val)))
+                                          (apply-procedure/k proc1 val2 cont enp-cont)))
+                                      enp-cont))
+                        enp-cont))
            (try-exp
             (exp1 var handler-exp)
             (value-of/k exp1
                         env
-                        (cons
-                         (lambda (val)
-                           ((car cont) val))
-                         (lambda ()
-                           (lambda (val)
-                             (value-of/k handler-exp (extend-env var val env) cont))))))
+                        cont
+                        (lambda (val)
+                          (value-of/k handler-exp (extend-env var val env) cont enp-cont))))
            (raise-exp
             (exp1)
             (value-of/k exp1
                         env
-                        (cons
-                         (lambda (val)
-                           (((cdr cont)) val))
-                         (lambda () ((cdr cont)))))))))
+                        enp-cont
+                        enp-cont)))))
 ;; value-of-program : Program -> FinalAnswer
 (define value-of-program
   (lambda (prog)
     (cases program prog
            (a-program
             (exp)
-            (let ((val (value-of/k exp (empty-env) (end-cont))))
+            (let ((val (value-of/k exp (empty-env) (end-cont) (end-enp-cont))))
               (if (exp-val? val)
                   (cases exp-val val
                          (num-val
@@ -613,3 +599,20 @@
    catch (y)
      -(y, 3)")
  0)
+
+(check-eqv?
+ (run
+  "let x = 3 in
+   try raise raise 18
+   catch (x)
+    try
+     raise -(x, raise x)
+    catch (x)
+     x")
+ 18)
+
+(check-eqv?
+ (run
+  "let x = 3 in
+    raise -(x, raise x)")
+ #f)
