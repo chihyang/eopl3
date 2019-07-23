@@ -1,6 +1,31 @@
 #lang eopl
 (require "exer06.19.scm")
 (require rackunit)
+;;; tests from exercise 6.12
+(check-equal?
+ (run
+  "-((f -(x,1)),1)")
+ #f)
+
+(check-equal?
+ (run
+  "(f -(-(x,y),1))")
+ #t)
+
+(check-equal?
+ (run
+  "if zero?(x) then -(x,y) else -(-(x,y),1)")
+ #t)
+
+(check-equal?
+ (run "let x = proc (y) (y x) in -(x,3)")
+ #t)
+
+(check-equal?
+ (run "let f = proc (x) x in (f 3)")
+ #t)
+
+;;; tests from exercise 6.13
 ;;; removeall
 (check-equal?
  (run
