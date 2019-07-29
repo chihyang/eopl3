@@ -3,10 +3,10 @@
 
 (define cps
   (lambda (exp)
-    (cps-of exp 0 '(lambda (v0) v0))))
+    (cps-of exp '(lambda (v0) v0))))
 
 (define cps-of
-  (lambda (exp i k)
+  (lambda (exp k)
     (match exp
       [var
        #:when (or (symbol? var) (integer? var))
@@ -16,25 +16,24 @@
       [(list 'if exp1 exp2 exp3)
        (cps-of-if exp1 exp2 exp3 k)]
       [_
-       (cps-of-exps exp (list i) k)])))
+       (cps-of-exps exp '(0) k)])))
 
 (define cps-of-if
   (lambda (exp1 exp2 exp3 k)
     (if (simple? exp1)
         `(if ,exp1
-             ,(cps-of exp2 0 k)
-             ,(cps-of exp3 0 k))
+             ,(cps-of exp2 k)
+             ,(cps-of exp3 k))
         (cps-of exp1
-                0
                 `(lambda (v)
                    (if v
-                       ,(cps-of exp2 0 k)
-                       ,(cps-of exp3 0 k)))))))
+                       ,(cps-of exp2 k)
+                       ,(cps-of exp3 k)))))))
 
 (define cps-of-lambda
   (lambda (vars body k)
     `(lambda ,(append vars (list k))
-       ,(cps-of body 0 k))))
+       ,(cps-of body k))))
 
 (define cps-of-exps
   (lambda (exps n k)
@@ -52,7 +51,7 @@
                   (cps-of-exps
                    (make-exps exps
                               (reverse n)
-                              (cps-of (current-exp exps (reverse n)) 0 'k))
+                              (cps-of (current-exp exps (reverse n)) 'k))
                    (cons (+ (car n) 1)
                          (cdr n))
                    k)]
@@ -67,7 +66,6 @@
                                k)]
                  [else
                   (cps-of (current-exp exps (reverse n))
-                          0
                           `(lambda (,(make-var (car n)))
                              ,(cps-of-exps
                                (make-exps exps (reverse n) (make-var (car n)))
