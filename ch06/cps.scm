@@ -37,40 +37,40 @@
 
 (define cps-of-exps
   (lambda (exps n k)
-    (cond [(null? n)
-           (make-result exps k)]
-          [(null? (current-exp exps (reverse n)))
-           (if (null? (cdr n))
-               (make-result exps k)
-               (cps-of-exps exps
-                            (cons (+ (cadr n) 1)
-                                  (cddr n))
-                            k))]
-          [else
-           (cond [(lambda? (current-exp exps (reverse n)))
-                  (cps-of-exps
-                   (make-exps exps
-                              (reverse n)
-                              (cps-of (current-exp exps (reverse n)) 'k))
-                   (cons (+ (car n) 1)
-                         (cdr n))
-                   k)]
-                 [(simple? (current-exp exps (reverse n)))
-                  (cps-of-exps exps
-                               (cons (+ (car n) 1)
-                                     (cdr n))
-                               k)]
-                 [(almost-simple? (current-exp exps (reverse n)))
-                  (cps-of-exps exps
-                               (cons 1 n)
-                               k)]
-                 [else
-                  (cps-of (current-exp exps (reverse n))
-                          `(lambda (,(make-var (car n)))
-                             ,(cps-of-exps
-                               (make-exps exps (reverse n) (make-var (car n)))
-                               (cons (+ (car n) 1) (cdr n))
-                               k)))])])))
+    (if (null? n)
+        (make-result exps k)
+        (let ((exp (current-exp exps (reverse n))))
+          (cond [(null? exp)
+                 (if (null? (cdr n))
+                     (make-result exps k)
+                     (cps-of-exps exps
+                                  (cons (+ (cadr n) 1)
+                                        (cddr n))
+                                  k))]
+                [(lambda? exp)
+                 (cps-of-exps
+                  (make-exps exps
+                             (reverse n)
+                             (cps-of exp 'k))
+                  (cons (+ (car n) 1)
+                        (cdr n))
+                  k)]
+                [(simple? exp)
+                 (cps-of-exps exps
+                              (cons (+ (car n) 1)
+                                    (cdr n))
+                              k)]
+                [(almost-simple? exp)
+                 (cps-of-exps exps
+                              (cons 1 n)
+                              k)]
+                [else
+                 (cps-of exp
+                         `(lambda (,(make-var (car n)))
+                            ,(cps-of-exps
+                              (make-exps exps (reverse n) (make-var (car n)))
+                              (cons (+ (car n) 1) (cdr n))
+                              k)))])))))
 
 (define make-result
   (lambda (exps k)
