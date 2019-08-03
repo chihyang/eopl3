@@ -27,7 +27,7 @@
             (cons (car lst)
                   (list-set (cdr lst) (- n 1) x))))))
 
-;;; ---------------------- Syntax for the CPS-IN/CPS-OUT language ----------------------
+;;; ---------------------- Syntax for the CPS-IN language ----------------------
 ;;; Program     ::= Expression
 ;;;                 a-program (exp1)
 ;;; Expression  ::= Number
@@ -50,28 +50,6 @@
 ;;;                 letrec-exp (p-names b-vars p-bodies body)
 ;;; Expression  ::= (Expression Expression*)
 ;;;                 call-exp (rator rands)
-;;; TfProgram  ::= TfExp
-;;;                a-cps-program (exp1)
-;;; SimpleExp  ::= Number
-;;;                cps-const-exp (num)
-;;; SimpleExp  ::= Identifier
-;;;                cps-var-exp (var)
-;;; SimpleExp  ::= + (SimpleExp{,}*)
-;;;                cps-sum-exp (exps)
-;;; SimpleExp  ::= - (SimpleExp, SimpleExp)
-;;;                cps-diff-exp (exp1, exp2)
-;;; SimpleExp  ::= zero? (SimpleExp)
-;;;                cps-zero?-exp (exp1)
-;;; TfExp      ::= SimpleExp
-;;;                simple-exp->exp (simple-exp1)
-;;; TfExp      ::= if SimpleExp then TfExp else TfExp
-;;;                cps-if-exp (exp1 exp2 exp3)
-;;; TfExp      ::= let {Identifier = SimpleExp}* in TfExp
-;;;                cps-let-exp (vars exps body)
-;;; TfExp      ::= letrec {Identifier (Identifier*,) = TfExp}* in TfExp
-;;;                cps-letrec-exp (p-names b-vars p-bodies body)
-;;; TfExp      ::= (SimpleExp SimpleExp*)
-;;;                cps-call-exp (rator rands)
 ;;; Parse Expression
 (define let-scanner-spec
   '((white-sp (whitespace) skip)
@@ -104,8 +82,97 @@
     (expression ("letrec" (arbno identifier "(" (separated-list identifier ",") ")" "=" expression) "in" expression)
                 letrec-exp)
     (expression ("(" expression (arbno expression) ")")
-                call-exp)
-    (cps-program (tf-exp) a-cps-program)
+                call-exp)))
+
+(sllgen:make-define-datatypes let-scanner-spec let-grammar)
+(define list-the-datatypes
+  (lambda ()
+    (sllgen:list-define-datatypes let-scanner-spec let-grammar)))
+(define just-scan
+  (sllgen:make-string-scanner let-scanner-spec let-grammar))
+(define scan&parse
+  (sllgen:make-string-parser let-scanner-spec let-grammar))
+
+(define unparse-exp
+  (lambda (exp)
+    (cases expression exp
+           (const-exp (num) num)
+           (var-exp (var) var)
+           (proc-exp
+            (vars body)
+            `(lambda ,vars ,(unparse-exp body)))
+           (sum-exp
+            (exps)
+            (append '(+) (map unparse-exp exps)))
+           (diff-exp
+            (exp1 exp2)
+            `(- ,(unparse-exp exp1) ,(unparse-exp exp2)))
+           (zero?-exp
+            (exp1)
+            `(zero? ,(unparse-exp exp1)))
+           (if-exp
+            (exp1 exp2 exp3)
+            `(if ,(unparse-exp exp1) ,(unparse-exp exp2) ,(unparse-exp exp3)))
+           (let-exp
+            (vars exps body)
+            `(let ,(map (lambda (v1 v2) (list v1 (unparse-exp v2)))
+                        vars exps)
+               ,(unparse-exp body)))
+           (letrec-exp
+            (p-names p-vars p-bodies body)
+            `(letrec ,(map (lambda (v1 v2 v3)
+                             (list v1
+                                   `(lambda ,v2
+                                      ,(unparse-exp v3))))
+                        p-names p-vars p-bodies)
+               ,(unparse-exp body)))
+           (call-exp
+            (rator rands)
+            (map unparse-exp (cons rator rands))))))
+
+(define unparse-prgm
+  (lambda (prgm)
+    (cases program prgm
+           (a-program
+            (exp)
+            (unparse-exp exp)))))
+
+;;; ---------------------- Syntax for the CPS-OUT language ----------------------
+;;; TfProgram  ::= TfExp
+;;;                cps-a-program (exp1)
+;;; SimpleExp  ::= Number
+;;;                cps-const-exp (num)
+;;; SimpleExp  ::= Identifier
+;;;                cps-var-exp (var)
+;;; SimpleExp  ::= + (SimpleExp{,}*)
+;;;                cps-sum-exp (exps)
+;;; SimpleExp  ::= - (SimpleExp, SimpleExp)
+;;;                cps-diff-exp (exp1, exp2)
+;;; SimpleExp  ::= zero? (SimpleExp)
+;;;                cps-zero?-exp (exp1)
+;;; TfExp      ::= SimpleExp
+;;;                simple-exp->exp (simple-exp1)
+;;; TfExp      ::= if SimpleExp then TfExp else TfExp
+;;;                cps-if-exp (exp1 exp2 exp3)
+;;; TfExp      ::= let {Identifier = SimpleExp}* in TfExp
+;;;                cps-let-exp (vars exps body)
+;;; TfExp      ::= letrec {Identifier (Identifier*,) = TfExp}* in TfExp
+;;;                cps-letrec-exp (p-names b-vars p-bodies body)
+;;; TfExp      ::= (SimpleExp SimpleExp*)
+;;;                cps-call-exp (rator rands)
+;;; Parse Expression
+(define cps-scanner-spec
+  '((white-sp (whitespace) skip)
+    (identifier (letter (arbno (or letter digit "_" "-" "?"))) symbol)
+    (number ((or (concat digit (arbno digit))
+                 (concat "-" digit (arbno digit))
+                 (concat (arbno digit) "." digit (arbno digit))
+                 (concat "-" (arbno digit) "." digit (arbno digit))
+                 (concat digit (arbno digit) "." (arbno digit))
+                 (concat "-" digit (arbno digit) "." (arbno digit)))) number)
+    (comment ("%" (arbno (not #\newline))) skip)))
+(define cps-grammar
+  '((cps-program (tf-exp) cps-a-program)
     (simple-exp (number)
                 cps-const-exp)
     (simple-exp (identifier)
@@ -129,22 +196,74 @@
     (tf-exp ("(" simple-exp (arbno simple-exp) ")")
             cps-call-exp)))
 
-(sllgen:make-define-datatypes let-scanner-spec let-grammar)
-(define list-the-datatypes
+(sllgen:make-define-datatypes cps-scanner-spec cps-grammar)
+(define cps-list-the-datatypes
   (lambda ()
-    (sllgen:list-define-datatypes let-scanner-spec let-grammar)))
-(define just-scan
-  (sllgen:make-string-scanner let-scanner-spec let-grammar))
-(define scan&parse
-  (sllgen:make-string-parser let-scanner-spec let-grammar))
+    (sllgen:list-define-datatypes cps-scanner-spec cps-grammar)))
+(define cps-just-scan
+  (sllgen:make-string-scanner cps-scanner-spec cps-grammar))
+(define cps-scan&parse
+  (sllgen:make-string-parser cps-scanner-spec cps-grammar))
 
+(define cps-unparse-simple-exp
+  (lambda (exp)
+    (cases simple-exp exp
+           (cps-const-exp (num) num)
+           (cps-var-exp (var) var)
+           (cps-proc-exp
+            (vars body)
+            `(lambda ,vars ,(cps-unparse-exp body)))
+           (cps-sum-exp
+            (exps)
+            (append '(+) (map cps-unparse-simple-exp exps)))
+           (cps-diff-exp
+            (exp1 exp2)
+            `(- ,(cps-unparse-simple-exp exp1) ,(cps-unparse-simple-exp exp2)))
+           (cps-zero?-exp
+            (exp1)
+            `(zero? ,(cps-unparse-simple-exp exp1))))))
+
+(define cps-unparse-exp
+  (lambda (exp)
+    (cases tf-exp exp
+           (simple-exp->exp (simple) (cps-unparse-simple-exp simple))
+           (cps-if-exp
+            (exp1 exp2 exp3)
+            `(if ,(cps-unparse-simple-exp exp1)
+                 ,(cps-unparse-exp exp2)
+                 ,(cps-unparse-exp exp3)))
+           (cps-let-exp
+            (vars exps body)
+            `(let ,(map (lambda (v1 v2) (list v1 (cps-unparse-simple-exp v2)))
+                        vars exps)
+               ,(cps-unparse-exp body)))
+           (cps-letrec-exp
+            (p-names p-vars p-bodies body)
+            `(letrec ,(map (lambda (v1 v2 v3)
+                             (list v1
+                                   `(lambda ,v2
+                                      ,(cps-unparse-exp v3))))
+                        p-names p-vars p-bodies)
+               ,(cps-unparse-exp body)))
+           (cps-call-exp
+            (rator rands)
+            (map cps-unparse-simple-exp (cons rator rands))))))
+
+(define cps-unparse-prgm
+  (lambda (prgm)
+    (cases cps-program prgm
+           (cps-a-program
+            (exp)
+            (cps-unparse-exp exp)))))
+
+;;; ---------------------- CPS ----------------------
 (define cps-of-program
   (lambda (prgm)
     (set! n 0)
     (cases program prgm
            (a-program
             (exp)
-            (a-cps-program
+            (cps-a-program
              (cps-of-exp exp
                          (cps-proc-exp '(v0)
                                        (simple-exp->exp (cps-var-exp 'v0)))))))))
