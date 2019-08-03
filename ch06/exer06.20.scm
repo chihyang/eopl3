@@ -1,6 +1,8 @@
 #lang eopl
 (require "cps-in-lang.scm")
 (require "cps-out-lang.scm")
+(provide compile)
+
 ;;; list-index : pred x list -> Int | #f
 ;;;
 ;;; usage: return the 0-based position of the first element of lst that
@@ -59,6 +61,7 @@
              (cps-of-exp exp
                          (cps-proc-exp '(v0)
                                        (simple-exp->exp (cps-var-exp 'v0)))))))))
+(define compile cps-of-program)
 
 (define cps-of-exp
   (lambda (exp k)
@@ -79,7 +82,7 @@
             (cps-of-exps
              (list exp1)
              (lambda (simples)
-               (make-send-to-cont k (cps-zero?-exp (cps-of-exp exp1 (car simples)))))))
+               (make-send-to-cont k (cps-zero?-exp (car simples))))))
            (diff-exp
             (exp1 exp2)
             (cps-of-exps
@@ -101,17 +104,19 @@
                             (cps-of-exp exp2 k)
                             (cps-of-exp exp3 k)))))
            (let-exp
-            (var exp1 body)
+            (vars exp1 body)
             (cps-of-exps
              exp1
              (lambda (simples)
-               (cps-let-exp var simples
-                            (cps-of-exp body k)))))
+               (let ((var (fresh-identifier '%v)))
+                 (cps-let-exp (append vars (list var))
+                              (append simples (list k))
+                              (cps-of-exp body (cps-var-exp var)))))))
            (letrec-exp
             (p-names p-vars p-bodies body)
             (cps-letrec-exp
              p-names
-             (map (lambda (vars) (append vars 'k))
+             (map (lambda (vars) (append vars (list 'k)))
                   p-vars)
              (map (lambda (body) (cps-of-exp body (cps-var-exp 'k)))
                   p-bodies)
@@ -200,12 +205,3 @@
 (define report-invalid-exp-to-cps-of-simple-exp
   (lambda (exp)
     (eopl:error "invalid exp to cps: ~a~%" exp)))
-
-
-(require rackunit)
-(check-equal?
- (cps-unparse-prgm (cps-of-program (scan&parse "(f x (h m) (g n))")))
- '(g
-  n
-  (lambda (v1)
-    (h m (lambda (v2) (f x v2 v1 (lambda (v0) v0)))))))

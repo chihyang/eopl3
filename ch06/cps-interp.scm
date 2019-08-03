@@ -210,7 +210,7 @@
 (define end-cont
   (lambda ()
     (lambda (val)
-      (eopl:printf "End of computation.~%")
+      ;; (eopl:printf "End of computation.~%")
       val)))
 (define apply-cont
   (lambda (cont val)
@@ -271,7 +271,7 @@
            (cps-sum-exp
             (exp1)
             (let ((nums
-                   (map (lambda (e) ((expval->num (value-of-simple-exp e env))))
+                   (map (lambda (e) (expval->num (value-of-simple-exp e env)))
                         exp1)))
                  (num-val (apply + nums))))
            (cps-diff-exp
@@ -291,3 +291,15 @@
             (exp)
             (let ((val (value-of/k exp (empty-env) (end-cont))))
               (expval->schemeval val))))))
+
+(define run
+  (lambda (prgm)
+    (value-of-cps-program prgm)))
+
+;;; checked-run : String -> Int | Bool | Proc | '() | List | Pair | String (for exception)
+(require racket/base)
+(define checked-run
+  (lambda (prgm)
+    (with-handlers
+        [(exn:fail? (lambda (en) 'error))]
+      (run prgm))))
