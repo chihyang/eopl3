@@ -103,9 +103,9 @@
            (let-exp
             (var exp1 body)
             (cps-of-exps
-             (list exp1)
+             exp1
              (lambda (simples)
-               (cps-let-exp var (car simples)
+               (cps-let-exp var simples
                             (cps-of-exp body k)))))
            (letrec-exp
             (p-names p-vars p-bodies body)
