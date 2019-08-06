@@ -28,7 +28,7 @@ each layer!
 
 > As it stands, cps-of-let-exp will generate a useless let expression. (Why?)
 > Modify this procedure so that the continuation variable is the same as the let
-> variable. Then if exp1 is nonsimple,
+> variable. Then if `exp1` is nonsimple,
 >
 > ``` racket
 > (cps-of-exp <<let var1 = exp1 in exp2>> K)
