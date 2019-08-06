@@ -32,10 +32,22 @@ each layer!
 >
 > ``` racket
 > (cps-of-exp <<let var1 = exp1 in exp2>> K)
-> = (cps-of-exp exp1 <<proc (var1) (cps-of-exp exp2 K)>>
+> = (cps-of-exp exp1 <<proc (var1) (cps-of-exp exp2 K)>>)
 > ```
 
-Note the condition: **nonsimple**, try case `let-scope-1` in
-[cps-tests.scm](cps-tests.scm) to see what will happen if we use the transform
-above for any simple expressions. And: does this work if let has multiple
-bindings?
+First see the case below:
+
+``` racket
+let x = (g m)
+in if zero?(x) then 0 else 1
+```
+
+Here `x` is the de facto continuation variable, so we don't have to make another
+one.
+
+And: does this work if let has multiple bindings?
+
+Besides, note the condition **nonsimple**. Try the case `let-scope-1` in
+[cps-tests.scm](cps-tests.scm) to see what will happen and you would know what I
+mean. Keep in mind that any transform shouldn't change the semantic that every
+binding in let is in the same layer of environment.
