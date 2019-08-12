@@ -59,7 +59,7 @@
             (vars body)
             (make-send-to-cont k (anf-proc-exp
                                   vars
-                                  (anf-of-exp body '()))))
+                                  (anf-of-exp body end-cont))))
            (zero?-exp
             (exp1)
             (anf-of-exps
@@ -94,12 +94,11 @@
                             (anf-of-exp exp3 k)))))
            (let-exp
             (vars exp1 body)
-            (anf-of-exps
-             exp1
-             (lambda (simples)
-               (anf-let-exp vars
-                            simples
-                            (anf-of-exp body)))))
+            (anf-of-exp
+             (call-exp
+              (proc-exp vars body)
+              exp1)
+             k))
            (letrec-exp
             (p-names p-vars p-bodies body)
             (anf-letrec-exp
@@ -181,8 +180,8 @@
                        (anf-of-simple-exp exp2)))
            (proc-exp (ids exp)
                      (anf-proc-exp
-                      (append ids (list 'k%00))
-                      (anf-of-exp exp (anf-var-exp 'k%00))))
+                      ids
+                      (anf-of-exp exp end-cont)))
            (sum-exp (exps)
                     (anf-sum-exp (map anf-of-simple-exp exps)))
            (else
