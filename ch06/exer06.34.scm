@@ -32,9 +32,6 @@
                   (list-set (cdr lst) (- n 1) x))))))
 
 ;;; ---------------------- ANF ----------------------
-(define end-cont
-  (lambda (v0) v0))
-
 (define anf-of-program
   (lambda (prgm)
     (set! n 0)
@@ -42,78 +39,75 @@
            (a-program
             (exp)
             (anf-a-program
-             (anf-of-exp exp end-cont))))))
+             (anf-of-exp exp))))))
 
 (define compile anf-of-program)
 
 (define anf-of-exp
-  (lambda (exp k)
+  (lambda (exp)
     (cases expression exp
            (const-exp
             (num)
-            (make-send-to-cont k (anf-const-exp num)))
+            (simple-exp->exp (anf-const-exp num)))
            (var-exp
             (var)
-            (make-send-to-cont k (anf-var-exp var)))
+            (simple-exp->exp (anf-var-exp var)))
            (proc-exp
             (vars body)
-            (make-send-to-cont k (anf-proc-exp
-                                  vars
-                                  (anf-of-exp body end-cont))))
+            (simple-exp->exp (anf-proc-exp
+                              vars
+                              (anf-of-exp body))))
            (zero?-exp
             (exp1)
             (anf-of-exps
              (list exp1)
              (lambda (simples)
-               (make-send-to-cont k (anf-zero?-exp (car simples))))))
+               (simple-exp->exp (anf-zero?-exp (car simples))))))
            (less?-exp
             (exp1 exp2)
             (anf-of-exps
              (list exp1 exp2)
              (lambda (simples)
-               (make-send-to-cont k (anf-less?-exp (car simples) (cadr simples))))))
+               (simple-exp->exp (anf-less?-exp (car simples) (cadr simples))))))
            (diff-exp
             (exp1 exp2)
             (anf-of-exps
              (list exp1 exp2)
              (lambda (simples)
-               (make-send-to-cont k (anf-diff-exp (car simples) (cadr simples))))))
+               (simple-exp->exp (anf-diff-exp (car simples) (cadr simples))))))
            (sum-exp
             (exps)
             (anf-of-exps
              exps
              (lambda (simples)
-               (make-send-to-cont k (anf-sum-exp simples)))))
+               (simple-exp->exp (anf-sum-exp simples)))))
            (if-exp
             (exp1 exp2 exp3)
             (anf-of-exps (list exp1)
                          (lambda (simples)
                            (anf-if-exp
                             (car simples)
-                            (anf-of-exp exp2 k)
-                            (anf-of-exp exp3 k)))))
+                            (anf-of-exp exp2)
+                            (anf-of-exp exp3)))))
            (let-exp
             (vars exp1 body)
-            (anf-of-exp
-             (call-exp
-              (proc-exp vars body)
-              exp1)
-             k))
+            (anf-let-exp
+             vars
+             (map anf-of-exp exp1)
+             (anf-of-exp body)))
            (letrec-exp
             (p-names p-vars p-bodies body)
             (anf-letrec-exp
              p-names
              p-vars
-             (map (lambda (e) (anf-of-exp e k)) p-bodies)
-             (anf-of-exp body k)))
+             (map anf-of-exp p-bodies)
+             (anf-of-exp body)))
            (call-exp
             (rator rands)
             (anf-of-exps (cons rator rands)
                          (lambda (simples)
-                           (make-call-send-to-cont
-                            k
-                            (anf-a-call-exp (car simples)
-                                            (cdr simples)))))))))
+                           (anf-call-exp (car simples)
+                                         (cdr simples))))))))
 
 ;;; anf-of-exps: Listof(InpExp) x (Listof(InpExp) -> TfExp) -> TfExp
 (define anf-of-rest
@@ -125,12 +119,12 @@
       (if (not pos)
           (builder (map anf-of-simple-exp exps))
           (let ((var (fresh-identifier 'v)))
-            (anf-of-exp
-             (list-ref exps pos)
-             (anf-proc-exp (list var)
-                           (anf-of-rest
-                            (list-set exps pos (var-exp var))
-                            builder))))))))
+            (anf-let-exp
+             (list var)
+             (list (anf-of-exp (list-ref exps pos)))
+             (anf-of-rest
+              (list-set exps pos (var-exp var))
+              builder)))))))
 
 (define anf-of-exps
   (lambda (exps builder)
@@ -181,41 +175,11 @@
            (proc-exp (ids exp)
                      (anf-proc-exp
                       ids
-                      (anf-of-exp exp end-cont)))
+                      (anf-of-exp exp)))
            (sum-exp (exps)
                     (anf-sum-exp (map anf-of-simple-exp exps)))
            (else
             (report-invalid-exp-to-anf-of-simple-exp exp)))))
-
-;;; make-send-to-cont : SimpleExp x SimpleExp -> TfExp
-(define make-send-to-cont
-  (lambda (k-exp s-exp)
-    (if (eq? k-exp end-cont)
-        (simple-exp->exp (anf-simple-exp->exp s-exp))
-        (cases simple-exp k-exp
-               (anf-proc-exp
-                (vars body)
-                (anf-let-exp
-                 (list (car vars))
-                 (list (anf-simple-exp->exp s-exp))
-                 body))
-               (else
-                (report-invalid-cont-exp k-exp))))))
-
-;;; make-call-send-to-cont : SimpleExp x CallExp -> TfExp
-(define make-call-send-to-cont
-  (lambda (k-exp c-exp)
-    (if (eq? k-exp end-cont)
-        (simple-exp->exp (anf-call-exp->exp c-exp))
-        (cases simple-exp k-exp
-               (anf-proc-exp
-                (vars body)
-                (anf-let-exp
-                 (list (car vars))
-                 (list (anf-call-exp->exp c-exp))
-                 body))
-               (else
-                (report-invalid-cont-exp k-exp))))))
 
 (define n 'uninitiated)
 (define fresh-identifier

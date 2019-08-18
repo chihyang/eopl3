@@ -222,7 +222,7 @@
     (cases tf-exp exp
            (simple-exp->exp
             (simple)
-            (value-of-anf-simple-exp simple env))
+            (value-of-simple-exp simple env))
            (anf-if-exp
             (exp1 exp2 exp3)
             (if (expval->bool (value-of-simple-exp exp1 env))
@@ -232,30 +232,13 @@
             (vars exps body)
             (value-of/k body
                         (extend-env* vars
-                                     (map (lambda (e) (value-of-anf-simple-exp e env))
+                                     (map (lambda (e) (value-of/k e env))
                                           exps)
-                                     env)
-                       ))
+                                     env)))
            (anf-letrec-exp
             (p-names p-vars p-bodies letrec-body)
-            (value-of/k letrec-body (extend-env-rec p-names p-vars p-bodies env))))))
-
-;;; value-of-anf-simple-exp : SimpleExp x Env -> ExpVal
-(define value-of-anf-simple-exp
-  (lambda (exp env)
-    (cases anf-simple-exp exp
-           (anf-call-exp->exp
-            (call-exp)
-            (value-of-anf-call-exp call-exp env))
-           (anf-simple-exp->exp
-            (simple-exp)
-            (value-of-simple-exp simple-exp env)))))
-
-;;; value-of-anf-call-exp : CallExp x Env -> ExpVal
-(define value-of-anf-call-exp
-  (lambda (exp env)
-    (cases anf-call-exp exp
-           (anf-a-call-exp
+            (value-of/k letrec-body (extend-env-rec p-names p-vars p-bodies env)))
+           (anf-call-exp
             (rator rands)
             (let ((proc (expval->proc (value-of-simple-exp rator env)))
                   (args (map (lambda (e) (value-of-simple-exp e env)) rands)))

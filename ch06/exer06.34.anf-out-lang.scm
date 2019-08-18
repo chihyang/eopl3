@@ -52,20 +52,16 @@
                 anf-zero?-exp)
     (simple-exp ("less?" "(" simple-exp "," simple-exp ")")
                 anf-less?-exp)
-    (anf-call-exp ("(" simple-exp (arbno simple-exp) ")")
-                  anf-a-call-exp)
-    (anf-simple-exp (simple-exp)
-                    anf-simple-exp->exp)
-    (anf-simple-exp (anf-call-exp)
-                    anf-call-exp->exp)
-    (tf-exp (anf-simple-exp)
+    (tf-exp (simple-exp)
             simple-exp->exp)
     (tf-exp ("if" simple-exp "then" tf-exp "else" tf-exp)
             anf-if-exp)
-    (tf-exp ("let" (arbno identifier "=" anf-simple-exp) "in" tf-exp)
+    (tf-exp ("let" (arbno identifier "=" tf-exp) "in" tf-exp)
             anf-let-exp)
     (tf-exp ("letrec" (arbno identifier "(" (separated-list identifier ",") ")" "=" tf-exp) "in" tf-exp)
-            anf-letrec-exp)))
+            anf-letrec-exp)
+    (tf-exp ("(" simple-exp (arbno simple-exp) ")")
+            anf-call-exp)))
 
 (sllgen:make-define-datatypes anf-scanner-spec anf-grammar)
 (define anf-list-the-datatypes
@@ -97,23 +93,10 @@
             (exp1 exp2)
             `(< ,(anf-unparse-simple-exp exp1) ,(anf-unparse-simple-exp exp2))))))
 
-(define anf-unparse-anf-simple-exp
-  (lambda (exp)
-    (cases anf-simple-exp exp
-           (anf-simple-exp->exp (simple) (anf-unparse-simple-exp simple))
-           (anf-call-exp->exp (call) (anf-unparse-anf-call-exp call)))))
-
-(define anf-unparse-anf-call-exp
-  (lambda (exp)
-    (cases anf-call-exp exp
-           (anf-a-call-exp
-            (rator rands)
-            (map anf-unparse-simple-exp (cons rator rands))))))
-
 (define anf-unparse-exp
   (lambda (exp)
     (cases tf-exp exp
-           (simple-exp->exp (simple) (anf-unparse-anf-simple-exp simple))
+           (simple-exp->exp (simple) (anf-unparse-simple-exp simple))
            (anf-if-exp
             (exp1 exp2 exp3)
             `(if ,(anf-unparse-simple-exp exp1)
@@ -121,7 +104,7 @@
                  ,(anf-unparse-exp exp3)))
            (anf-let-exp
             (vars exps body)
-            `(let ,(map (lambda (v1 v2) (list v1 (anf-unparse-anf-simple-exp v2)))
+            `(let ,(map (lambda (v1 v2) (list v1 (anf-unparse-exp v2)))
                         vars exps)
                ,(anf-unparse-exp body)))
            (anf-letrec-exp
@@ -131,7 +114,10 @@
                                    `(lambda ,v2
                                       ,(anf-unparse-exp v3))))
                         p-names p-vars p-bodies)
-               ,(anf-unparse-exp body))))))
+               ,(anf-unparse-exp body)))
+           (anf-call-exp
+            (rator rands)
+            (map anf-unparse-simple-exp (cons rator rands))))))
 
 (define anf-unparse-prgm
   (lambda (prgm)
