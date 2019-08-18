@@ -51,3 +51,98 @@ Besides, note the condition **nonsimple**. Try the case `let-scope-1` in
 [cps-tests.scm](cps-tests.scm) to see what will happen and you would know what I
 mean. Keep in mind that any transform shouldn't change the semantic that every
 binding in let is in the same layer of environment.
+
+# Exercise 6.31
+
+> Write a translator that takes the output of `cps-of-program` and produces an
+> equivalent program in which all the continuations are represented by data
+> structures, as in chapter 5. Represent data structures like those constructed
+> using `define-datatype` as lists. Since our language does not have symbols,
+> you can use an integer tag in the car position to distinguish the variants of
+> a data type.
+
+I asked a
+[question](https://stackoverflow.com/questions/57441866/hints-about-exercise-6-31-of-eopl3)
+on stackoverflow. But there are other problems not solved. Summer ends, fall is
+approaching. Months later I'll revisit this exercise and the following two.
+
+Exercise 6.34
+
+> When we convert a program to CPS, we do more than produce a programin which
+> the control contexts become explicit. We also choose the exact order in which
+> the operations are done, and choose names for each intermediate result. The
+> latter is called *sequentialization*. If we don’t care about obtaining
+> iterative behavior, we can sequentialize a program by converting it to
+> *A-normal form* or ANF. Here’s an example of a program in ANF.
+>
+> ``` racket
+> (define fib/anf
+>   (lambda (n)
+>     (if (< n 2)
+>         1
+>         (let ((val1 (fib/anf (- n 1))))
+>           (let ((val2 (fib/anf (- n 2))))
+>             (+ val1 val2))))))
+> ```
+>
+> Whereas a programin CPS sequentializes computation by passing continuations that
+> name intermediate results, a program in ANF sequentializes computation by using
+> let expressions that name all of the intermediate results.
+>
+> Retarget `cps-of-exp` so that it generates programs in ANF instead of
+> CPS. (For conditional expressions occurring in nontail position, use the ideas
+> in exercise 6.23.)  Then, show that applying the revised `cps-of-exp` to,
+> e.g., the definition of `fib` yields the definition of `fib/anf`. Finally,
+> show that given an input program which is already in ANF, your translator
+> produces the same program except for the names of bound variables.
+
+What is an *intermediate* result? I thought it was only `cps-call-exp`, but
+turned out it made the program much more complicated if other `tf-exp` were not
+allowed. If the condition is loosened, like
+[this](https://course.ccs.neu.edu/cs4410/hw_boa_assignment.html):
+
+``` ocaml
+(* abstract syntax tree *)
+type prim1 =
+  | Add1
+  | Sub1
+
+type prim2 =
+  | Plus
+  | Minus
+  | Times
+
+type 'a bind =
+  (* the third component is any information specifically about the identifier, like its position *)
+  (string * 'a expr * 'a)
+
+and 'a expr =
+  | ELet of 'a bind list * 'a expr * 'a
+  | EPrim1 of prim1 * 'a expr * 'a
+  | EPrim2 of prim2 * 'a expr * 'a expr * 'a
+  | EIf of 'a expr * 'a expr * 'a expr * 'a
+  | ENumber of int * 'a
+  | EId of string * 'a
+
+(* check if an expression is in anf form *)
+let rec is_anf (e : 'a expr) : bool =
+  match e with
+  | EPrim1(_, e, _) -> is_imm e
+  | EPrim2(_, e1, e2, _) -> is_imm e1 && is_imm e2
+  | ELet(binds, body, _) ->
+     List.for_all (fun (_, e, _) -> is_anf e) binds
+     && is_anf body
+  | EIf(cond, thn, els, _) -> is_imm cond && is_anf thn && is_anf els
+  | _ -> is_imm e
+and is_imm e =
+  match e with
+  | ENumber _ -> true
+  | EId _ -> true
+  | _ -> false
+;;
+```
+
+`anf-of-exp` is simpler than `cps-of-exp`. I don't even to pass a continuation!
+Since the whole `anf-if-exp` can be put into a non-tail position in this
+transformation, is it necessary to replace it with a variable? If not, why ideas
+in exercise 6.23 must be used? This is another unanswered question for now.
