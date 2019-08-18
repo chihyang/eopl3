@@ -63,10 +63,10 @@ binding in let is in the same layer of environment.
 
 I asked a
 [question](https://stackoverflow.com/questions/57441866/hints-about-exercise-6-31-of-eopl3)
-on stackoverflow. But there are other problems not solved. Summer ends, fall is
+on stackoverflow. But there are other problems not solved. Summer ends. Fall is
 approaching. Months later I'll revisit this exercise and the following two.
 
-Exercise 6.34
+# Exercise 6.34
 
 > When we convert a program to CPS, we do more than produce a programin which
 > the control contexts become explicit. We also choose the exact order in which
@@ -142,7 +142,8 @@ and is_imm e =
 ;;
 ```
 
-`anf-of-exp` is simpler than `cps-of-exp`. I don't even to pass a continuation!
-Since the whole `anf-if-exp` can be put into a non-tail position in this
-transformation, is it necessary to replace it with a variable? If not, why ideas
-in exercise 6.23 must be used? This is another unanswered question for now.
+`anf-of-exp` is simpler than `cps-of-exp`. I don't even need to pass a
+continuation!  Since the whole `anf-if-exp` can be put into a non-tail position
+in this transformation, is it necessary to replace it with a variable? If not,
+why ideas in exercise 6.23 must be used? This is another unanswered question for
+now.
