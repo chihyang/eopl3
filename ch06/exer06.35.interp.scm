@@ -1,6 +1,4 @@
 #lang eopl
-(require "exer06.34.anf-in-lang.scm")
-(require "exer06.34.anf-out-lang.scm")
 (require "exer06.35.cps-out-lang.scm")
 (provide (all-defined-out))
 ;;; ---------------------- Environment (from section 3.2) ----------------------

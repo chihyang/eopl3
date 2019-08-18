@@ -1,7 +1,5 @@
 #lang eopl
-(require "exer06.34.anf-in-lang.scm")
 (require "exer06.34.anf-out-lang.scm")
-(require "exer06.34.scm")
 (require "exer06.35.cps-out-lang.scm")
 (provide cps-compile)
 
