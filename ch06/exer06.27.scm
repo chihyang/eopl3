@@ -191,63 +191,6 @@
   (lambda (k-exp s-exp)
     (cps-call-exp k-exp (list s-exp))))
 
-;;; replace-with-var : TfExp x Identifier x SimpleExp -> TfExp
-(define replace-with-var
-  (lambda (t-exp var s-exp)
-    (cases tf-exp t-exp
-           (simple-exp->exp
-            (simple)
-            (simple-exp->exp
-             (replace-with-var-in-simple simple var s-exp)))
-           (cps-if-exp
-            (exp1 exp2 exp3)
-            (cps-if-exp
-             (replace-with-var-in-simple exp1 var s-exp)
-             (replace-with-var exp2 var s-exp)
-             (replace-with-var exp3 var s-exp)))
-           (cps-let-exp
-            (vars exps body)
-            (cps-let-exp
-             vars
-             (map (lambda (e) (replace-with-var-in-simple e var s-exp)) exps)
-             (replace-with-var body var s-exp)))
-           (cps-letrec-exp
-            (p-names p-vars p-bodies letrec-body)
-            (cps-letrec-exp
-             p-names
-             p-vars
-             (map (lambda (e) (replace-with-var e var s-exp)) p-bodies)
-             (replace-with-var letrec-body var s-exp)))
-           (cps-call-exp
-            (rator rands)
-            (cps-call-exp
-             (replace-with-var-in-simple rator var s-exp)
-             (map (lambda (e) (replace-with-var-in-simple e var s-exp)) rands))))))
-
-(define replace-with-var-in-simple
-  (lambda (s-exp1 var s-exp2)
-    (cases simple-exp s-exp1
-           (cps-const-exp (num) s-exp1)
-           (cps-var-exp
-            (var1)
-            (if (eq? var1 var) s-exp2 s-exp1))
-           (cps-diff-exp
-            (exp1 exp2)
-            (cps-diff-exp
-             (replace-with-var-in-simple exp1 var s-exp2)
-             (replace-with-var-in-simple exp2 var s-exp2)))
-           (cps-zero?-exp
-            (exp1)
-            (cps-zero?-exp (replace-with-var-in-simple exp1 var s-exp2)))
-           (cps-proc-exp
-            (ids exp)
-            (cps-proc-exp
-             ids
-             (replace-with-var exp var s-exp2)))
-           (cps-sum-exp
-            (exps)
-            (cps-sum-exp (map (lambda (e) (replace-with-var-in-simple e var s-exp2)) exps))))))
-
 (define n 'uninitiated)
 (define fresh-identifier
   (lambda (v)
