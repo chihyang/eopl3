@@ -2,7 +2,7 @@
 (require "exer06.24.cps-in-lang.scm")
 (require "exer06.24.cps-out-lang.scm")
 (require "exer06.24.scm")
-(require "exer06.24.interp.scm")
+(require "exer06.24.cps-interp.scm")
 
 (require rackunit)
 (require "cps-tests.scm")

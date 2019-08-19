@@ -1,5 +1,5 @@
 #lang eopl
-(require "cps-out-lang.scm")
+(require "chap06.s03.cps-out-lang.scm")
 (provide (all-defined-out))
 ;;; ---------------------- Environment (from section 3.2) ----------------------
 (define member?

@@ -2,7 +2,7 @@
 (require "exer06.34.anf-in-lang.scm")
 (require "exer06.34.scm")
 (require "exer06.35.scm")
-(require "exer06.35.interp.scm")
+(require "exer06.35.cps-interp.scm")
 
 (require rackunit)
 (require "cps-tests.scm")

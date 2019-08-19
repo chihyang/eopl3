@@ -1,6 +1,6 @@
 #lang eopl
-(require "cps-in-lang.scm")
-(require "cps-out-lang.scm")
+(require "chap06.s03.cps-in-lang.scm")
+(require "chap06.s03.cps-out-lang.scm")
 (provide compile)
 
 ;;; list-index : pred x list -> Int | #f
