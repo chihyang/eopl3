@@ -126,7 +126,7 @@
            (anf-less?-exp
             (exp1 exp2)
             (cps-less?-exp (cps-of-simple-exp exp1)
-                           (cps-of-simple-exp exp1))))))
+                           (cps-of-simple-exp exp2))))))
 
 ;;; cps-of-exps: Listof(InpExp) x (Listof(InpExp) -> TfExp) -> TfExp
 (define cps-of-rest
