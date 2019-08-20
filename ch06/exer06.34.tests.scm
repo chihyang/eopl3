@@ -4,7 +4,7 @@
 (require "exer06.34.anf-interp.scm")
 
 (require rackunit)
-(require "cps-tests.scm")
+(require "chap06.s03.cps-tests.scm")
 (require "exer06.34.less-tests.scm")
 
 (define test-name car)

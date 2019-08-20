@@ -65,7 +65,13 @@
     (expression ("(" expression (arbno expression) ")")
                 call-exp)
     (expression ("print" "(" expression ")")
-                print-exp)))
+                print-exp)
+    (expression ("newref" "(" expression ")")
+                newref-exp)
+    (expression ("deref" "(" expression ")")
+                deref-exp)
+    (expression ("setref" "(" expression "," expression ")")
+                setref-exp)))
 
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
 (define list-the-datatypes
@@ -114,7 +120,16 @@
             (map unparse-exp (cons rator rands)))
            (print-exp
             (exp1)
-            `(print (unparse-exp exp1))))))
+            `(print (unparse-exp exp1)))
+           (newref-exp
+            (exp1)
+            `(newref (unparse-exp exp1)))
+           (deref-exp
+            (exp1)
+            `(deref (unparse-exp exp1)))
+           (setref-exp
+            (exp1 exp2)
+            `(setref (unparse-exp exp1) (unparse-exp exp2))))))
 
 (define unparse-prgm
   (lambda (prgm)

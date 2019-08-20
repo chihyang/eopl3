@@ -5,7 +5,7 @@
 (require "cps-interp.scm")
 
 (require rackunit)
-(require "cps-tests.scm")
+(require "chap06.s03.cps-tests.scm")
 
 (define test-name car)
 (define test-program cadr)
