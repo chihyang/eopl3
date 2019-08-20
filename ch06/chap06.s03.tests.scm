@@ -1,7 +1,7 @@
 #lang eopl
 (require "chap06.s03.cps-in-lang.scm")
 (require "chap06.s03.scm")
-(require "cps-interp.scm")
+(require "chap06.s03.cps-interp.scm")
 
 (require rackunit)
 (require "cps-tests.scm")
