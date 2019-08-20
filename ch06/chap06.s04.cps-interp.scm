@@ -126,7 +126,9 @@
   (null-val)
   (pair-val
    (val1 exp-val?)
-   (val2 exp-val?)))
+   (val2 exp-val?))
+  (ref-val
+   (val number?)))
 (define expval->num
   (lambda (value)
     (cases exp-val value
@@ -170,15 +172,25 @@
                     (bool-val (bool) bool)
                     (null-val () '())
                     (proc-val (proc1) proc1)
-                    (pair-val (val3 val4) (expval->pair val1)))
+                    (pair-val (val3 val4) (expval->pair val1))
+                    (ref-val (ref) ref))
              (cases exp-val val2
                     (num-val (num) num)
                     (bool-val (bool) bool)
                     (null-val () '())
                     (proc-val (proc1) proc1)
-                    (pair-val (val3 val4) (expval->pair val2)))))
+                    (pair-val (val3 val4) (expval->pair val2))
+                    (ref-val (ref) ref))))
            (else
             (report-invalid-exp-value 'pair)))))
+(define expval->ref
+  (lambda (value)
+    (cases exp-val value
+           (ref-val
+            (ref)
+            ref)
+           (else
+            (report-invalid-exp-value 'ref)))))
 ;; expval->schemeval : ExpVal -> SchemeVal
 (define expval->schemeval
   (lambda (v)
@@ -200,12 +212,76 @@
             (cases proc p
                    (procedure
                     (var saved-env body)
-                    `(λ (,var) ...)))))))
+                    `(λ (,var) ...))))
+           (ref-val
+            (ref)
+            ref))))
 (define report-invalid-exp-value
   (lambda (type)
     (eopl:error
      'exp-val
      "Not a valid exp value of type ~s" type)))
+
+;;; ---------------------- Store (from section 4.2) ----------------------
+;; empty-store : () -> Sto
+(define empty-store (lambda () '()))
+;; usage : A scheme variable containing the current state of the
+;; store. Initially set to a dummy value.
+(define the-store 'uninitialized)
+;; get-store : () -> Sto
+(define get-store
+  (lambda () the-store))
+;; initialize-store! : () -> Unspecified
+;; usage : (initialize-store!) sets the store to the empty store
+(define initialize-store!
+  (lambda ()
+    (set! the-store (empty-store))))
+;; reference? : SchemeVal -> Bool
+(define reference?
+  (lambda (v)
+    (integer? v)))
+;; newref : ExpVal | Uninitialized -> Ref
+(define newref
+  (lambda (val)
+    (let ((next-ref (length the-store)))
+      (set! the-store (append the-store (list val)))
+      next-ref)))
+;; deref : Ref -> ExpVal
+(define deref
+  (lambda (ref)
+    (let ((val (list-ref the-store ref)))
+      (if (eqv? val 'uninitialized)
+          (report-uninitialized-reference ref the-store)
+          val))))
+;; setref! : Ref x ExpVal -> Unspecified
+;; usage : sets the-store to a state like the original, but with position ref
+;; containing val
+(define setref!
+  (lambda (ref val)
+    (set! the-store
+      (letrec ((setref-inner
+                ;; usage : returns a list like store1, except that position ref1
+                ;; contains val.
+                (lambda (store1 ref1)
+                  (cond [(null? store1)
+                         (report-invalid-reference ref the-store)]
+                        [(zero? ref1)
+                         (cons val (cdr store1))]
+                        [else
+                         (cons (car store1)
+                               (setref-inner (cdr store1) (- ref1 1)))]))))
+        (setref-inner the-store ref)))))
+(define report-invalid-reference
+  (lambda (ref store)
+    (eopl:error
+     'exp-val
+     "Not a valid reference ~a for store ~a" ref store)))
+(define report-uninitialized-reference
+  (lambda (ref store)
+    (eopl:error
+     'deref
+     "Reference ~a is not initialized in store ~a" ref store)))
+
 ;;; ---------------------- Continuation ----------------------
 (define end-cont
   (lambda ()
@@ -257,7 +333,30 @@
            (cps-printk-exp
             (simple-exp1 body)
             (eopl:printf "~a~%" (expval->schemeval (value-of-simple-exp simple-exp1 env)))
-            (value-of/k body env cont)))))
+            (value-of/k body env cont))
+           (cps-newrefk-exp
+            (exp1 exp2)
+            (let ((val1 (value-of-simple-exp exp1 env))
+                  (val2 (value-of-simple-exp exp2 env)))
+              (let ((newval (ref-val (newref val1))))
+                (apply-procedure/k
+                 (expval->proc val2)
+                 (list newval)
+                 cont))))
+           (cps-derefk-exp
+            (exp1 exp2)
+            (let ((val1 (value-of-simple-exp exp1 env))
+                  (val2 (value-of-simple-exp exp2 env)))
+              (apply-procedure/k
+               (expval->proc val2)
+               (list (deref (expval->ref val1)))
+               cont)))
+           (cps-setrefk-exp
+            (exp1 exp2 body)
+            (let ((val1 (value-of-simple-exp exp1 env))
+                  (val2 (value-of-simple-exp exp2 env)))
+              (setref! (expval->ref val1) val2)
+              (value-of/k body env cont))))))
 
 ;;; value-of-simple-exp : SimpleExp x Env -> ExpVal
 (define value-of-simple-exp
@@ -290,6 +389,7 @@
 ;;; value-of-cps-program : CPS-Out-Program -> FinalAnswer
 (define value-of-cps-program
   (lambda (prog)
+    (initialize-store!)
     (cases cps-program prog
            (cps-a-program
             (exp)

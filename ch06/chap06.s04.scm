@@ -114,7 +114,29 @@
                          (lambda (simples)
                            (cps-printk-exp
                             (car simples)
-                            (make-send-to-cont k (cps-const-exp 38)))))))))
+                            (make-send-to-cont k (cps-const-exp 38))))))
+           (newref-exp
+            (exp1)
+            (cps-of-exps (list exp1)
+                         (lambda (simples)
+                           (cps-newrefk-exp
+                            (car simples)
+                            k))))
+           (deref-exp
+            (exp1)
+            (cps-of-exps (list exp1)
+                         (lambda (simples)
+                           (cps-derefk-exp
+                            (car simples)
+                            k))))
+           (setref-exp
+            (exp1 exp2)
+            (cps-of-exps (list exp1 exp2)
+                         (lambda (simples)
+                           (cps-setrefk-exp
+                            (car simples)
+                            (cadr simples)
+                            (make-send-to-cont k (cps-const-exp 23)))))))))
 
 ;;; cps-of-exps: Listof(InpExp) x (Listof(InpExp) -> TfExp) -> TfExp
 (define cps-of-rest

@@ -25,6 +25,10 @@
 ;;;                cps-call-exp (rator rands)
 ;;; TfExp      ::= printk (SimpleExp TfExp)
 ;;;                cps-printk-exp (rator body)
+;;; TfExp      ::= newrefk (SimpleExp SimpleExp)
+;;;                cps-newrefk-exp (exp1 exp2)
+;;; TfExp      ::= derefk (SimpleExp SimpleExp)
+;;;                cps-derefk-exp (exp1 exp2)
 ;;; Parse Expression
 (define cps-scanner-spec
   '((white-sp (whitespace) skip)
@@ -61,7 +65,13 @@
     (tf-exp ("(" simple-exp (arbno simple-exp) ")")
             cps-call-exp)
     (tf-exp ("printk" "(" simple-exp ")" ";" tf-exp)
-            cps-printk-exp)))
+            cps-printk-exp)
+    (tf-exp ("newrefk" "(" simple-exp "," simple-exp ")")
+            cps-newrefk-exp)
+    (tf-exp ("derefk" "(" simple-exp "," simple-exp ")")
+            cps-derefk-exp)
+    (tf-exp ("setrefk" "(" simple-exp "," simple-exp ")" ";" tf-exp)
+            cps-setrefk-exp)))
 
 (sllgen:make-define-datatypes cps-scanner-spec cps-grammar)
 (define cps-list-the-datatypes
@@ -118,6 +128,19 @@
            (cps-printk-exp
             (simple-exp1 body)
             `((print ,(cps-unparse-simple-exp simple-exp1))
+              ,(cps-unparse-exp body)))
+           (cps-newrefk-exp
+            (simple-exp1 simple-exp2)
+            `(newrefk ,(cps-unparse-simple-exp simple-exp1)
+                      ,(cps-unparse-simple-exp simple-exp2)))
+           (cps-derefk-exp
+            (simple-exp1 simple-exp2)
+            `(derefk ,(cps-unparse-simple-exp simple-exp1)
+                     ,(cps-unparse-simple-exp simple-exp2)))
+           (cps-setrefk-exp
+            (simple1 simple2 body)
+            `((setref ,(cps-unparse-simple-exp simple1)
+                      ,(cps-unparse-simple-exp simple2))
               ,(cps-unparse-exp body))))))
 
 (define cps-unparse-prgm
