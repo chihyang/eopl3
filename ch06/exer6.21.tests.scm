@@ -1,6 +1,6 @@
 #lang eopl
 (require "chap06.s03.cps-in-lang.scm")
-(require "exer06.29.scm")
+(require "exer6.21.scm")
 (require "cps-interp.scm")
 
 (require rackunit)

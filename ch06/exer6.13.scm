@@ -1,6 +1,6 @@
 #lang eopl
-(require "exer06.11.v1.scm")
-(require "exer06.18.scm")
+(require "exer6.11.v1.scm")
+(require "exer6.11.v2.scm")
 (require rackunit)
 ;;; removeall
 (check-equal?
@@ -18,18 +18,13 @@
                  list(1,2,3,list(4,2,5)))")
  (run-cps
   "letrec
-     car-cont(n, cont) =
-       (cont car(n))
      removeall(n, s, cont) =
        if null?(s)
        then (cont emptylist)
        else if number?(car(s))
             then if equal?(n,car(s))
                  then (removeall n cdr(s) cont)
-                 else let first = car(s) in
-                        (removeall n
-                                   cdr(s)
-                                   proc (val1) (cont cons(first, val1)))
+                 else (removeall n cdr(s) proc (val) (cont cons(car(s), val)))
             else (removeall n
                             car(s)
                             proc (val1)
@@ -103,13 +98,10 @@
          loop(s,cont) =
            if null?(s)
            then (cont emptylist)
-           else
-             let first = car(s)
-                 rest = cdr(s)
-             in if number?(first)
-                then if equal?(n,first)
-                     then (cont rest)
-                     else (loop rest proc (val) (cont cons(first, val)))
+           else if number?(car(s))
+                then if equal?(n,car(s))
+                     then (cont cdr(s))
+                     else (loop cdr(s) proc (val) (cont cons(car(s), val)))
                 else (occurs-in? n
                                  car(s)
                                  proc (val)
@@ -117,11 +109,11 @@
                                    then (remfirst n
                                                   car(s)
                                                   proc (val)
-                                                    (cont cons(val, rest)))
+                                                    (cont cons(val, cdr(s))))
                                    else (remfirst n
                                                   cdr(s)
                                                   proc (val)
-                                                    (cont cons(first, val))))
+                                                    (cont cons(car(s), val))))
      in (loop s cont)
    in (remfirst 3
                 list(1,3,list(4,3,1))

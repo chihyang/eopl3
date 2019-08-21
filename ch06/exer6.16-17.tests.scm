@@ -1,6 +1,6 @@
 #lang eopl
-(require "exer06.11.v1.scm")
-(require "exer06.11.v2.scm")
+(require "exer6.11.v1.scm")
+(require "exer6.16-17.scm")
 (require rackunit)
 ;;; removeall
 (check-equal?

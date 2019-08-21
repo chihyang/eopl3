@@ -1,6 +1,6 @@
 #lang eopl
-(require "exer06.34.anf-out-lang.scm")
-(require "exer06.35.cps-out-lang.scm")
+(require "exer6.34.anf-out-lang.scm")
+(require "exer6.35.cps-out-lang.scm")
 (provide cps-compile)
 
 ;;; list-index : pred x list -> Int | #f

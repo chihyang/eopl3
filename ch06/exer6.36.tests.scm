@@ -1,12 +1,11 @@
 #lang eopl
-(require "exer06.34.anf-in-lang.scm")
-(require "exer06.34.scm")
-(require "exer06.35.scm")
-(require "exer06.35.cps-interp.scm")
+(require "exer6.36.cps-in-lang.scm")
+(require "exer6.36.scm")
+(require "chap06.s04.cps-interp.scm")
 
 (require rackunit)
-(require "chap06.s03.cps-tests.scm")
-(require "exer06.34.less-tests.scm")
+(require "chap06.s04.cps-tests.scm")
+(require "exer6.36.begin-tests.scm")
 
 (define test-name car)
 (define test-program cadr)
@@ -14,11 +13,11 @@
 (define passed 0)
 (define failed 0)
 
-(define tests (append test-list less?-test-list))
+(define tests (append test-list begin-test-list))
 (for-each
  (lambda (test)
    (let ((v1 (checked-run
-              (cps-compile (compile (scan&parse (test-program test))))))
+              (compile (scan&parse (test-program test)))))
          (v2 (test-answer test)))
      (if  (equal? v1 v2)
           (begin

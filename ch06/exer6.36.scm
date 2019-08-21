@@ -1,5 +1,5 @@
 #lang eopl
-(require "exer06.36.cps-in-lang.scm")
+(require "exer6.36.cps-in-lang.scm")
 (require "chap06.s04.cps-out-lang.scm")
 (provide compile)
 

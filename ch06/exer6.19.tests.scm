@@ -1,7 +1,31 @@
 #lang eopl
-(require "exer06.11.v1.scm")
-(require "exer06.16-17.scm")
+(require "exer6.19.scm")
 (require rackunit)
+;;; tests from exercise 6.12
+(check-equal?
+ (run
+  "-((f -(x,1)),1)")
+ #f)
+
+(check-equal?
+ (run
+  "(f -(-(x,y),1))")
+ #t)
+
+(check-equal?
+ (run
+  "if zero?(x) then -(x,y) else -(-(x,y),1)")
+ #t)
+
+(check-equal?
+ (run "let x = proc (y) (y x) in -(x,3)")
+ #t)
+
+(check-equal?
+ (run "let f = proc (x) x in (f 3)")
+ #t)
+
+;;; tests from exercise 6.13
 ;;; removeall
 (check-equal?
  (run
@@ -16,7 +40,10 @@
             else cons((removeall n car(s)), (removeall n cdr(s)))
    in (removeall 2
                  list(1,2,3,list(4,2,5)))")
- (run-cps
+ #f)
+
+(check-equal?
+ (run
   "letrec
      removeall(n, s, cont) =
        if null?(s)
@@ -33,7 +60,8 @@
                                          proc (val2) (cont cons(val1, val2))))
    in (removeall 2
                  list(1,2,3,list(4,2,5))
-                 proc (val) val)"))
+                 proc (val) val)")
+ #t)
 
 ;;; occurs-in?
 (check-equal?
@@ -51,7 +79,10 @@
                  else (occurs-in? n cdr(s))
    in (occurs-in? 3
                   list(1,3,list(4,3,1)))")
- (run-cps
+ #f)
+
+(check-equal?
+ (run
   "letrec
      occurs-in?(n, s, cont) =
        if null?(s)
@@ -68,7 +99,8 @@
                                else (occurs-in? n cdr(s) cont))
    in (occurs-in? 3
                   list(1,3,list(4,3,1))
-                  proc (val) val)"))
+                  proc (val) val)")
+ #t)
 
 ;;; remfirst
 (check-equal?
@@ -91,7 +123,10 @@
      in (loop s)
    in (remfirst 3
                 list(1,3,list(4,3,1)))")
- (run-cps
+ #f)
+
+(check-equal?
+ (run
   "letrec
      remfirst(n,s,cont) =
        letrec
@@ -117,7 +152,8 @@
      in (loop s cont)
    in (remfirst 3
                 list(1,3,list(4,3,1))
-                proc (val) val)"))
+                proc (val) val)")
+ #t)
 
 
 ;;; depth
@@ -134,7 +170,10 @@
                  then (depth cdr(s))
                  else add1((depth car(s)))
    in (depth list(list(), 1,3,list(4,5,list())))")
- (run-cps
+ #f)
+
+(check-equal?
+ (run
   "letrec
      depth(s, cont) =
        if null?(s)
@@ -151,7 +190,8 @@
                                                proc (val3)
                                                  (cont add1(val3)))))
    in (depth list(list(), 1, 3, list(4, 5, list()))
-             proc (val) val)"))
+             proc (val) val)")
+ #t)
 
 ;;; depth-with-let
 (check-equal?
@@ -168,7 +208,10 @@
                    then drest
                    else dfirst
   in (depth list(list(), 1, 3, list(4, 5, list())))")
- (run-cps
+ #f)
+
+(check-equal?
+ (run
   "letrec
     depth(s, cont) =
       if null?(s)
@@ -186,7 +229,8 @@
                                    then (cont drest)
                                    else (cont dfirst))))
    in (depth list(list(), 1, 3, list(4, 5, list()))
-             proc (val) val)"))
+             proc (val) val)")
+ #t)
 
 ;;; map
 (check-equal?
@@ -198,7 +242,10 @@
                           (map f cdr(l)))
     square(n) = *(n,n)
    in (map square list(1,2,3,4,5))")
- (run-cps
+ #f)
+
+(check-equal?
+ (run
   "letrec
      map(f, l, cont) = if null?(l)
                        then (cont emptylist)
@@ -209,7 +256,8 @@
                                       proc (val2)
                                         (cont cons(val1, val2))))
      square(n, cont) = (cont *(n,n))
-   in (map square list(1,2,3,4,5) proc (val) val)"))
+   in (map square list(1,2,3,4,5) proc (val) val)")
+ #t)
 
 ;;; fnlrgtn
 (check-equal?
@@ -226,7 +274,10 @@
                                else (fnlrgtn car(l) n)
    in (fnlrgtn list(1, list(3, list(2), 7, list(9)))
                6)")
- (run-cps
+ #f)
+
+(check-equal?
+ (run
   "letrec
      fnlrgtn(l, n, cont) = if null?(l)
                            then (cont emptylist)
@@ -242,7 +293,8 @@
                                                 else (fnlrgtn car(l) n cont))
    in (fnlrgtn list(1, list(3, list(2), 7, list(9)))
                6
-               proc (val) val)"))
+               proc (val) val)")
+ #t)
 
 ;;; fnlrgtn-with-let
 (check-equal?
@@ -260,7 +312,10 @@
                                   else ffirst
    in (fnlrgtn list(1, list(3, list(2), 7, list(9)))
                6)")
- (run-cps
+ #f)
+
+(check-equal?
+ (run
   "letrec
      fnlrgtn(l, n, cont) = if null?(l)
                            then (cont emptylist)
@@ -276,7 +331,8 @@
                                                 else (cont val))
    in (fnlrgtn list(1, list(3, list(2), 7, list(9)))
                6
-               proc (val) val)"))
+               proc (val) val)")
+ #t)
 
 ;;; every
 (check-equal?
@@ -290,7 +346,10 @@
             else 0
    in (every proc(n) greater?(n,5)
              list(6,7,8,9))")
- (run-cps
+ #f)
+
+(check-equal?
+ (run
   "letrec
      every(pred, l, cont) =
        if null?(l)
@@ -302,4 +361,5 @@
                     else (cont 0))
    in (every proc(n, cont) (cont greater?(n, 5))
              list(6,7,8,9)
-             proc (val) val)"))
+             proc (val) val)")
+ #t)

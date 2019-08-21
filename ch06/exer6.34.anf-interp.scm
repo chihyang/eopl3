@@ -1,5 +1,5 @@
 #lang eopl
-(require "exer06.24.cps-out-lang.scm")
+(require "exer6.34.anf-out-lang.scm")
 (provide (all-defined-out))
 ;;; ---------------------- Environment (from section 3.2) ----------------------
 (define member?
@@ -206,135 +206,89 @@
     (eopl:error
      'exp-val
      "Not a valid exp value of type ~s" type)))
-;;; ---------------------- Continuation ----------------------
-(define end-cont
-  (lambda ()
-    (lambda (val)
-      ;; (eopl:printf "End of computation.~%")
-      val)))
-(define apply-cont
-  (lambda (cont val)
-    (cont val)))
 
-;;; ---------------------- Evaluate CPS-OUT expression ----------------------
-;;; apply-procedure/k : Proc x Listof(ExpVal) x Cont -> FinalAnswer
+;;; ---------------------- Evaluate ANF-OUT expression ----------------------
+;;; apply-procedure/k : Proc x Listof(ExpVal) -> FinalAnswer
 (define apply-procedure/k
-  (lambda (proc1 vals cont)
+  (lambda (proc1 vals)
     (cases proc proc1
            (procedure
             (vars body saved-env)
-            (value-of/k body (extend-env* vars vals saved-env) cont)))))
+            (value-of/k body (extend-env* vars vals saved-env))))))
 
-;;; value-of/k : TfExp x Env x Cont -> FinalAnswer
+;;; value-of/k : TfExp x Env -> FinalAnswer
 (define value-of/k
-  (lambda (exp env cont)
+  (lambda (exp env)
     (cases tf-exp exp
            (simple-exp->exp
             (simple)
-            (apply-cont cont
-                        (value-of-simple-exp simple env)))
-           (cps-if-exp
+            (value-of-simple-exp simple env))
+           (anf-if-exp
             (exp1 exp2 exp3)
             (if (expval->bool (value-of-simple-exp exp1 env))
-                (value-of/k exp2 env cont)
-                (value-of/k exp3 env cont)))
-           (cps-let-exp
+                (value-of/k exp2 env)
+                (value-of/k exp3 env)))
+           (anf-let-exp
             (vars exps body)
             (value-of/k body
                         (extend-env* vars
-                                     (map (lambda (e) (value-of-simple-exp e env))
+                                     (map (lambda (e) (value-of/k e env))
                                           exps)
-                                     env)
-                        cont))
-           (cps-letrec-exp
+                                     env)))
+           (anf-letrec-exp
             (p-names p-vars p-bodies letrec-body)
-            (value-of/k letrec-body (extend-env-rec p-names p-vars p-bodies env) cont))
-           (cps-call-exp
+            (value-of/k letrec-body (extend-env-rec p-names p-vars p-bodies env)))
+           (anf-call-exp
             (rator rands)
             (let ((proc (expval->proc (value-of-simple-exp rator env)))
                   (args (map (lambda (e) (value-of-simple-exp e env)) rands)))
-              (apply-procedure/k proc args cont))))))
+              (apply-procedure/k proc args))))))
 
 ;;; value-of-simple-exp : SimpleExp x Env -> ExpVal
 (define value-of-simple-exp
   (lambda (exp env)
     (cases simple-exp exp
-           (cps-const-exp
+           (anf-const-exp
             (num)
             (num-val num))
-           (cps-var-exp
+           (anf-var-exp
             (var)
             (apply-env env var))
-           (cps-proc-exp
+           (anf-proc-exp
             (vars body)
             (proc-val (procedure vars body env)))
-           (cps-sum-exp
+           (anf-sum-exp
             (exp1)
             (let ((nums
                    (map (lambda (e) (expval->num (value-of-simple-exp e env)))
                         exp1)))
-                 (num-val (apply + nums))))
-           (cps-diff-exp
+              (num-val (apply + nums))))
+           (anf-diff-exp
             (exp1 exp2)
             (let ((num1 (expval->num (value-of-simple-exp exp1 env)))
                   (num2 (expval->num (value-of-simple-exp exp2 env))))
               (num-val (- num1 num2))))
-           (cps-zero?-exp
+           (anf-zero?-exp
             (exp1)
             (bool-val (zero? (expval->num (value-of-simple-exp exp1 env)))))
-           (cps-emptylist-exp
-            ()
-            (null-val))
-           (cps-car-exp
-            (exp1)
-            (let ((val (value-of-simple-exp exp1 env)))
-              (cases exp-val val
-                     (pair-val
-                      (first rest)
-                      first)
-                     (else (report-invalid-exp-value 'pair-val)))))
-           (cps-cdr-exp
-            (exp1)
-            (let ((val (value-of-simple-exp exp1 env)))
-              (cases exp-val val
-                     (pair-val
-                      (first rest)
-                      rest)
-                     (else (report-invalid-exp-value 'pair-val)))))
-           (cps-cons-exp
+           (anf-less?-exp
             (exp1 exp2)
-            (let ((val1 (value-of-simple-exp exp1 env))
-                  (val2 (value-of-simple-exp exp2 env)))
-              (pair-val val1 val2)))
-           (cps-list-exp
-            (exps)
-            (if (null? exps)
-                (null-val)
-                (pair-val
-                 (value-of-simple-exp (car exps) env)
-                 (value-of-simple-exp (cps-list-exp (cdr exps)) env))))
-           (cps-null?-exp
-            (exp1)
-            (let ((val (value-of-simple-exp exp1 env)))
-              (cases exp-val val
-                     (null-val
-                      ()
-                      (bool-val #t))
-                     (else
-                      (bool-val #f))))))))
+            (let ((num1 (expval->num (value-of-simple-exp exp1 env)))
+                  (num2 (expval->num (value-of-simple-exp exp2 env))))
+              (bool-val (< num1 num2)))))))
 
-;;; value-of-cps-program : CPS-Out-Program -> FinalAnswer
-(define value-of-cps-program
+;;; value-of-anf-program : ANF-Out-Program -> FinalAnswer
+(define value-of-anf-program
   (lambda (prog)
-    (cases cps-program prog
-           (cps-a-program
+    (cases anf-program prog
+           (anf-a-program
             (exp)
-            (let ((val (value-of/k exp (empty-env) (end-cont))))
+            (let ((val (value-of/k exp (empty-env))))
               (expval->schemeval val))))))
 
 (define run
   (lambda (prgm)
-    (value-of-cps-program prgm)))
+    (value-of-anf-program prgm)))
 
 ;;; checked-run : String -> Int | Bool | Proc | '() | List | Pair | String (for exception)
 (require racket/base)

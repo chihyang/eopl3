@@ -1,5 +1,5 @@
 #lang eopl
-(require "exer06.35.cps-out-lang.scm")
+(require "exer6.24.cps-out-lang.scm")
 (provide (all-defined-out))
 ;;; ---------------------- Environment (from section 3.2) ----------------------
 (define member?
@@ -114,7 +114,7 @@
 (define-datatype proc proc?
   (procedure
    (vars (list-of identifier?))
-   (body cps-tf-exp?)
+   (body tf-exp?)
    (saved-env environment?)))
 (define-datatype exp-val exp-val?
   (num-val
@@ -228,8 +228,8 @@
 ;;; value-of/k : TfExp x Env x Cont -> FinalAnswer
 (define value-of/k
   (lambda (exp env cont)
-    (cases cps-tf-exp exp
-           (cps-simple-exp->exp
+    (cases tf-exp exp
+           (simple-exp->exp
             (simple)
             (apply-cont cont
                         (value-of-simple-exp simple env)))
@@ -258,7 +258,7 @@
 ;;; value-of-simple-exp : SimpleExp x Env -> ExpVal
 (define value-of-simple-exp
   (lambda (exp env)
-    (cases cps-simple-exp exp
+    (cases simple-exp exp
            (cps-const-exp
             (num)
             (num-val num))
@@ -282,10 +282,46 @@
            (cps-zero?-exp
             (exp1)
             (bool-val (zero? (expval->num (value-of-simple-exp exp1 env)))))
-           (cps-less?-exp
+           (cps-emptylist-exp
+            ()
+            (null-val))
+           (cps-car-exp
+            (exp1)
+            (let ((val (value-of-simple-exp exp1 env)))
+              (cases exp-val val
+                     (pair-val
+                      (first rest)
+                      first)
+                     (else (report-invalid-exp-value 'pair-val)))))
+           (cps-cdr-exp
+            (exp1)
+            (let ((val (value-of-simple-exp exp1 env)))
+              (cases exp-val val
+                     (pair-val
+                      (first rest)
+                      rest)
+                     (else (report-invalid-exp-value 'pair-val)))))
+           (cps-cons-exp
             (exp1 exp2)
-            (bool-val (< (expval->num (value-of-simple-exp exp1 env))
-                         (expval->num (value-of-simple-exp exp2 env))))))))
+            (let ((val1 (value-of-simple-exp exp1 env))
+                  (val2 (value-of-simple-exp exp2 env)))
+              (pair-val val1 val2)))
+           (cps-list-exp
+            (exps)
+            (if (null? exps)
+                (null-val)
+                (pair-val
+                 (value-of-simple-exp (car exps) env)
+                 (value-of-simple-exp (cps-list-exp (cdr exps)) env))))
+           (cps-null?-exp
+            (exp1)
+            (let ((val (value-of-simple-exp exp1 env)))
+              (cases exp-val val
+                     (null-val
+                      ()
+                      (bool-val #t))
+                     (else
+                      (bool-val #f))))))))
 
 ;;; value-of-cps-program : CPS-Out-Program -> FinalAnswer
 (define value-of-cps-program
@@ -300,8 +336,8 @@
   (lambda (prgm)
     (value-of-cps-program prgm)))
 
-(require racket/base)
 ;;; checked-run : String -> Int | Bool | Proc | '() | List | Pair | String (for exception)
+(require racket/base)
 (define checked-run
   (lambda (prgm)
     (with-handlers
