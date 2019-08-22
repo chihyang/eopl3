@@ -148,55 +148,55 @@ in let times4 = (fix t4m)
       in +((fib 1), 12, (fib 5))"
                          21)
 
-      ;; tests from explicit-refs
+      ;; tests from implicit-refs
       (gensym-test-1
-       "let g = let counter = newref(0)
-         in proc (dummy) let d = setref(counter, -(deref(counter),-1))
-                    in deref(counter)
+       "let g = let counter = 0
+         in proc (dummy) let d = set counter = -(counter,-1)
+                    in counter
 in -((g 11),(g 22))"
        -1)
 
-      (simple-store-test-1 "let x = newref(17) in deref(x)" 17)
+      (simple-store-test-1 "let x = 17 in x" 17)
 
-      (assignment-test-1 "let x = newref(17)
-                          in let y = setref(x,27) in deref(x)"
+      (assignment-test-1 "let x = 17
+                          in let y = set x = 27 in x"
                          27)
 
       (gensym-test-2
-       "let g = let counter = newref(0)
+       "let g = let counter = 0
          in proc (dummy)
-             let dummy1 = setref(counter, -(deref(counter),-1))
-             in deref(counter)
+             let dummy1 = set counter = -(counter,-1)
+             in counter
  in -((g 11),(g 22))"
        -1)
 
       (even-odd-via-set-1 "
-let x = newref(0)
-in letrec even(d) = if zero?(deref(x))
+let x = 0
+in letrec even(d) = if zero?(x)
                    then 1
-                   else let d = setref(x, -(deref(x),1))
+                   else let d = set x = -(x,1)
                         in (odd d)
-          odd(d)  = if zero?(deref(x))
+          odd(d)  = if zero?(x)
                    then 0
-                   else let d = setref(x, -(deref(x),1))
+                   else let d = set x = -(x,1)
                         in (even d)
-   in let d = setref(x,13) in (odd -100)" 1)
+   in let d = set x = 13 in (odd -100)" 1)
 
       (even-odd-via-set-2 "
-let x = newref(0)
-in letrec even(d) = if zero?(deref(x))
+let x = 0
+in letrec even(d) = if zero?(x)
                    then 1
-                   else let d = setref(x, -(deref(x),1))
+                   else let d = set x = -(x,1)
                         in (odd d)
-          odd(d)  = if zero?(deref(x))
+          odd(d)  = if zero?(x)
                    then 0
-                   else let d = setref(x, -(deref(x),1))
+                   else let d = set x = -(x,1)
                         in (even d)
-   in let d = setref(x,13) in (odd -100)" 1)
+   in let d = set x = 13 in (odd -100)" 1)
 
       (show-allocation-1 "
-let x = newref(22)
-in let f = proc (z) let zz = newref(-(z,deref(x))) in deref(zz)
+let x = 22
+in let f = proc (z) let zz = -(z,x) in zz
    in -((f 66), (f 55))"
                          11)
 
