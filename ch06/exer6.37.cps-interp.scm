@@ -1,5 +1,5 @@
 #lang eopl
-(require "chap06.s04.cps-out-lang.scm")
+(require "exer6.37.cps-out-lang.scm")
 (provide (all-defined-out))
 ;;; ---------------------- Environment (from section 3.2) ----------------------
 (define member?
@@ -22,8 +22,7 @@
   (lambda (env)
     (and (list? env)
          (not (null? env))
-         (or (eqv? (car env) 'extend-env)
-             (eqv? (car env) 'extend-env-rec)))))
+         (eqv? (car env) 'extend-env))))
 (define environment?
   (lambda (env)
     (or (empty-env? env)
@@ -55,12 +54,6 @@
                                  (cdr vals)
                                  (list 'extend-env (car vars) (car vals) env))]))))
                (extend-env*-inner vars vals env))]))))
-(define extend-env-rec
-  (lambda (p-names p-vars p-bodies env)
-    (let ((dup-name (check-duplicates p-names)))
-      (if (null? dup-name)
-          (list 'extend-env-rec (list p-names p-vars p-bodies) env)
-          (report-duplicate-id dup-name)))))
 (define apply-env
   (lambda (env search-var)
     (cond
@@ -73,16 +66,6 @@
          (if (eqv? search-var saved-var)
              saved-val
              (apply-env saved-env search-var))))
-      ((eqv? (car env) 'extend-env-rec)
-       (let ((func (apply-env-rec search-var
-                                  (car (cadr env))
-                                  (cadr (cadr env))
-                                  (caddr (cadr env)))))
-         (if (null? func)
-             (apply-env (caddr env) search-var)
-             (let ((saved-p-vars (car func))
-                   (saved-p-body (cadr func)))
-               (ref-val (newref (proc-val (procedure saved-p-vars saved-p-body env))))))))
       (else
        (report-invalid-env env)))))
 ;;; apply-env-rec : Sym x Listof(Sym) x Listof(Listof(Sym)) x Listof(Expression) ->
@@ -323,9 +306,6 @@
                                           exps)
                                      env)
                         cont))
-           (cps-letrec-exp
-            (p-names p-vars p-bodies letrec-body)
-            (value-of/k letrec-body (extend-env-rec p-names p-vars p-bodies env) cont))
            (cps-call-exp
             (rator rands)
             (let ((proc (expval->proc (value-of-simple-exp rator env)))

@@ -1,6 +1,6 @@
 #lang eopl
 (require "exer6.37.cps-in-lang.scm")
-(require "chap06.s04.cps-out-lang.scm")
+(require "exer6.37.cps-out-lang.scm")
 (provide compile explicit-of-exp)
 
 ;;; list-index : pred x list -> Int | #f
@@ -172,13 +172,20 @@
                               (cps-of-exp body (cps-var-exp var)))))))
            (letrec-exp
             (p-names p-vars p-bodies body)
-            (cps-letrec-exp
-             p-names
-             (map (lambda (vars) (append vars (list 'k)))
-                  p-vars)
-             (map (lambda (body) (cps-of-exp body (cps-var-exp 'k)))
-                  p-bodies)
-             (cps-of-exp body k)))
+            (cps-of-exp
+             (let-exp
+              p-names
+              (map (lambda (v) (inewref-exp (const-exp 156))) p-names)
+              (if (null? p-names)
+                  body
+                  (let ((binds
+                         (map (lambda (p-name p-vars p-body)
+                                (assign-exp p-name (proc-exp p-vars p-body)))
+                              p-names p-vars p-bodies)))
+                    (begin-exp
+                     (car binds)
+                     (append (cdr binds) (list body))))))
+             k))
            (call-exp
             (rator rands)
             (cps-of-exps (cons rator rands)
