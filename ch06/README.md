@@ -163,10 +163,11 @@ The only problem for this exercise might be `letrec-exp`. Hints for it:
 = (cps-of-exp
    <<let p1 = newref(165) ... in
        begin
-       set p1 = proc (v1, v2, ...) p-body1;
-       set p2 = proc (v1, v2, ...) p-body2;
-       ...
-       body>>
+         set p1 = proc (v1, v2, ...) p-body1;
+         set p2 = proc (v1, v2, ...) p-body2;
+         ...
+         body
+       end>>
    k)
 ```
 
