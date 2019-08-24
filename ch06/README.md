@@ -147,3 +147,32 @@ continuation!  Since the whole `anf-if-exp` can be put into a non-tail position
 in this transformation, is it necessary to replace it with a variable? If not,
 why ideas in exercise 6.23 must be used? This is another unanswered question for
 now.
+
+Exercise 6.37
+
+> Add implicit references (section 4.3) to CPS-IN. Use the same version of
+> CPS-OUT, with explicit references, and make sure your translator inserts
+> allocation and dereference where necessary. As a hint, recall that in the
+> presence of implicit references, a `var-exp` is no longer simple, since it
+> reads from the store.
+
+The only problem for this exercise might be `letrec-exp`. Hints for it:
+
+``` racket
+(cps-of-exp <<letrec-exp p-names p-vars p-bodies body>> k)
+= (cps-of-exp
+   (call-exp
+    (proc-exp p-names body)
+    (map (lambda (vars body) (newref (proc-exp vars body)))
+         p-vars
+         p-bodies))
+   k)
+```
+
+It is worth noting that this is a little different from the implementation of
+chapter 4. In chapter 4 `newref` is put into `apply-env`, thus each time a var
+is searched, a reference for the bound procedure is generated. That is time
+consuming, of course, but performance should not get in the way of understanding
+a concept. In the conversion above, `apply-env` doesn't need to produce a new
+procedure each time, and variables bound by `letrec` can be assigned to a value
+of any expressed type. This is the same as in scheme.
