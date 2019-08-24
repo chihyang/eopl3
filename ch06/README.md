@@ -148,7 +148,7 @@ in this transformation, is it necessary to replace it with a variable? If not,
 why ideas in exercise 6.23 must be used? This is another unanswered question for
 now.
 
-Exercise 6.37
+# Exercise 6.37
 
 > Add implicit references (section 4.3) to CPS-IN. Use the same version of
 > CPS-OUT, with explicit references, and make sure your translator inserts
@@ -159,13 +159,14 @@ Exercise 6.37
 The only problem for this exercise might be `letrec-exp`. Hints for it:
 
 ``` racket
-(cps-of-exp <<letrec-exp p-names p-vars p-bodies body>> k)
+(cps-of-exp <<letrec-exp p1(v1, v2, ...) = p-body1 ... in body>> k)
 = (cps-of-exp
-   (call-exp
-    (proc-exp p-names body)
-    (map (lambda (vars body) (newref (proc-exp vars body)))
-         p-vars
-         p-bodies))
+   <<let p1 = newref(165) ... in
+       begin
+       set p1 = proc (v1, v2, ...) p-body1;
+       set p2 = proc (v1, v2, ...) p-body2;
+       ...
+       body>>
    k)
 ```
 
