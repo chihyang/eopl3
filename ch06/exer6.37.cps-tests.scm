@@ -204,4 +204,9 @@ in let f = proc (z) let zz = -(z,x) in zz
       (let-scope-1 "
       let x = 6 in -(let x = 11 in x, x)"
                    5)
-      )))
+
+      (letrec-with-set-1 "
+       letrec even(x) = if zero?(x) then zero?(0) else (odd -(x,1))
+              odd (x) = if zero?(x) then zero?(1) else (even -(x,1))
+       in begin set even = 5; +(even, 12) end"
+                   17))))
