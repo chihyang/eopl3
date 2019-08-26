@@ -178,3 +178,26 @@ consuming, of course, but performance should not get in the way of understanding
 a concept. In the conversion above, `apply-env` doesn't need to produce a new
 procedure each time, and variables bound by `letrec` can be assigned to a value
 of any expressed type. This is the same as in scheme.
+
+# Exercise 6.38
+
+> If a variable never appears on the left-hand side of a `set` expression, then
+> it is immutable, and could be treated as simple. Extend your solution to the
+> preceding exercise so that all such variables are treated as simple.
+
+To check whether a variable is simple, we must know whether appears on the left
+side of a `set` expression. To know whether a variable appears on the left side
+of an expression, we must:
+
+- Find all of its occurrences in current scope;
+- Check if any of the occurrences is the left side of a `set`;
+- Record the result of checking, and extend current "knowledge base", or say,
+  environment.
+
+Do you see it? We must first dive deeper into next layer of environment and then
+swim back! For now, all bindings built by a procedure are treated as a
+reference, because otherwise I have to search for the corresponding procedure
+except for recording immutability. I don't know how to do it elegantly, so I
+bypass this part. I guess I may need to traverse the AST more than once to
+simplify a procedure call. But for now, let me have a rest and go for the
+remaining chapters.
