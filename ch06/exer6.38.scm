@@ -32,40 +32,42 @@
                   (list-set (cdr lst) (- n 1) x))))))
 
 ;;; ---------------------- Mut Environment ----------------------
-(define-datatype mut-env mut-env?
-  (empty-mut-env)
-  (extend-mut-env
+(define-datatype immut-env immut-env?
+  (empty-immut-env)
+  (extend-immut-env
    (var symbol?)
    (mut? boolean?)
-   (env mut-env?))
-  (extend-mut-env*
+   (env immut-env?))
+  (extend-immut-env*
    (vars (list-of symbol?))
    (mut?s (list-of boolean?))
-   (env mut-env?)))
+   (env immut-env?)))
 
-(define init-mut-env
-  (lambda () (empty-mut-env)))
+(define init-immut-env
+  (lambda () (empty-immut-env)))
 
-;;; apply-mut-env : MutEnv x Var -> Bool
-(define apply-mut-env
+;;; apply-immut-env : MutEnv x Var -> Bool
+;;; usage: check whether a variable is immutable in current environment, #t
+;;; means immutable, #f means immutable
+(define apply-immut-env
   (lambda (menv var)
-    (cases mut-env menv
-           (empty-mut-env
+    (cases immut-env menv
+           (empty-immut-env
             ()
             #t)
-           (extend-mut-env
+           (extend-immut-env
             (saved-var saved-mut? saved-env)
             (if (eq? var saved-var)
                 saved-mut?
-                (apply-mut-env saved-env var)))
-           (extend-mut-env*
+                (apply-immut-env saved-env var)))
+           (extend-immut-env*
             (saved-vars saved-mut?s saved-env)
             (if (null? saved-vars)
-                (apply-mut-env saved-env var)
+                (apply-immut-env saved-env var)
                 (if (eq? var (car saved-vars))
                     (car saved-mut?s)
-                    (apply-mut-env
-                     (extend-mut-env*
+                    (apply-immut-env
+                     (extend-immut-env*
                       (cdr saved-vars)
                       (cdr saved-mut?s)
                       saved-env)
@@ -137,7 +139,7 @@
            (a-program
             (exp)
             (a-program
-             (explicit-of-exp exp (init-mut-env)))))))
+             (explicit-of-exp exp (init-immut-env)))))))
 
 (define explicit-of-exp
   (lambda (exp env)
@@ -147,7 +149,7 @@
             exp)
            (var-exp
             (var)
-            (if (apply-mut-env env var)
+            (if (apply-immut-env env var)
                 exp
                 (ideref-exp exp)))
            (proc-exp
@@ -156,7 +158,7 @@
              vars
              (explicit-of-exp
               body
-              (extend-mut-env* vars (map (lambda (v) #f) vars) env))))
+              (extend-immut-env* vars (map (lambda (v) #f) vars) env))))
            (zero?-exp
             (exp1)
             (zero?-exp (explicit-of-exp exp1 env)))
@@ -185,11 +187,11 @@
                           (inewref-exp (explicit-of-exp e env))))
                     mut-properties
                     exps)
-               (explicit-of-exp body (extend-mut-env* vars mut-properties env)))))
+               (explicit-of-exp body (extend-immut-env* vars mut-properties env)))))
            (letrec-exp
             (p-names p-vars p-bodies body)
             (let ((mut-properties (map (lambda (v) #f) p-names)))
-              (let ((rec-env (extend-mut-env* p-names mut-properties env)))
+              (let ((rec-env (extend-immut-env* p-names mut-properties env)))
                 (letrec-exp
                  p-names p-vars
                  (explicit-of-letrec-p-bodies p-vars p-bodies rec-env)
@@ -218,9 +220,9 @@
   (lambda (p-vars p-bodies env)
     (if (null? p-vars)
         '()
-        (let ((new-env (extend-mut-env* (car p-vars)
-                                        (map (lambda (v) #f) (car p-vars))
-                                        env)))
+        (let ((new-env (extend-immut-env* (car p-vars)
+                                          (map (lambda (v) #f) (car p-vars))
+                                          env)))
           (cons (explicit-of-exp (car p-bodies) new-env)
                 (explicit-of-letrec-p-bodies (cdr p-vars) (cdr p-bodies) env))))))
 
@@ -236,7 +238,7 @@
            (a-program
             (exp)
             (cps-a-program
-             (cps-of-exp (explicit-of-exp exp (init-mut-env))
+             (cps-of-exp (explicit-of-exp exp (init-immut-env))
                          (cps-proc-exp '(v0)
                                        (simple-exp->exp (cps-var-exp 'v0)))))))))
 
