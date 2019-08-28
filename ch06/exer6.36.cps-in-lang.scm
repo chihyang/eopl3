@@ -124,16 +124,16 @@
             (map unparse-exp (cons rator rands)))
            (print-exp
             (exp1)
-            `(print (unparse-exp exp1)))
+            `(print ,(unparse-exp exp1)))
            (newref-exp
             (exp1)
-            `(newref (unparse-exp exp1)))
+            `(newref ,(unparse-exp exp1)))
            (deref-exp
             (exp1)
-            `(deref (unparse-exp exp1)))
+            `(deref ,(unparse-exp exp1)))
            (setref-exp
             (exp1 exp2)
-            `(setref (unparse-exp exp1) (unparse-exp exp2)))
+            `(setref ,(unparse-exp exp1) ,(unparse-exp exp2)))
            (begin-exp
             (exp1 exps)
             `(begin

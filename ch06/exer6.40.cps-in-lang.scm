@@ -31,6 +31,10 @@
 ;;;                 deref-exp (exp1)
 ;;; Expression  ::= setref (InpExp, InpExp)
 ;;;                 setref-exp (exp1 exp2)
+;;; Expression ::= try Expression catch (Identifier) Expression
+;;;                try-exp (exp1 var handler-exp)
+;;; Expression ::= raise Expression
+;;;                raise-exp (exp)
 ;;; Parse Expression
 (define let-scanner-spec
   '((white-sp (whitespace) skip)
@@ -71,7 +75,11 @@
     (expression ("deref" "(" expression ")")
                 deref-exp)
     (expression ("setref" "(" expression "," expression ")")
-                setref-exp)))
+                setref-exp)
+    (expression ("try" expression "catch" "(" identifier ")" expression)
+                try-exp)
+    (expression ("raise" expression)
+                raise-exp)))
 
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
 (define list-the-datatypes
@@ -129,7 +137,15 @@
             `(deref ,(unparse-exp exp1)))
            (setref-exp
             (exp1 exp2)
-            `(setref ,(unparse-exp exp1) ,(unparse-exp exp2))))))
+            `(setref ,(unparse-exp exp1) ,(unparse-exp exp2)))
+           (try-exp
+            (exp1 var handler-exp)
+            `(with-handler
+              ((var ,(unparse-exp handler-exp)))
+              ,(unparse-exp exp1)))
+           (raise-exp
+            (exp1)
+            `(raise ,(unparse-exp exp1))))))
 
 (define unparse-prgm
   (lambda (prgm)

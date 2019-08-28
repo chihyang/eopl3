@@ -120,20 +120,20 @@
             (map unparse-exp (cons rator rands)))
            (print-exp
             (exp1)
-            `(print (unparse-exp exp1)))
+            `(print ,(unparse-exp exp1)))
            (begin-exp
             (exp1 exps)
             `(begin
                ,(map unparse-exp (cons exp1 exps))))
            (assign-exp
             (var exp1)
-            `(set ,var (unparse-exp ex1)))
+            `(set ,var ,(unparse-exp exp1)))
            (inewref-exp
             (exp1)
-            `(inewref (unparse-exp exp1)))
+            `(inewref ,(unparse-exp exp1)))
            (ideref-exp
             (exp1)
-            `(ideref (unparse-exp exp1))))))
+            `(ideref ,(unparse-exp exp1))))))
 
 (define unparse-prgm
   (lambda (prgm)
