@@ -1,6 +1,7 @@
 #lang eopl
 (require "exer6.40.cps-in-lang.scm")
 (require "chap06.s04.cps-out-lang.scm")
+(require racket/base)
 (provide compile)
 
 ;;; list-index : pred x list -> Int | #f
@@ -43,7 +44,11 @@
                          (cps-proc-exp '(v0)
                                        (simple-exp->exp (cps-var-exp 'v0)))
                          uncaught-exception-handler))))))
-(define compile cps-of-program)
+(define compile
+  (lambda (prgm)
+    (with-handlers
+        [(exn:fail? (lambda (en) 'error))]
+      (cps-of-program prgm))))
 
 (define cps-of-exp
   (lambda (exp k enp-k)
