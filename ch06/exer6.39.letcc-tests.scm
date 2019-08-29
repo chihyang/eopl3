@@ -14,4 +14,13 @@
              -(3, -(2, throw x to cnt))
        to final-cnt,
      3)"
-       0))))
+       0)
+
+      (letcc-without-throw
+       "letcc final-cnt in
+   -(letcc cnt in
+       throw let x = 3 in
+             -(3, -(2, x))
+       to final-cnt,
+     3)"
+       4))))
