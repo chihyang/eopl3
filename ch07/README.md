@@ -95,5 +95,5 @@ At least for some *val*s, it is decidable.
         fact
         ```
 
-3. But there exists undecidable expressed values as we have seen in exercise 7.1
-   and examples in section 7.1.
+3. But there exist undecidable expressed values as we have seen in examples in
+   section 7.1 and exercise 7.1.
