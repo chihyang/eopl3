@@ -33,7 +33,7 @@ intersect. According to definition 7.1.1:
 > induction on t:
 >
 > 1. An expressed value is of type `int` if and only if it is a `num-val`.
-
+>
 > 2. It is of type `bool` if and only if it is a `bool-val`.
 >
 > 3. It is of type (t<sub>1</sub> -> t<sub>2</sub>) if and only if it is a
