@@ -6,3 +6,4 @@ Notes on Essentials of Programming Languages
   - [chapter4](ch04/README.md)
   - [chapter5](ch05/README.md)
   - [chapter6](ch06/README.md)
+  - [chapter7](ch07/README.md)
