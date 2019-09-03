@@ -17,9 +17,9 @@ It is not describable in our type language. Because its type is:
 (t<sub>1</sub> -> t<sub>2</sub>), where t<sub>1</sub> = (t<sub>1</sub> -> t<sub>2</sub>)
 
 There is no way to define a type that contains itself in our type language. So
-it is quite possible that we cannot decide its type for the reason above. For
-the same reason, the type of Y-combinator in 13 might be undecidable. But I am
-not sure for now.
+it is quite possible that we cannot decide the type of a recursive
+procedure. For the same reason, the type of Y-combinator in 13 might be
+undecidable. But I am not sure for now.
 
 
 ``` racket
