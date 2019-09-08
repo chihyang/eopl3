@@ -209,7 +209,8 @@
                  (concat (arbno digit) "." digit (arbno digit))
                  (concat "-" (arbno digit) "." digit (arbno digit))
                  (concat digit (arbno digit) "." (arbno digit))
-                 (concat "-" digit (arbno digit) "." (arbno digit)))) number)))
+                 (concat "-" digit (arbno digit) "." (arbno digit)))) number)
+    (comment ("%" (arbno (not #\newline))) skip)))
 (define let-grammar
   '((program (expression) a-program)
     (expression (number)
@@ -226,7 +227,7 @@
                 let-exp)
     (expression ("proc" "(" identifier ":" type-dec ")" expression)
                 proc-exp)
-    (expression ("letrec" type-dec identifier "(" identifier ":" type-dec ")" expression expression)
+    (expression ("letrec" type-dec identifier "(" identifier ":" type-dec ")" "=" expression "in" expression)
                 letrec-exp)
     (expression ("(" expression expression ")")
                 call-exp)
@@ -295,24 +296,27 @@
             (exp1)
             (check-equal-type!
              (int-type)
-             (type-of-exp exp1 tenv))
+             (type-of-exp exp1 tenv)
+             exp1)
             (bool-type))
            (diff-exp
             (exp1 exp2)
             (check-equal-type!
              (int-type)
-             (type-of-exp exp1 tenv))
+             (type-of-exp exp1 tenv)
+             exp1)
             (check-equal-type!
              (int-type)
-             (type-of-exp exp2 tenv))
+             (type-of-exp exp2 tenv)
+             exp2)
             (int-type))
            (if-exp
             (exp1 exp2 exp3)
             (let ((ty1 (type-of-exp exp1 tenv))
                   (ty2 (type-of-exp exp2 tenv))
                   (ty3 (type-of-exp exp3 tenv)))
-              (check-equal-type! (bool-type) ty1)
-              (check-equal-type! ty2 ty3)
+              (check-equal-type! (bool-type) ty1 exp1)
+              (check-equal-type! ty2 ty3 exp)
               ty2))
            (proc-exp
             (var ty body)
@@ -327,25 +331,23 @@
             (p-result-type p-name b-var b-arg-type b-body letrec-body)
             (let ((arg-type (type-dec-to-type b-arg-type))
                   (result-type (type-dec-to-type p-result-type)))
-              (let ((checked-type (type-of-exp
-                                   b-body
-                                   (extend-env b-var arg-type
-                                               (extend-env p-name
-                                                           (proc-type arg-type result-type)
-                                                           tenv)))))
-                (check-equal-type! checked-type result-type)
-                (type-of-exp letrec-body
-                             (extend-env p-name
-                                         (proc-type arg-type result-type)
-                                         tenv)))))
+              (let ((letrec-tenv (extend-tenv p-name
+                                              (proc-type arg-type result-type)
+                                              tenv)))
+                (let ((checked-type (type-of-exp
+                                     b-body
+                                     (extend-tenv b-var arg-type letrec-tenv))))
+                  (check-equal-type! checked-type result-type exp)
+                  (type-of-exp letrec-body letrec-tenv)))))
            (call-exp
             (rator rand)
             (let ((rator-type (type-of-exp rator tenv))
-                  (rand-type (type-of-exp rator tenv)))
+                  (rand-type (type-of-exp rand tenv)))
               (cases type rator-type
                      (proc-type
                       (arg-type result-type)
-                      (check-equal-type! arg-type rand-type))
+                      (check-equal-type! arg-type rand-type exp)
+                      result-type)
                      (else
                       (report-invalid-procedure rator-type exp))))))))
 
@@ -356,14 +358,6 @@
                 (type-to-external-form ty1)
                 exp)))
 
-;;; ---------------------- interpreter ----------------------
-(define apply-procedure
-  (lambda (proc1 val)
-    (cases proc proc1
-           (procedure
-            (var body saved-env)
-            (value-of body (extend-env var val saved-env))))))
-
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
 (define list-the-datatypes
@@ -373,11 +367,3 @@
   (sllgen:make-string-scanner let-scanner-spec let-grammar))
 (define scan&parse
   (sllgen:make-string-parser let-scanner-spec let-grammar))
-(define read-eval-print
-  (sllgen:make-rep-loop
-   "--> "
-   value-of-program
-   (sllgen:make-stream-parser let-scanner-spec let-grammar)))
-(define run
-  (lambda (exp)
-    (value-of-program (scan&parse exp))))
