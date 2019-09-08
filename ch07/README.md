@@ -91,9 +91,16 @@ At least for some *val*s, it is decidable.
    * the `fact` procedure has type (int -> int):
 
         ```racket
-        letrec fact (n) = if zero?(n) then 1 else *(n, fact(-(n, 1))) in
+        letrec fact (n) = if zero?(n) then 1 else *(n, (fact -(n, 1))) in
         fact
         ```
 
 3. But there exist undecidable expressed values as we have seen in examples in
    section 7.1 and exercise 7.1.
+
+# Exercise 7.4
+
+> Using the rules of this section, write derivations, like the one on page 5,
+> that assign types for `proc (x) x` and `proc (x) proc (y) (x y)`. Use the
+> rules to assign at least two types for each of these terms. Do the values of
+> these expressions have the same types?
