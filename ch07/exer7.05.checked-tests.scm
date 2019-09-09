@@ -54,6 +54,9 @@
     (check-shadowing-in-body "let x = 3 in let x = 4 in x" 4)
     (check-shadowing-in-rhs "let x = 3 in let x = -(x,1) in x" 2)
 
+    ;; check multiple let
+    (simple-multuple-let "let x = 3 y = 4 in -(x,y)" -1)
+
     ;; simple applications
     (apply-proc-in-rator-pos "(proc(x : int) -(x,1)  30)" 29)
     (interp-ignores-type-info-in-proc "(proc(x : (int -> int)) -(x,1)  30)" 29)
@@ -62,7 +65,11 @@
 
 
     (nested-procs "((proc (x : int) proc (y : int) -(x,y)  5) 6)" -1)
+    (nested-procs-in-tf "(proc (x : int y : int) -(x,y)  5 6)" -1)
+
     (nested-procs2 "let f = proc(x : int) proc (y : int) -(x,y) in ((f -(10,5)) 6)"
+                   -1)
+    (nested-procs3 "let f = proc(x : int y : int) -(x,y) in (f -(10,5) 6)"
                    -1)
 
     (y-combinator-1 "
@@ -95,6 +102,10 @@ in let times4 = (fix t4m)
    in letrec  int odd(x : int)  = if zero?(x) then 0 else ((even odd) -(x,1))
    in (odd 13)" 1)
 
+    (HO-multiple-letrecs
+     "letrec int even(x : int) = if zero?(x) then 1 else (odd -(x,1))
+             int odd(x : int)  = if zero?(x) then 0 else (even -(x,1))
+      in (odd 13)" 1)
     ))
 
 (define tests-for-check
