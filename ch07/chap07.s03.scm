@@ -298,9 +298,8 @@
               ty2))
            (proc-exp
             (var ty body)
-            (let ((arg-type ty))
-              (let ((result-type (type-of-exp body (extend-tenv var arg-type tenv))))
-                (proc-type arg-type result-type))))
+            (let ((result-type (type-of-exp body (extend-tenv var ty tenv))))
+              (proc-type ty result-type)))
            (let-exp
             (b-var b-exp let-body)
             (let ((b-type (type-of-exp b-exp tenv)))
@@ -325,12 +324,12 @@
                       (check-equal-type! arg-type rand-type exp)
                       result-type)
                      (else
-                      (report-invalid-procedure rator-type exp))))))))
+                      (report-rator-not-a-proc-type rator-type rator))))))))
 
-(define report-invalid-procedure
+(define report-rator-not-a-proc-type
   (lambda (ty1 exp)
     (eopl:error 'type-of-exp
-                "Expect a procedure, actual ~a~%~a~%"
+                "expect a procedure, actual ~a: ~a"
                 (type-to-external-form ty1)
                 exp)))
 
