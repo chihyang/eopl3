@@ -1,6 +1,6 @@
 #lang eopl
 (require "chap07.s03.lang.scm")
-(provide type-of-program type-of-exp)
+(provide checked-type-of type-of type-of-program type-of-exp)
 
 ;;; ---------------------- Type Environment ----------------------
 (define-datatype tenv tenv?
@@ -128,3 +128,15 @@
                 "Expect a procedure, actual ~a: ~a"
                 (type-to-external-form ty1)
                 exp)))
+
+(define type-of
+  (lambda (prgm)
+    (type-to-external-form (type-of-program prgm))))
+
+;;; checked-type-of : String -> Type | String (for exception)
+(require (only-in racket/base with-handlers exn:fail?))
+(define checked-type-of
+  (lambda (prgm)
+    (with-handlers
+        [(exn:fail? (lambda (en) 'error))]
+      (type-of prgm))))

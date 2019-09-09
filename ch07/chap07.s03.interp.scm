@@ -1,7 +1,8 @@
 #lang eopl
-(require "chap07.s03.env.scm")
 (require "chap07.s03.lang.scm")
+(require "chap07.s03.env.scm")
 (require "chap07.s03.checker.scm")
+(provide value-of-program value-of run checked-run)
 
 ;;; ---------------------- Evaluate expression ----------------------
 (define apply-procedure
@@ -45,8 +46,8 @@
            (call-exp
             (rator rand)
             (let ((proc (expval->proc (value-of rator env)))
-                  (args (map (lambda (exp1) (value-of exp1 env)) rand)))
-              (apply-procedure proc args))))))
+                  (arg (value-of rand env)))
+              (apply-procedure proc arg))))))
 
 ;; value-of-program : Program -> SchemeVal
 (define value-of-program
@@ -56,3 +57,15 @@
             (exp)
             (let ((val (value-of exp (empty-env))))
               (expval->schemeval val))))))
+
+(define run
+  (lambda (prgm)
+    (value-of-program prgm)))
+
+;;; checked-run : String -> Int | Bool | Proc | String (for exception)
+(require (only-in racket/base with-handlers exn:fail?))
+(define checked-run
+  (lambda (prgm)
+    (with-handlers
+        [(exn:fail? (lambda (en) 'error))]
+      (run prgm))))
