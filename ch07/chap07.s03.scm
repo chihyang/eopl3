@@ -103,14 +103,6 @@
   (lambda (sym)
     (eopl:error 'extend-env* "Duplicate identifier ~s" sym)))
 
-;;; ---------------------- Type ----------------------
-(define-datatype type type?
-  (int-type)
-  (bool-type)
-  (proc-type
-   (arg-type type?)
-   (result-type type?)))
-
 ;;; ---------------------- Type Environment ----------------------
 (define-datatype tenv tenv?
   (empty-tenv)
@@ -225,18 +217,18 @@
                 var-exp)
     (expression ("let" identifier "=" expression "in" expression)
                 let-exp)
-    (expression ("proc" "(" identifier ":" type-dec ")" expression)
+    (expression ("proc" "(" identifier ":" type ")" expression)
                 proc-exp)
-    (expression ("letrec" type-dec identifier "(" identifier ":" type-dec ")" "=" expression "in" expression)
+    (expression ("letrec" type identifier "(" identifier ":" type ")" "=" expression "in" expression)
                 letrec-exp)
     (expression ("(" expression expression ")")
                 call-exp)
-    (type-dec ("int")
-              int-type-dec)
-    (type-dec ("bool")
-              bool-type-dec)
-    (type-dec ("(" type-dec "->" type-dec ")")
-              proc-type-dec)))
+    (type ("int")
+              int-type)
+    (type ("bool")
+              bool-type)
+    (type ("(" type "->" type ")")
+              proc-type)))
 
 ;;; ---------------------- type checker ----------------------
 ;;; check-equal-type! : Type x Type x Expression -> Unspecified
@@ -261,20 +253,6 @@
                       (list (type-to-external-form arg-type)
                             '->
                             (type-to-external-form result-type))))))
-
-(define type-dec-to-type
-  (lambda (ty)
-    (cases type-dec ty
-           (int-type-dec
-            ()
-            (int-type))
-           (bool-type-dec
-            ()
-            (bool-type))
-           (proc-type-dec
-            (arg-type result-type)
-            (proc-type (type-dec-to-type arg-type)
-                       (type-dec-to-type result-type))))))
 
 (define type-of-program
   (lambda (prgm)
@@ -320,7 +298,7 @@
               ty2))
            (proc-exp
             (var ty body)
-            (let ((arg-type (type-dec-to-type ty)))
+            (let ((arg-type ty))
               (let ((result-type (type-of-exp body (extend-tenv var arg-type tenv))))
                 (proc-type arg-type result-type))))
            (let-exp
@@ -328,17 +306,15 @@
             (let ((b-type (type-of-exp b-exp tenv)))
               (type-of-exp let-body (extend-tenv b-var b-type tenv))))
            (letrec-exp
-            (p-result-type p-name b-var b-arg-type b-body letrec-body)
-            (let ((arg-type (type-dec-to-type b-arg-type))
-                  (result-type (type-dec-to-type p-result-type)))
-              (let ((letrec-tenv (extend-tenv p-name
-                                              (proc-type arg-type result-type)
-                                              tenv)))
-                (let ((checked-type (type-of-exp
-                                     b-body
-                                     (extend-tenv b-var arg-type letrec-tenv))))
-                  (check-equal-type! checked-type result-type exp)
-                  (type-of-exp letrec-body letrec-tenv)))))
+            (result-type p-name b-var arg-type b-body letrec-body)
+            (let ((letrec-tenv (extend-tenv p-name
+                                            (proc-type arg-type result-type)
+                                            tenv)))
+              (let ((checked-type (type-of-exp
+                                   b-body
+                                   (extend-tenv b-var arg-type letrec-tenv))))
+                (check-equal-type! checked-type result-type exp)
+                (type-of-exp letrec-body letrec-tenv))))
            (call-exp
             (rator rand)
             (let ((rator-type (type-of-exp rator tenv))
