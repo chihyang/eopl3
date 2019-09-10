@@ -1,6 +1,6 @@
 #lang eopl
 (require "exer7.06.lang.scm")
-(require "exer7.06.reference.scm")
+(require "exer7.06.store.scm")
 (provide checked-type-of type-of type-of-program type-of-exp)
 
 ;;; ---------------------- Type Environment ----------------------
@@ -38,7 +38,7 @@
            (extend-tenv
             (saved-var saved-type saved-tenv)
             (if (eq? var saved-var)
-                (deref saved-type)
+                saved-type
                 (apply-tenv saved-tenv var))))))
 
 (define replace-type-in-tenv!
@@ -110,7 +110,7 @@
             (int-type))
            (var-exp
             (var)
-            (apply-tenv tenv var))
+            (deref (apply-tenv tenv var)))
            (zero?-exp
             (exp1)
             (check-equal-type!
