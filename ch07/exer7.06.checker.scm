@@ -51,7 +51,7 @@
             (saved-var saved-type saved-tenv)
             (if (eq? var saved-var)
                 (setref! saved-type new-type)
-                (replace-type-in-tenv! var new-type saved-tenv))))))
+                (replace-type-in-tenv! saved-tenv var new-type))))))
 
 (define report-no-binding-type-found
   (lambda (search-var)
