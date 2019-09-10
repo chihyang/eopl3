@@ -31,6 +31,11 @@
       (if (eqv? val 'uninitialized)
           (report-uninitialized-reference ref the-store)
           val))))
+;; deref : Ref -> Bool
+(define uninitialized?
+  (lambda (ref)
+    (let ((val (list-ref the-store ref)))
+      (eqv? val 'uninitialized))))
 ;; setref! : Ref x ExpVal -> Unspecified
 ;; usage : sets the-store to a state like the original, but with position ref
 ;; containing val

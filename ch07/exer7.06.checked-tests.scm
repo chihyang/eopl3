@@ -1,7 +1,175 @@
 #lang eopl
 
-(provide tests-for-check)
+(provide tests-for-run tests-for-check)
 ;;;;;;;;;;;;;;;; tests ;;;;;;;;;;;;;;;;
+
+(define tests-for-run
+  '(
+
+    ;; simple arithmetic
+    (positive-const "11" 11)
+    (negative-const "-33" -33)
+    (simple-arith-1 "-(44,33)" 11)
+
+    ;; nested arithmetic
+    (nested-arith-left "-(-(44,33),22)" -11)
+    (nested-arith-right "-(55, -(22,11))" 44)
+
+    ;; simple variables
+    (test-var-1 "x" error)
+    (test-var-2 "-(x,1)" error)
+    (test-var-3 "-(1,x)" error)
+
+    ;; simple unbound variables
+    (test-unbound-var-1 "foo" error)
+    (test-unbound-var-2 "-(x,foo)" error)
+
+    ;; simple conditionals
+    (if-true "if zero?(0) then 3 else 4" 3)
+    (if-false "if zero?(1) then 3 else 4" 4)
+
+    ;; test dynamic typechecking
+    (no-bool-to-diff-1 "-(zero?(0),1)" error)
+    (no-bool-to-diff-2 "-(1,zero?(0))" error)
+    (no-int-to-if "if 1 then 2 else 3" error)
+
+    ;; make sure that the test and both arms get evaluated
+    ;; properly.
+    (if-eval-test-true "if zero?(-(11,11)) then 3 else 4" 3)
+    (if-eval-test-false "if zero?(-(11, 12)) then 3 else 4" 4)
+
+    ;; and make sure the other arm doesn't get evaluated.
+    (if-eval-test-true-2 "if zero?(-(11, 11)) then 3 else foo" 3)
+    (if-eval-test-false-2 "if zero?(-(11,12)) then foo else 4" 4)
+
+    ;; simple let
+    (simple-let-1 "let x = 3 in x" 3)
+
+    ;; make sure the body and rhs get evaluated
+    (eval-let-body "let x = 3 in -(x,1)" 2)
+    (eval-let-rhs "let x = -(4,1) in -(x,1)" 2)
+
+    ;; check nested let and shadowing
+    (simple-nested-let "let x = 3 in let y = 4 in -(x,y)" -1)
+    (check-shadowing-in-body "let x = 3 in let x = 4 in x" 4)
+    (check-shadowing-in-rhs "let x = 3 in let x = -(x,1) in x" 2)
+
+    ;; check multiple let
+    (simple-multuple-let "let x = 3 y = 4 in -(x,y)" -1)
+
+    ;; simple applications
+    (apply-proc-in-rator-pos "(proc(x : int) -(x,1)  30)" 29)
+    (interp-ignores-type-info-in-proc "(proc(x : (int -> int)) -(x,1)  30)" 29)
+    (apply-simple-proc "let f = proc (x : int) -(x,1) in (f 30)" 29)
+    (let-to-proc-1 "(proc(f : (int -> int))(f 30)  proc(x : int)-(x,1))" 29)
+
+
+    (nested-procs "((proc (x : int) proc (y : int) -(x,y)  5) 6)" -1)
+    (nested-procs-in-tf "(proc (x : int y : int) -(x,y)  5 6)" -1)
+
+    (nested-procs2 "let f = proc(x : int) proc (y : int) -(x,y) in ((f -(10,5)) 6)"
+                   -1)
+    (nested-procs3 "let f = proc(x : int y : int) -(x,y) in (f -(10,5) 6)"
+                   -1)
+
+    (y-combinator-1 "
+let fix =  proc (f : bool)
+            let d = proc (x : bool) proc (z : bool) ((f (x x)) z)
+            in proc (n : bool) ((f (d d)) n)
+in let
+    t4m = proc (f : bool) proc(x : bool) if zero?(x) then 0 else -((f -(x,1)),-4)
+in let times4 = (fix t4m)
+   in (times4 3)" 12)
+
+    ;; simple letrecs
+    (simple-letrec-1 "letrec int f(x : int) = -(x,1) in (f 33)" 32)
+    (simple-letrec-2
+     "letrec int f(x : int) = if zero?(x)  then 0 else -((f -(x,1)), -2) in (f 4)"
+     8)
+
+    (simple-letrec-3
+     "let m = -5
+ in letrec int f(x : int) = if zero?(x) then 0 else -((f -(x,1)), m) in (f 4)"
+     20)
+
+                                        ;      (fact-of-6  "letrec
+                                        ;  fact(x) = if zero?(x) then 1 else *(x, (fact sub1(x)))
+                                        ;in (fact 6)"
+                                        ;                  720)
+
+    (HO-nested-letrecs
+     "letrec int even(odd : (int -> int))  = proc(x : int) if zero?(x) then 1 else (odd -(x,1))
+   in letrec  int odd(x : int)  = if zero?(x) then 0 else ((even odd) -(x,1))
+   in (odd 13)" 1)
+
+    (HO-multiple-letrecs
+     "letrec int even(x : int) = if zero?(x) then 1 else (odd -(x,1))
+             int odd(x : int)  = if zero?(x) then 0 else (even -(x,1))
+      in (odd 13)" 1)
+
+    ;; tests from implicit-refs
+    (gensym-test-1
+     "let g = let counter = 0
+         in proc (dummy : int) let d = set counter = -(counter,-1)
+                    in counter
+in -((g 11),(g 22))"
+     -1)
+
+    (simple-store-test-1 "let x = 17 in x" 17)
+
+    (assignment-test-1 "let x = 17
+                          in let y = set x = 27 in x"
+                       27)
+
+    (gensym-test-2
+     "let g = let counter = 0
+         in proc (dummy : int)
+             let dummy1 = set counter = -(counter,-1)
+             in counter
+ in -((g 11),(g 22))"
+     -1)
+
+    (even-odd-via-set-1 "
+let x = 0
+in letrec int even(d : int) = if zero?(x)
+                   then 1
+                   else let d = set x = -(x,1)
+                        in (odd d)
+          int odd(d : int)  = if zero?(x)
+                   then 0
+                   else let d = set x = -(x,1)
+                        in (even d)
+   in let d = set x = 13 in (odd -100)" 1)
+
+    (even-odd-via-set-2 "
+let x = 0
+in letrec int even(d : int) = if zero?(x)
+                   then 1
+                   else let d = set x = -(x,1)
+                        in (odd d)
+          int odd(d : int)  = if zero?(x)
+                   then 0
+                   else let d = set x = -(x,1)
+                        in (even d)
+   in let d = set x = 13 in (odd -100)" 1)
+
+    (show-allocation-1 "
+let x = 22
+in let f = proc (z : int) let zz = -(z,x) in zz
+   in -((f 66), (f 55))"
+                       11)
+
+    ;; thanks to EFanZh for finding this
+    (let-scope-1 "
+      let x = 6 in -(let x = 11 in x, x)"
+                 5)
+
+    (letrec-with-set-1 "
+       letrec int even(x : int) = if zero?(x) then zero?(0) else (odd -(x,1))
+              int odd (x : int) = if zero?(x) then zero?(1) else (even -(x,1))
+       in begin set even = 5; -(even, -12) end"
+                       17)
+    ))
 
 (define tests-for-check
   '(
