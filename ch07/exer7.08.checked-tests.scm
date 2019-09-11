@@ -106,6 +106,16 @@ in let times4 = (fix t4m)
      "letrec int even(x : int) = if zero?(x) then 1 else (odd -(x,1))
              int odd(x : int)  = if zero?(x) then 0 else (even -(x,1))
       in (odd 13)" 1)
+
+    (pair-1
+     "newpair(1, zero?(1))"
+     (1 . #f))
+
+    (unpair-1
+     "let x = newpair(1, zero?(1)) in
+      unpair first second = x in
+      if second then -(first,1) else -(first, -1)"
+     2)
     ))
 
 (define tests-for-check
@@ -262,5 +272,14 @@ in letrec
                        int)
 
 
+    (pair-1
+     "newpair(1, zero?(1))"
+     (pairof int bool))
+
+    (unpair-1
+     "let x = newpair(1, zero?(1)) in
+      unpair first second = x in
+      if second then -(first,1) else -(first, -1)"
+     int)
 
     ))
