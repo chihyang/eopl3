@@ -173,8 +173,8 @@
             (exp1 exp2)
             (let ((ty1 (type-of-exp exp1 tenv))
                   (ty2 (type-of-exp exp2 tenv)))
-              (check-equal-type! ty1 ty2 exp)
-              (list-type ty1)))
+              (check-equal-type! (list-type ty1) ty2 exp)
+              ty2))
            (null-exp
             (exp1)
             (let ((ty1 (type-of-exp exp1 tenv)))
@@ -193,7 +193,7 @@
               (cases type ty1
                      (list-type
                       (ty)
-                      ty1)
+                      ty)
                      (else
                       (report-exp-not-a-list-type ty1 exp1)))))
            (cdr-exp
@@ -202,7 +202,7 @@
               (cases type ty1
                      (list-type
                       (ty)
-                      ty1)
+                      ty)
                      (else
                       (report-exp-not-a-list-type ty1 exp1))))))))
 

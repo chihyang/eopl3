@@ -59,11 +59,7 @@
             (exp1 exp2)
             (let ((val1 (value-of exp1 env))
                   (val2 (value-of exp2 env)))
-              (pair-val
-               val1
-               (pair-val
-                val2
-                (null-val)))))
+              (pair-val val1 val2)))
            (car-exp
             (exp1)
             (let ((val1 (value-of exp1 env)))
@@ -88,9 +84,9 @@
               (cases exp-val val1
                      (null-val
                       ()
-                      #t)
+                      (bool-val #t))
                      (else
-                      #f))))
+                      (bool-val #f)))))
            (emptylist-exp
             (ty)
             (null-val)))))
