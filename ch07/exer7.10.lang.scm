@@ -40,6 +40,8 @@
 ;;;                deref-exp (exp1)
 ;;; Expression ::= setref(Expression, Expression)
 ;;;                setref-exp (exp1 exp2)
+;;; Expression ::= begin exp1 {; exp}* end
+;;;                begin-exp (exp1 exps)
 ;;; Parse Expression
 (define let-scanner-spec
   '((white-sp (whitespace) skip)

@@ -419,6 +419,9 @@ in begin
     deref(deref(x))
    end"
               int)
+
+    (set-change-type "let x = newref(3) in begin set x = zero?(x); x end"
+                     error)
 )
 
   )
