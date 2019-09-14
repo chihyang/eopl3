@@ -98,14 +98,21 @@
            (deref-exp
             (exp1)
             (let ((val1 (value-of exp1 env)))
-              (deref val1)))
+              (deref (expval->ref val1))))
            (setref-exp
             (exp1 exp2)
             (let ((val1 (value-of exp1 env))
-                  (val2 (value-of exp1 env)))
+                  (val2 (value-of exp2 env)))
               (begin
                 (setref! (expval->ref val1) val2)
-                (num-val 27)))))))
+                (num-val 23))))
+           (begin-exp
+            (exp1 exps)
+            (if (null? exps)
+                (value-of exp1 env)
+                (begin
+                  (value-of exp1 env)
+                  (value-of (begin-exp (car exps) (cdr exps)) env)))))))
 
 ;; value-of-program : Program -> SchemeVal
 (define value-of-program
@@ -119,7 +126,6 @@
 
 (define run
   (lambda (prgm)
-    (type-of-program prgm)
     (value-of-program prgm)))
 
 ;;; checked-run : String -> Int | Bool | Proc | String (for exception)

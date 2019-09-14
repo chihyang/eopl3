@@ -231,7 +231,15 @@
                       (check-equal-type! ty ty2 exp)
                       (void-type))
                      (else
-                      (report-exp-not-a-ref-type ty1 exp1))))))))
+                      (report-exp-not-a-ref-type ty1 exp1)))))
+           (begin-exp
+            (exp1 exps)
+            (if (null? exps)
+                (type-of-exp exp1 tenv)
+                (begin
+                  ;; is it necessary to evaluate type of exp1?
+                  (type-of-exp exp1 tenv)
+                  (type-of-exp (begin-exp (car exps) (cdr exps)) tenv)))))))
 
 (define report-rator-not-a-proc-type
   (lambda (ty1 exp)

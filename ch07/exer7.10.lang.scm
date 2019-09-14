@@ -89,6 +89,8 @@
                 deref-exp)
     (expression ("setref" "(" expression "," expression ")")
                 setref-exp)
+    (expression ("begin" expression (arbno ";" expression) "end")
+                begin-exp)
     (type ("int")
           int-type)
     (type ("bool")
