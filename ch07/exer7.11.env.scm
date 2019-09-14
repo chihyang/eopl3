@@ -180,8 +180,9 @@
     (cases mutpair v
            (a-pair
             (val1 val2)
-            (mcons (expval->schemeval (deref val1))
-                   (expval->schemeval (deref val2)))))))
+            (list 'mcons
+                  (expval->schemeval (deref val1))
+                  (expval->schemeval (deref val2)))))))
 
 ;; expval->schemeval : ExpVal -> SchemeVal
 (define expval->schemeval
