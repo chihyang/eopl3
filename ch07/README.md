@@ -111,7 +111,7 @@ At least for some *val*s, it is decidable.
 > ```
 >
 > and the extra work is shifted to `apply-subst-to-type`, so that the property
-> `t(σ[tv = t')[tv = t']` is still satisfied. For this definition of
+> `t(σ[tv = t') = (tσ)[tv = t']` is still satisfied. For this definition of
 > `extend-subst`, is the no-occurrence invariant needed?
 
 
