@@ -110,9 +110,9 @@ in let times4 = (fix t4m)
     (nested-arith-right "-(55, -(22,11))" int)
 
     ;; simple variables
-    (test-var-1 "x" int)
-    (test-var-2 "-(x,1)" int)
-    (test-var-3 "-(1,x)" int)
+    (test-var-1 "x" error)
+    (test-var-2 "-(x,1)" error)
+    (test-var-3 "-(1,x)" error)
 
     (zero-test-1 "zero?(-(3,2))" bool)
     (zero-test-2 "-(2,zero?(0))" error)

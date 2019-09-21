@@ -182,11 +182,11 @@
            (a-type (ty) ty))))
 
 ;;; fresh-tvar-type : () -> Type
+(define serial-number 0)
 (define fresh-tvar-type
-  (let ((sn 0))
-    (lambda ()
-      (set! sn (+ sn 1))
-      (tvar-type sn))))
+  (lambda ()
+    (set! serial-number (+ serial-number 1))
+    (tvar-type serial-number)))
 
 ;;; type-to-external-form : Type -> List
 (define type-to-external-form
@@ -213,6 +213,7 @@
 ;;; type-of-program : Program -> Type
 (define type-of-program
   (lambda (prgm)
+    (set! serial-number 0)
     (cases program prgm
            (a-program
             (exp)
@@ -301,23 +302,23 @@
                                            subst)
                        (an-answer
                         (p-body-type subst)
-                        (let ((subst (unifier p-body-type result-type subst)))
+                        (let ((subst (unifier p-body-type result-type subst b-body)))
                           (type-of-exp letrec-body tenv-for-letrec-body subst)))))))
            (call-exp
             (rator rand)
-            (cases answer (type-of-exp rator tenv subst)
-                   (an-answer
-                    (ty subst)
-                    (cases type ty
-                           (proc-type
-                            (t1 t2)
-                            (cases answer (type-of-exp rand tenv subst)
-                                   (an-answer
-                                    (ty subst)
-                                    (let ((subst (unifier t1 ty subst exp)))
-                                      (an-answer t2 subst)))))
-                           (else
-                            (report-rator-not-a-proc-type ty rator)))))))))
+            (let ((result-type (fresh-tvar-type)))
+              (cases answer (type-of-exp rator tenv subst)
+                     (an-answer
+                      (rator-type subst)
+                      (cases answer (type-of-exp rand tenv subst)
+                             (an-answer
+                              (rand-type subst)
+                              (let ((subst (unifier rator-type
+                                                    (proc-type rand-type result-type)
+                                                    subst
+                                                    exp)))
+                                (an-answer result-type subst)))))))
+            ))))
 
 (define report-rator-not-a-proc-type
   (lambda (ty1 exp)
