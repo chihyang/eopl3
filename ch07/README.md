@@ -98,9 +98,71 @@ At least for some *val*s, it is decidable.
 3. But there exist undecidable expressed values as we have seen in examples in
    section 7.1 and exercise 7.1.
 
-# Exercise 7.4
+# Exercise 7.17
 
-> Using the rules of this section, write derivations, like the one on page 5,
-> that assign types for `proc (x) x` and `proc (x) proc (y) (x y)`. Use the
-> rules to assign at least two types for each of these terms. Do the values of
-> these expressions have the same types?
+> In our representation, `extend-subst` may do a lot of work if σ is
+> large. Implement an alternate representation in which `extend-subst` is
+> implemented as
+>
+> ``` racket
+> (define extend-subst
+>   (lambda (subst tvar ty)
+>     (cons (cons tvar ty) subst)))
+> ```
+>
+> and the extra work is shifted to `apply-subst-to-type`, so that the property
+> `t(σ[tv = t')[tv = t']` is still satisfied. For this definition of
+> `extend-subst`, is the no-occurrence invariant needed?
+
+
+See [this](./exer7.17.infer.scm) for the solution. The key difference is:
+
+``` diff
+  ;;; apply-subst-to-type : Type x Subst -> Type
+  (define apply-subst-to-type
+    (lambda (ty subst)
+      (cases type ty
+             (int-type () (int-type))
+             (bool-type () (bool-type))
+              (sn)
+              (let ((tmp (assoc ty subst)))
+                (if tmp
++                   (apply-subst-to-type (cdr tmp) subst)
+-                   (cdr tmp)
+                    ty))))))
+              (sn)
+```
+
+Now the problem is: is there an input to cause it interminable? What if `ty` is
+something like
+
+``` racket
+(proc-type (tvar-type 0) (tvar-type 0))
+```
+
+Note where the replaced value if found from: `subst`. So the case above happens
+only if the right-hand side value from `subst` contains its left side. But
+before adding a `(tvar . type)`, we always check the added pair to preserve
+no-occurrence invariant (this is completed in `unifier`, as below:
+
+``` racket
+(define unifier
+  (lambda (ty1 ty2 subst exp)
+    (let ((ty1 (apply-subst-to-type ty1 subst))
+          (ty2 (apply-subst-to-type ty2 subst)))
+      (cond [(equal? ty1 ty2) subst]
+            [(tvar-type? ty1)
+             (if (no-occurrence? ty1 ty2)
+                 (extend-subst subst ty1 ty2)
+                 (report-no-occurrence-violation ty1 ty2 exp))]
+            [(tvar-type? ty2)
+             (if (no-occurrence? ty2 ty1)
+                 (extend-subst subst ty2 ty1)
+                 (report-no-occurrence-violation ty2 ty1 exp))]
+            ;; the rest part
+            ;; ...
+            ))))
+```
+
+). Thus we can avoid the loop in `subst`, and make sure `apply-subst-to-type`
+terminates.
