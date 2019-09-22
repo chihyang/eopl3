@@ -45,22 +45,20 @@
 
 ;;; apply-subst-to-type : Type x Subst -> Type
 (define apply-subst-to-type
-  (lambda (ty subst)
-    ;; occur check first, but how?
+  (lambda (ty)
     (cases type ty
            (int-type () (int-type))
            (bool-type () (bool-type))
            (proc-type
             (t1 t2)
             (proc-type
-             (apply-subst-to-type t1 subst)
-             (apply-subst-to-type t2 subst)))
+             (apply-subst-to-type t1)
+             (apply-subst-to-type t2)))
            (tvar-type
             (sn)
-            (let ((tmp (assoc ty subst)))
+            (let ((tmp (subst-of ty)))
               (if tmp
-                  ;; what if (cdr tmp) contains ty directly or indirectly?
-                  (apply-subst-to-type (cdr tmp) subst)
+                  (apply-subst-to-type (cdr tmp))
                   ty))))))
 
 ;;; emtpty-subst : () -> Subst
@@ -80,36 +78,37 @@
 ;;; extend-subst! : Tvar x Type -> Subst
 (define extend-subst!
   (lambda (tvar ty)
-    (set! the-subst (cons (cons tvar ty) the-subst))
-    the-subst))
+    (set! the-subst (cons (cons tvar ty) the-subst))))
+
+;;; subst-of : Tvar -> Type
+(define subst-of
+  (lambda (tvar)
+    (assoc tvar the-subst)))
 
 ;;; ---------------------- Unifier ----------------------
-;;; unifier : Type x Type x Subst x Exp -> Subst
+;;; unifier : Type x Type x Exp -> Unspecified
 (define unifier
-  (lambda (ty1 ty2 subst exp)
+  (lambda (ty1 ty2 exp)
     (let ((ty1
-           (if (tvar-type? ty1) (apply-subst-to-type ty1 subst) ty1))
+           (if (tvar-type? ty1) (apply-subst-to-type ty1) ty1))
           (ty2
-           (if (tvar-type? ty2) (apply-subst-to-type ty2 subst) ty2)))
-      (cond [(equal? ty1 ty2) subst]
+           (if (tvar-type? ty2) (apply-subst-to-type ty2) ty2)))
+      (cond [(equal? ty1 ty2) #t]
             [(tvar-type? ty1)
              (if (no-occurrence? ty1 ty2)
-                 (begin
-                   (extend-subst! ty1 ty2))
+                 (extend-subst! ty1 ty2)
                  (report-no-occurrence-violation ty1 ty2 exp))]
             [(tvar-type? ty2)
              (if (no-occurrence? ty2 ty1)
-                 (begin
-                   (extend-subst! ty2 ty1))
+                 (extend-subst! ty2 ty1)
                  (report-no-occurrence-violation ty2 ty1 exp))]
             [(and (proc-type? ty1) (proc-type? ty2))
-             (let ((subst (unifier (proc-type->arg-type ty1)
-                                   (proc-type->arg-type ty2)
-                                   subst exp)))
-               (let ((subst (unifier (proc-type->result-type ty1)
-                                     (proc-type->result-type ty2)
-                                     subst exp)))
-                 subst))]
+             (unifier (proc-type->arg-type ty1)
+                      (proc-type->arg-type ty2)
+                      exp)
+             (unifier (proc-type->result-type ty1)
+                      (proc-type->result-type ty2)
+                      exp)]
             [else (report-unification-failure ty1 ty2 exp)]))))
 
 ;;; no-occurrence? : Type x Type -> Bool
@@ -201,12 +200,6 @@
                         "ty"
                         (number->string sn)))))))
 
-;;; Answer = Type x Subst
-(define-datatype answer answer?
-  (an-answer
-   (ty type?)
-   (subst substitution?)))
-
 ;;; type-of-program : Program -> Type
 (define type-of-program
   (lambda (prgm)
@@ -215,107 +208,72 @@
     (cases program prgm
            (a-program
             (exp)
-            (cases answer
-                   (type-of-exp exp
-                                (init-tenv)
-                                (empty-subst))
-                   (an-answer (ty subst)
-                              (apply-subst-to-type ty subst)))))))
+            (apply-subst-to-type (type-of-exp exp (init-tenv)))))))
 
-;;; type-of-exp : Exp x Tenv x Subst -> Answer
+;;; type-of-exp : Exp x Tenv -> Type
 (define type-of-exp
-  (lambda (exp tenv subst)
+  (lambda (exp tenv)
     (cases expression exp
            (const-exp
             (num)
-            (an-answer (int-type) subst))
+            (int-type))
            (zero?-exp
             (exp1)
-            (cases answer (type-of-exp exp1 tenv subst)
-                   (an-answer
-                    (ty1 subst1)
-                    (let ((subst2
-                           (unifier ty1 (int-type) subst1 exp)))
-                      (an-answer (bool-type) subst2)))))
+            (let ((ty1 (type-of-exp exp1 tenv)))
+              (unifier ty1 (int-type) exp)
+              (bool-type)))
            (diff-exp
             (exp1 exp2)
-            (cases answer (type-of-exp exp1 tenv subst)
-                   (an-answer
-                    (ty1 subst1)
-                    (let ((subst1
-                           (unifier ty1 (int-type) subst1 exp1)))
-                      (cases answer (type-of-exp exp2 tenv subst1)
-                             (an-answer
-                              (ty2 subst2)
-                              (let ((subst2
-                                     (unifier ty2 (int-type) subst2 exp2)))
-                                (an-answer (int-type) subst2))))))))
+            (let ((ty1 (type-of-exp exp1 tenv)))
+              (unifier ty1 (int-type) exp1)
+              (let ((ty2 (type-of-exp exp2 tenv)))
+                (unifier ty2 (int-type) exp2)
+                (int-type))))
            (if-exp
             (exp1 exp2 exp3)
-            (cases answer (type-of-exp exp1 tenv subst)
-                   (an-answer
-                    (ty1 subst1)
-                    (let ((subst1 (unifier ty1 (bool-type) subst1 exp1)))
-                      (cases answer (type-of-exp exp2 tenv subst1)
-                             (an-answer
-                              (ty2 subst2)
-                              (cases answer (type-of-exp exp3 tenv subst2)
-                                     (an-answer
-                                      (ty3 subst3)
-                                      (let ((subst4 (unifier ty2 ty3 subst3 exp)))
-                                        (an-answer ty2 subst4))))))))))
+            (let ((ty1 (type-of-exp exp1 tenv)))
+              (unifier ty1 (bool-type) exp1)
+              (let ((ty2 (type-of-exp exp2 tenv)))
+                (let ((ty3 (type-of-exp exp3 tenv)))
+                  (unifier ty2 ty3 exp)
+                  ty2))))
            (var-exp
             (var)
-            (an-answer (apply-tenv tenv var) subst))
+            (apply-tenv tenv var))
            (let-exp
             (b-var b-exp let-body)
-            (cases answer (type-of-exp b-exp tenv subst)
-                   (an-answer
-                    (ty1 subst1)
-                    (type-of-exp let-body
-                                 (extend-tenv b-var ty1 tenv)
-                                 subst1))))
+            (let ((ty1 (type-of-exp b-exp tenv)))
+              (type-of-exp let-body (extend-tenv b-var ty1 tenv))))
            (proc-exp
             (var opty body)
             (let ((arg-type (optype->type opty)))
-              (cases answer (type-of-exp body
-                                         (extend-tenv var arg-type tenv)
-                                         subst)
-                     (an-answer
-                      (result-type subst)
-                      (an-answer (proc-type arg-type result-type)
-                                 subst)))))
+              (let ((result-type
+                     (type-of-exp body
+                                  (extend-tenv var arg-type tenv))))
+                (proc-type arg-type result-type))))
            (letrec-exp
             (result-otype p-name b-var arg-otype b-body letrec-body)
             (let ((result-type (optype->type result-otype))
                   (arg-type (optype->type arg-otype)))
-              (let ((tenv-for-letrec-body
-                     (extend-tenv p-name
-                                  (proc-type arg-type result-type)
-                                  tenv)))
-                (cases answer (type-of-exp b-body
-                                           (extend-tenv b-var
-                                                        arg-type
-                                                        tenv-for-letrec-body)
-                                           subst)
-                       (an-answer
-                        (p-body-type subst)
-                        (let ((subst (unifier p-body-type result-type subst b-body)))
-                          (type-of-exp letrec-body tenv-for-letrec-body subst)))))))
+              (let ((tenv-for-letrec-body (extend-tenv p-name
+                                                       (proc-type arg-type result-type)
+                                                       tenv)))
+                (let ((p-body-type
+                       (type-of-exp b-body
+                                    (extend-tenv b-var
+                                                 arg-type
+                                                 tenv-for-letrec-body))))
+                  (unifier p-body-type result-type b-body)
+                  (type-of-exp letrec-body tenv-for-letrec-body)))))
            (call-exp
             (rator rand)
             (let ((result-type (fresh-tvar-type)))
-              (cases answer (type-of-exp rator tenv subst)
-                     (an-answer
-                      (rator-type subst)
-                      (cases answer (type-of-exp rand tenv subst)
-                             (an-answer
-                              (rand-type subst)
-                              (let ((subst (unifier rator-type
-                                                    (proc-type rand-type result-type)
-                                                    subst
-                                                    exp)))
-                                (an-answer result-type subst)))))))
+              (let ((rator-type (type-of-exp rator tenv)))
+                (let ((rand-type (type-of-exp rand tenv)))
+                  (unifier rator-type
+                           (proc-type rand-type result-type)
+                           exp)
+                  result-type)))
             ))))
 
 (define report-rator-not-a-proc-type
