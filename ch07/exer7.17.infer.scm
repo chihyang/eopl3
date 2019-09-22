@@ -345,9 +345,8 @@
 ;;; tvar-type-sym? : Sym -> Bool
 (define tvar-type-sym?
   (lambda (sym)
-    (lambda (sym)
-      (and (symbol? sym)
-           (char-numeric? (car (reverse (symbol->list sym))))))))
+    (and (symbol? sym)
+         (char-numeric? (car (reverse (symbol->list sym)))))))
 
 ;;; symbol->list : Sym -> List
 (define symbol->list
