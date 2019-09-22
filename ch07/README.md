@@ -124,16 +124,21 @@ See [this](./exer7.17.infer.scm) for the solution. The key difference is:
       (cases type ty
              (int-type () (int-type))
              (bool-type () (bool-type))
+             (proc-type
+              (t1 t2)
+              (proc-type
+               (apply-subst-to-type t1 subst)
+               (apply-subst-to-type t2 subst)))
+             (tvar-type
               (sn)
               (let ((tmp (assoc ty subst)))
                 (if tmp
 +                   (apply-subst-to-type (cdr tmp) subst)
 -                   (cdr tmp)
                     ty))))))
-              (sn)
 ```
 
-Now the problem is: is there an input to cause it interminable? What if `ty` is
+The problem is: is there an input to cause it interminable? What if `ty` is
 something like
 
 ``` racket
@@ -141,7 +146,7 @@ something like
 ```
 
 Note where the replaced value if found from: `subst`. So the case above happens
-only if the right-hand side value from `subst` contains its left side. But
+only if the right-hand side value from `subst` contains its left-hand side. But
 before adding a `(tvar . type)`, we always check the added pair to preserve
 no-occurrence invariant (this is completed in `unifier`, as below:
 
