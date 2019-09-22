@@ -115,7 +115,7 @@ At least for some *val*s, it is decidable.
 > `extend-subst`, is the no-occurrence invariant needed?
 
 
-See [this](./exer7.17.infer.scm) for the solution. The key difference is:
+See [this](./exer7.17.infer.scm#L36) for the solution. The key difference is:
 
 ``` diff
   ;;; apply-subst-to-type : Type x Subst -> Type
@@ -138,17 +138,18 @@ See [this](./exer7.17.infer.scm) for the solution. The key difference is:
                     ty))))))
 ```
 
-The problem is: is there an input to cause it interminable? What if `ty` is
-something like
+Question: is there an input to cause it interminable? What if `ty` is something
+like
 
 ``` racket
 (proc-type (tvar-type 0) (tvar-type 0))
 ```
 
-Note where the replaced value if found from: `subst`. So the case above happens
-only if the right-hand side value from `subst` contains its left-hand side. But
-before adding a `(tvar . type)`, we always check the added pair to preserve
-no-occurrence invariant (this is completed in `unifier`, as below:
+Note where the replaced value is found from: `subst`. So the case above happens
+only if the right-hand side type from `subst` contains its left-hand side
+variable. But before adding a `(tvar . type)`, we always check the added pair to
+preserve no-occurrence invariant (this is completed by `no-occurrence` in
+`unifier`, as below:
 
 ``` racket
 (define unifier
@@ -169,5 +170,5 @@ no-occurrence invariant (this is completed in `unifier`, as below:
             ))))
 ```
 
-). Thus we can avoid the loop in `subst`, and make sure `apply-subst-to-type`
-terminates.
+). Thus we can find the possible loop in advance, and guarantee
+`apply-subst-to-type` terminates.
