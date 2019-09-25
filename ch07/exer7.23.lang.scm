@@ -65,6 +65,8 @@
           proc-type)
     (type ("%tvar-type" number)
           tvar-type)
+    (type ("pairof" type "*" type)
+          pair-type)
     (optional-type ("?")
                    no-type)
     (optional-type (type)
