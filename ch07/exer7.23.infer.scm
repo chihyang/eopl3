@@ -65,7 +65,7 @@
              (apply-subst-to-type t2 subst)))
            (pair-type
             (t1 t2)
-            (proc-type
+            (pair-type
              (apply-subst-to-type t1 subst)
              (apply-subst-to-type t2 subst)))
            (tvar-type
@@ -209,7 +209,7 @@
            (int-type () 'int)
            (bool-type () 'bool)
            (proc-type (arg-type result-type)
-                      (list (type-to-external-form arg-type)
+                      (list (list (type-to-external-form arg-type))
                             '->
                             (type-to-external-form result-type)))
            (pair-type (ty1 ty2)
