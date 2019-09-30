@@ -225,7 +225,7 @@
            (int-type () 'int)
            (bool-type () 'bool)
            (proc-type (arg-type result-type)
-                      (list (type-to-external-form arg-type)
+                      (list (list (type-to-external-form arg-type))
                             '->
                             (type-to-external-form result-type)))
            (list-type
