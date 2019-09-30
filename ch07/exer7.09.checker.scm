@@ -202,7 +202,7 @@
               (cases type ty1
                      (list-type
                       (ty)
-                      ty)
+                      ty1)
                      (else
                       (report-exp-not-a-list-type ty1 exp1))))))))
 

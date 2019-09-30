@@ -292,7 +292,7 @@ in letrec
 
     (cdr-1
      "cdr(list(2,3,4))"
-     int)
+     (listof int))
 
 
     (cons-1
