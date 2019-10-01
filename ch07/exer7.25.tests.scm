@@ -13,7 +13,6 @@
 
 (for-each
  (lambda (test)
-   (eopl:printf "testt ~a~%" (test-name test))
    (let ((v1 (checked-type-of
               (scan&parse (test-program test))))
          (v2 (test-answer test)))
