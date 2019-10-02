@@ -1,7 +1,7 @@
 #lang eopl
 (provide (all-defined-out))
 (define identifier? symbol?)
-;;; ---------------------- Syntax for the CHECKED language ----------------------
+;;; ---------------------- Syntax for the INFERRED language ----------------------
 ;;; Program    ::= Expression
 ;;;                a-program (exp1)
 ;;; Expression ::= Number
