@@ -353,4 +353,38 @@ in fact"
                  ((map even)
                   cons(3,cons(5,emptylist))))"
      (pairof (listof int)
-             (listof bool)))))
+             (listof bool)))
+
+    (lists-1
+     "list(2, 3, 4)"
+     (listof int))
+
+    (car-1
+     "car(list(2,3,4))"
+     int)
+
+    (cdr-1
+     "cdr(list(2,3,4))"
+     (listof int))
+
+
+    (cons-1
+     "cons(2,cons(3, emptylist))"
+     (listof int))
+
+    (cons-2
+     "cons(2,cons(zero?(3), emptylist))"
+     error)
+
+    (null-1
+     "null?(emptylist)"
+     bool)
+
+    (list-2
+     "list(1, emptylist)"
+     error)
+
+    (begin-test-1
+     "begin 1; 2; 3 end"
+     int)
+    ))

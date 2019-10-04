@@ -410,6 +410,7 @@
                      (list
                       (an-equation tvar (list-type tvar1) exp)
                       (an-equation tvar2 (list-type tvar1) exp))
+                     (equations-of-exp exp1 tvar1 tenv)
                      (equations-of-exp (list-exp (car exps) (cdr exps)) tvar2 tenv))))))
            (cons-exp
             (exp1 exp2)
