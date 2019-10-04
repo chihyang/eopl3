@@ -172,3 +172,32 @@ preserve no-occurrence invariant (this is completed by `no-occurrence` in
 
 ). Thus we can find the possible loop in advance, and guarantee
 `apply-subst-to-type` terminates.
+
+# Exercise 7.30
+
+> The interaction between polymorphism and effects is subtle.  Consider a program
+> starting
+>
+> ``` racket
+> let p = newref(proc (x : ?) x)
+> in ...
+> ```
+>
+> 1. Finish this program to produce a program that passes the polymorphic
+> inferencer, but whose evaluation is not safe according to the definition at
+> the beginning of the chapter.
+> 2. Avoid this difficulty by restricting the right-hand side of a let to have
+> no effect on the store. This is called the value restriction.
+
+If no effect on the store in allowed in right-hand side of `let`, how can we
+create a reference binding that can be used later? I think the exercise here
+means `let polymorphism` and `effect on the store` should not be allowed to
+exist together. If so, I need a way to find:
+
+1. let polymorphism;
+2. side effect on the store in let binding.
+
+`2` is very easy: we just need to traverse through the bound expression of
+`let-exp`. For `1`, however, I need to find a way. If `1` is solved, exercise
+7.29 is solved too. Because the exercise 7.29 also requires a way to find all
+the possible polymorphic types variables in let bound.
