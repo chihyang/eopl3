@@ -524,5 +524,5 @@ in begin
            setref(p, proc(x) -(x, 1));
            (deref(p) zero?(3))
        end"
-     error)
+     bool)
      ))
