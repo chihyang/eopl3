@@ -47,15 +47,14 @@
     (comment ("%" (arbno (not #\newline))) skip)))
 (define let-grammar
   '((program ((arbno module-defn) expression) a-program)
-    (module-defn ("module" identifier "interface" iface "body" module-body)
+    (module-defn ("module" identifier "interface" interface "body" module-body)
                  a-module-definition)
-    (iface ("[" (arbno decl) "]")
-           simple-iface)
-    (decl (identifier ":" type)
-          val-decl)
-    (module-body ("[" (arbno defn) "]")
+    (interface ("[" (arbno declaration) "]") simple-iface)
+    (declaration (identifier ":" type)
+                 val-decl)
+    (module-body ("[" (arbno definition) "]")
                  defns-module-body)
-    (defn (identifier "=" expression) val-defn)
+    (definition (identifier "=" expression) val-defn)
     (expression ("from" identifier "take" identifier)
                 qualified-var-exp)
     (expression (number)
@@ -94,10 +93,18 @@
   (sllgen:make-string-parser let-scanner-spec let-grammar))
 
 (require (only-in racket/base with-handlers exn:fail?))
-;;; checked-scan&parse : String -> Bool | 'error
-(define checked-scan&parse
+
+;;; test-scan&parse : String -> Bool | 'error
+(define test-scan&parse
   (lambda (str)
     (with-handlers
         [(exn:fail? (lambda (en) 'error))]
       (scan&parse str)
       #t)))
+
+;;; checked-scan&parse : String -> Program | 'error
+(define checked-scan&parse
+  (lambda (str)
+    (with-handlers
+        [(exn:fail? (lambda (en) 'error))]
+      (scan&parse str))))

@@ -26,7 +26,7 @@
                   (simple-module (value-of-module-body m-body env))
                   env)))))))
 
-;;; value-of-module-body : ModuleBody -> Env
+;;; value-of-module-body : ModuleBody x Env -> Env
 (define value-of-module-body
   (lambda (m-body env)
     (cases module-body m-body
@@ -39,7 +39,7 @@
   (lambda (defns env)
     (if (null? defns)
         env
-        (cases defn (car defns)
+        (cases definition (car defns)
                (val-defn
                 (var exp)
                 (defns-to-env

@@ -13,7 +13,7 @@
 
 (for-each
  (lambda (test)
-   (let ((v1 (checked-scan&parse (test-program test)))
+   (let ((v1 (test-scan&parse (test-program test)))
          (v2 (test-answer test)))
      (if  (equal? v1 v2)
           (begin
