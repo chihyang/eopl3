@@ -383,8 +383,4 @@ in fact"
     (list-2
      "list(1, emptylist)"
      error)
-
-    (begin-test-1
-     "begin 1; 2; 3 end"
-     int)
     ))

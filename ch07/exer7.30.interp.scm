@@ -2,7 +2,7 @@
 (require "exer7.30.lang.scm")
 (require "exer7.30.env.scm")
 (require "exer7.30.store.scm")
-(require "exer7.30.infer.scm")
+(require "exer7.30.infer.v1.scm")
 (provide value-of-program value-of run checked-run)
 
 ;;; ---------------------- Evaluate expression ----------------------

@@ -6,7 +6,7 @@
 (require "exer7.30.interp.scm")
 
 (require rackunit)
-(require "exer7.30.infer-tests.scm")
+(require "exer7.30.infer-tests.v1.scm")
 
 (define test-name car)
 (define test-program cadr)

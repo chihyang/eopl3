@@ -359,7 +359,7 @@
                             (an-answer result-type subst))))))))
            )))
 
-;;; type-of-exps : Listof(Exp) x Tenv x Subst -> (Listof(Types) . Subst)
+;;; type-of-exps : Listof(Exp) x Tenv x Subst -> (Listof(Type) . Subst)
 (define type-of-exps
   (lambda (exps tenv subst)
     (let loop ((exps exps)
