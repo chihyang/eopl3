@@ -313,6 +313,35 @@ module m
       module m1 interface [v : int] body [v = -(m1.u,11)]
          -(m1.u, m2.v)"
      error)
+
+    (nested-procs3
+     "let f = proc(x : int y : int) -(x,y) in (f -(10,5) 6)"
+     int -1)
+
+    (multi-letrec
+     "
+          letrec int odd(x : int)  = if zero?(x) then 0 else (even -(x,1))
+                 int even(x : int) = if zero?(x) then 1 else (odd  -(x,1))
+          in odd"
+     ((int) -> int))
+
+    ;; from this test it's easy to see why let/letrec in module definitions is
+    ;; needed
+    (multi-letrec-in-module
+     "module m interface
+               [ odd  : (int -> int)
+                 even : (int -> int) ]
+             body
+               [ odd  = letrec int odd(x : int)  = if zero?(x) then 0 else (even -(x,1))
+                               int even(x : int) = if zero?(x) then 1 else (odd  -(x,1))
+                        in odd
+                 even = letrec int odd(x : int)  = if zero?(x) then 0 else (even -(x,1))
+                               int even(x : int) = if zero?(x) then 1 else (odd  -(x,1))
+                        in even
+               ]
+     (m.odd 3)"
+     int 1)
+
     ))
 
 (define tests-for-run

@@ -35,7 +35,7 @@
             (set! passed (+ passed 1)))
           (begin
             (set! failed (+ failed 1))
-            (eopl:printf "test for ~a failed: expect ~a, actual ~a~%"
+            (eopl:printf "test for evaluating ~a failed: expect ~a, actual ~a~%"
                          (test-name test) v2 v1)))))
  tests-for-run)
 
@@ -49,7 +49,7 @@
             (set! passed (+ passed 1)))
           (begin
             (set! failed (+ failed 1))
-            (eopl:printf "test for ~a failed: expect ~a, actual ~a~%"
+            (eopl:printf "test for type checking ~a failed: expect ~a, actual ~a~%"
                          (test-name test) v2 v1)))))
  tests-for-check)
 
