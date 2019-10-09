@@ -80,7 +80,7 @@
           int-type)
     (type ("bool")
           bool-type)
-    (type ("(" type "->" type ")")
+    (type ("(" (arbno type) "->" type ")")
           proc-type)))
 
 ;;; module-name : Sym -> Sym
