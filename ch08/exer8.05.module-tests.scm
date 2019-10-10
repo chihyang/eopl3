@@ -342,7 +342,7 @@ module m
      (m.odd 3)"
      int 1)
 
-    (multi-letrec-in-module-2
+    (letrec-in-module-defn
      "module m interface
                [ odd  : (int -> int)
                  even : (int -> int) ]
@@ -353,6 +353,17 @@ module m
                     even = local-even ]
      (m.odd 3)"
      int 1)
+
+    (let-in-module-defn
+     "module m interface
+               [ x : int
+                 y : int ]
+             body
+               let x1 = 3 y1 = 4
+               in [ x = x1
+                    y = y1 ]
+     -(m.x, m.y)"
+     int -1)
     ))
 
 (define tests-for-run
