@@ -12,6 +12,10 @@
 ;;;                val-decl (var-name ty)
 ;;; ModuleBody ::= [ {Defn}* ]
 ;;;                defns-module-body (defns)
+;;; ModuleBody ::= let {Identifier = Expression}* in ModuleBody
+;;;                let-module-body (defns)
+;;; ModuleBody ::= letrec {Type (Identifier : Type) = Expression}* in ModuleBody
+;;;                letrec-module-body (defns)
 ;;; Defn       ::= Identifier = Expression
 ;;;                val-defn (var-name exp)
 ;;; Expression ::= from Identifier take Identifier
