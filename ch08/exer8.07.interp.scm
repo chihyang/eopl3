@@ -25,9 +25,10 @@
                    (cases interface expected-iface
                           (simple-iface
                            (decls)
-                           (extend-env-with-module
+                           (extend-env
                             m-name
-                            (simple-module (prune-module-env decls actual-iface (empty-env)))
+                            (module-val
+                             (simple-module (prune-module-env decls actual-iface (empty-env))))
                             env))))))))))
 
 ;;; value-of-module-body : ModuleBody x Env -> Env

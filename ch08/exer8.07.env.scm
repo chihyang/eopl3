@@ -12,10 +12,6 @@
    (p-names (list-of identifier?))
    (b-vars (list-of (list-of identifier?)))
    (b-bodies (list-of expression?))
-   (saved-env environment?))
-  (extend-env-with-module
-   (m-name identifier?)
-   (m-val typed-module?)
    (saved-env environment?)))
 
 ;;; extend-env* : Listof(Id) x Listof(ExpVal) -> Env
@@ -78,12 +74,7 @@
                   (let ((b-vars (list-ref b-vars idx))
                         (b-body (list-ref b-bodies idx)))
                     (proc-val (procedure b-vars b-body env)))
-                  (apply-env saved-env search-var))))
-           (extend-env-with-module
-            (m-name m-val saved-env)
-            (if (equal? search-var m-name)
-                m-val
-                (apply-env saved-env search-var))))))
+                  (apply-env saved-env search-var)))))))
 
 ;;; lookup-proc-name : Listof(Sym) x Sym -> Int | #f
 (define lookup-proc-name
@@ -100,21 +91,10 @@
     (if (null? var-names)
         (apply-env env m-name)
         (let ((searched-val (apply-env env m-name)))
-          (cases typed-module
-                 (if (typed-module? searched-val)
-                     searched-val
-                     (expval->module searched-val))
+          (cases typed-module (expval->module searched-val)
                  (simple-module
                   (bindings)
                   (lookup-qualified-var-in-env (car var-names) (cdr var-names) bindings)))))))
-
-;;; lookup-module-name-in-env : Sym x Env -> ExpVal
-(define lookup-module-name-in-env
-  (lambda (m-name env)
-    (let ((val (apply-env env m-name)))
-      (if (typed-module? val)
-          val
-          (report-no-module-found m-name)))))
 
 (define report-duplicate-id
   (lambda (sym syms)
