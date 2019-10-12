@@ -93,7 +93,7 @@
           bool-type)
     (type ("(" (arbno type) "->" type ")")
           proc-type)
-    (type ("[" (arbno identifier ":" type) "]")
+    (type ("[" (arbno declaration) "]")
           module-type)))
 
 ;;; ---------------------- Sllgen operations ----------------------
