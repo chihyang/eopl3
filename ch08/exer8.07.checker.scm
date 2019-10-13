@@ -305,6 +305,8 @@
 (define report-module-doesnt-satisfy-iface
   (lambda (m-name exptected-iface actual-iface)
     (eopl:error
+     'add-module-defns-to-tenv
+     "Module does not satisfy interface: ~s"
      (list 'error-in-defn-of-module: m-name
            'expected-type: exptected-iface
            'actual-type: actual-iface))))
@@ -312,6 +314,7 @@
 (define report-duplicate-module-defn
   (lambda (m-name)
     (eopl:error
+     'add-module-defns-to-tenv
      "Duplicate module name: ~a~%" m-name)))
 
 (define type-of-program
