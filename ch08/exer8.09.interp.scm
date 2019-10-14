@@ -22,7 +22,7 @@
                 (cases module-spec m-spec
                        (depends-module-body
                         (m-depends m-body)
-                        (let ((new-env (remove-non-depends env m-depends)))
+                        (let ((new-env (remove-non-dependency env m-depends)))
                           (add-module-defns-to-env
                            (cdr m-defs)
                            (let ((actual-iface (value-of-module-body m-body new-env)))
@@ -35,7 +35,7 @@
                                       env)))))))
                        (simple-module-body
                         (m-body)
-                        (let ((new-env (remove-non-depends env (simple-module-depends '()))))
+                        (let ((new-env (remove-non-dependency env (simple-module-depends '()))))
                           (add-module-defns-to-env
                            (cdr m-defs)
                            (let ((actual-iface (value-of-module-body m-body new-env)))
@@ -90,14 +90,14 @@
                               env)))))))
 
 ;;; defns-to-env : Listof(Defn) × Env → Env
-(define remove-non-depends
+(define remove-non-dependency
   (lambda (env depends)
     (cases module-depends depends
            (simple-module-depends
             (mdls)
-            (remove-non-depends-module-from-env mdls env)))))
+            (remove-non-dependency-module-from-env mdls env)))))
 
-(define remove-non-depends-module-from-env
+(define remove-non-dependency-module-from-env
   (lambda (mdls env)
     (cases environment env
            (empty-env () (empty-env))
@@ -105,21 +105,21 @@
             (saved-var saved-val saved-env)
             (extend-env
              saved-var saved-val
-             (remove-non-depends-module-from-env mdls saved-env)))
+             (remove-non-dependency-module-from-env mdls saved-env)))
            (extend-env-rec
             (p-names b-vars b-bodies saved-env)
             (extend-env-rec
              p-names b-vars b-bodies
-             (remove-non-depends-module-from-env mdls saved-env)))
+             (remove-non-dependency-module-from-env mdls saved-env)))
            (extend-env-with-module
             (m-name m-val saved-env)
             (if (member? m-name mdls)
                 (extend-env-with-module
                  m-name m-val
-                 (remove-non-depends-module-from-env
+                 (remove-non-dependency-module-from-env
                   mdls
                   saved-env))
-                (remove-non-depends-module-from-env mdls saved-env))))))
+                (remove-non-dependency-module-from-env mdls saved-env))))))
 
 (define value-of
   (lambda (exp env)
@@ -166,19 +166,19 @@
   (lambda (prog)
     (cases program prog
            (a-program
-            (m-defs m-spec)
-            (cases program-spec m-spec
+            (m-defs prgm-spec)
+            (cases program-spec prgm-spec
                    (depends-program-spec
                     (m-depends exp)
                     (let ((new-env (add-module-defns-to-env m-defs (empty-env))))
-                      (let ((pruned-env (remove-non-depends new-env m-depends)))
+                      (let ((pruned-env (remove-non-dependency new-env m-depends)))
                         (let ((val (value-of exp pruned-env)))
                           (expval->schemeval val)))))
                    (simple-program-spec
                     (exp)
                     (let ((new-env (add-module-defns-to-env m-defs (empty-env))))
                       (let ((pruned-env
-                             (remove-non-depends
+                             (remove-non-dependency
                               new-env
                               (simple-module-depends '()))))
                         (let ((val (value-of exp pruned-env)))
