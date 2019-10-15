@@ -19,33 +19,38 @@
         (cases module-defn (car m-defs)
                (a-module-definition
                 (m-name expected-iface m-spec)
-                (cases module-spec m-spec
-                       (depends-module-body
-                        (m-depends m-body)
-                        (let ((new-env (remove-non-dependency env m-depends)))
-                          (add-module-defns-to-env
-                           (cdr m-defs)
-                           (let ((actual-iface (value-of-module-body m-body new-env)))
-                             (cases interface expected-iface
-                                    (simple-iface
-                                     (decls)
-                                     (extend-env-with-module
-                                      m-name
-                                      (simple-module (prune-module-env decls actual-iface (empty-env)))
-                                      env)))))))
-                       (simple-module-body
-                        (m-body)
-                        (let ((new-env (remove-non-dependency-module-from-env '() env)))
-                          (add-module-defns-to-env
-                           (cdr m-defs)
-                           (let ((actual-iface (value-of-module-body m-body new-env)))
-                             (cases interface expected-iface
-                                    (simple-iface
-                                     (decls)
-                                     (extend-env-with-module
-                                      m-name
-                                      (simple-module (prune-module-env decls actual-iface (empty-env)))
-                                      env)))))))))))))
+                (let ((new-env (module-spec-env m-spec env))
+                      (m-body (module-spec-body m-spec)))
+                  (add-module-defns-to-env
+                   (cdr m-defs)
+                   (let ((actual-iface (value-of-module-body m-body new-env)))
+                     (cases interface expected-iface
+                            (simple-iface
+                             (decls)
+                             (extend-env-with-module
+                              m-name
+                              (simple-module (prune-module-env decls actual-iface (empty-env)))
+                              env)))))))))))
+
+(define module-spec-env
+  (lambda (spec env)
+    (cases module-spec spec
+           (depends-module-body
+            (m-depends m-body)
+            (remove-non-dependency env m-depends))
+           (simple-module-body
+            (m-body)
+            (remove-non-dependency-module-from-env '() env)))))
+
+(define module-spec-body
+  (lambda (spec)
+    (cases module-spec spec
+           (depends-module-body
+            (m-depends m-body)
+            m-body)
+           (simple-module-body
+            (m-body)
+            m-body))))
 
 ;;; value-of-module-body : ModuleBody x Env -> Env
 (define value-of-module-body
@@ -167,21 +172,24 @@
     (cases program prog
            (a-program
             (m-defs prgm-spec)
-            (cases program-spec prgm-spec
-                   (depends-program-spec
-                    (m-depends exp)
-                    (let ((new-env (add-module-defns-to-env m-defs (empty-env))))
-                      (let ((pruned-env (remove-non-dependency new-env m-depends)))
-                        (let ((val (value-of exp pruned-env)))
-                          (expval->schemeval val)))))
-                   (simple-program-spec
-                    (exp)
-                    (let ((new-env (add-module-defns-to-env m-defs (empty-env))))
-                      (let ((pruned-env
-                             (remove-non-dependency-module-from-env
-                              '() new-env)))
-                        (let ((val (value-of exp pruned-env)))
-                          (expval->schemeval val))))))))))
+            (let ((env (add-module-defns-to-env m-defs (empty-env))))
+              (value-of-program-spec prgm-spec env))))))
+
+;; value-of-program-spec : ProgramSpec -> SchemeVal
+(define value-of-program-spec
+  (lambda (spec env)
+    (cases program-spec spec
+           (depends-program-spec
+            (m-depends exp)
+            (let ((pruned-env (remove-non-dependency env m-depends)))
+              (let ((val (value-of exp pruned-env)))
+                (expval->schemeval val))))
+           (simple-program-spec
+            (exp)
+            (let ((pruned-env
+                   (remove-non-dependency-module-from-env '() env)))
+              (let ((val (value-of exp pruned-env)))
+                (expval->schemeval val)))))))
 
 (define run
   (lambda (prgm)
