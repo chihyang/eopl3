@@ -198,9 +198,8 @@
     (cases module-spec m-spec
            (simple-module-body
             (m-body)
-            (let ((depends (simple-module-depends '())))
-              (let ((new-env (remove-non-dependency env depends)))
-                (interface-of-body m-body new-env))))
+            (let ((new-env (remove-non-dependency-from-env '() env)))
+              (interface-of-body m-body new-env)))
            (depends-module-body
             (m-depends m-body)
             (let ((new-env (remove-non-dependency env m-depends)))
@@ -316,10 +315,9 @@
     (cases program-spec prgm-spec
            (simple-program-spec
             (exp)
-            (let ((depends (simple-module-depends '())))
-              (type-of-exp
-               exp
-               (remove-non-dependency env depends))))
+            (type-of-exp
+             exp
+             (remove-non-dependency-from-env '() env)))
            (depends-program-spec
             (depends exp)
             (type-of-exp
@@ -330,8 +328,8 @@
   (lambda (env depends)
     (cases module-depends depends
            (simple-module-depends
-            (mdls)
-            (remove-non-dependency-from-env mdls env)))))
+            (mdl mdls)
+            (remove-non-dependency-from-env (cons mdl mdls) env)))))
 
 (define remove-non-dependency-from-env
   (lambda (mdls env)

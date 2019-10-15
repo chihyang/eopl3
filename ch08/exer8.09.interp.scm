@@ -35,7 +35,7 @@
                                       env)))))))
                        (simple-module-body
                         (m-body)
-                        (let ((new-env (remove-non-dependency env (simple-module-depends '()))))
+                        (let ((new-env (remove-non-dependency-module-from-env '() env)))
                           (add-module-defns-to-env
                            (cdr m-defs)
                            (let ((actual-iface (value-of-module-body m-body new-env)))
@@ -94,8 +94,8 @@
   (lambda (env depends)
     (cases module-depends depends
            (simple-module-depends
-            (mdls)
-            (remove-non-dependency-module-from-env mdls env)))))
+            (mdl mdls)
+            (remove-non-dependency-module-from-env (cons mdl mdls) env)))))
 
 (define remove-non-dependency-module-from-env
   (lambda (mdls env)
@@ -178,9 +178,8 @@
                     (exp)
                     (let ((new-env (add-module-defns-to-env m-defs (empty-env))))
                       (let ((pruned-env
-                             (remove-non-dependency
-                              new-env
-                              (simple-module-depends '()))))
+                             (remove-non-dependency-module-from-env
+                              '() new-env)))
                         (let ((val (value-of exp pruned-env)))
                           (expval->schemeval val))))))))))
 

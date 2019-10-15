@@ -173,7 +173,7 @@ module m
   [u : int]
  body
   [u = 3]
-depends-on m in
+depends-on m
 from m take u"
      int 3)
 
@@ -182,9 +182,8 @@ from m take u"
           interface
            [u : int]
           body
-           depends-on
            [u = 3]
-         depends-on m in
+         depends-on m
          from m take u"
      int 3)
 
@@ -195,7 +194,7 @@ module m
   ((m1 : []) => [u : int])
  body
   module-proc (m1 : []) [u = 3]
-depends-on m in
+depends-on m
 from m take u
 "
      error error error)
@@ -207,7 +206,7 @@ module m
   [u : int]
  body
   [u = 3 v = 4]
-depends-on m in
+depends-on m
 from m take u"
      int 3)
 
@@ -219,7 +218,7 @@ from m take u"
     (modules-take-one-value-but-interface-bad
      "
          module m interface []  body [u = 3]
-         depends-on m in
+         depends-on m
          from m take u"
      ;; this version for permissive interp
      ;; error 3
@@ -229,7 +228,7 @@ from m take u"
 
     (modules-take-bad-value
      "module m interface []  body [u = 3]
-      depends-on m in from m take x"
+      depends-on m from m take x"
      error error)
 
     (modules-two-vals
@@ -241,7 +240,7 @@ module m
  body
   [u = 44
    v = 33]
- depends-on m in
+ depends-on m
   -(from m take u, from m take v)"
      int 11)
 
@@ -249,20 +248,20 @@ module m
     (modules-two-vals-bad-interface-1
      "module m interface [u : int v : bool]
                   body [u = 44 v = 33]
-      depends-on m in
+      depends-on m
          -(from m take u, from m take v)"
      error 11)
 
     (modules-extra-vals-are-ok-1
      "
           module m interface [x : int] body [x = 3 y = 4]
-          depends-on m in from m take x"
+          depends-on m from m take x"
      int 3)
 
     (module-extra-vals-are-ok-2
      "
           module m interface [y : int] body [x = 3 y = 4]
-          depends-on m in from m take y"
+          depends-on m from m take y"
      int)
 
     (modules-two-vals-bad-interface-14
@@ -271,7 +270,7 @@ module m
              u : bool]
           body
            [v = zero?(0) u = 33]
-      depends-on m in
+      depends-on m
          -(from m take u, from m take v)"
      error)
 
@@ -279,7 +278,7 @@ module m
     (modules-check-let*-1
      "module m interface      [u : int v : int]
                   body [u = 44  v = -(u,11)]
-      depends-on m in
+      depends-on m
       -(from m take u, from m take v)"
      int 11)
 
@@ -289,7 +288,7 @@ module m
           body
            depends-on m1
            [v = -(from m1 take u,11)]
-      depends-on m1,m2 in
+      depends-on m1,m2
       -(from m1 take u, from m2 take v)"
      int 11)
 
@@ -308,7 +307,7 @@ module m
           body
             depends-on m1
             [v = -(from m1 take u,11)]
-      depends-on m1,m2 in
+      depends-on m1,m2
          -(from m1 take u, from m2 take v)"
      int 11)
 
@@ -318,14 +317,14 @@ module m
           body
            [v = -(from m1 take u,11)]
          module m1 interface [u : int] body [u = 44]
-      depends-on m1,m2 in
+      depends-on m1,m2
         -(from m1 take u, from m2 take v)"
      error)
 
     (modules-check-duplicate-defn
      "module m1 interface [u : int] body [u = 44]
       module m1 interface [v : int] body depends-on m1 [v = -(from m1 take u,11)]
-      depends-on m1, m2 in
+      depends-on m1, m2
          -(from m1 take u, from m2 take v)"
      error)
 
@@ -354,7 +353,7 @@ module m
                                int even(x : int) = if zero?(x) then 1 else (odd  -(x,1))
                         in even
                ]
-     depends-on m in
+     depends-on m
      (from m take odd 3)"
      int 1)
 
@@ -367,7 +366,7 @@ module m
                       int local-even(x : int) = if zero?(x) then 1 else (local-odd  -(x,1))
                in [ odd = local-odd
                     even = local-even ]
-     depends-on m in
+     depends-on m
      (from m take odd 3)"
      int 1)
 
@@ -379,7 +378,7 @@ module m
                let x1 = 3 y1 = 4
                in [ x = x1
                     y = y1 ]
-     depends-on m in
+     depends-on m
      -(from m take x, from m take y)"
      int -1)
 
