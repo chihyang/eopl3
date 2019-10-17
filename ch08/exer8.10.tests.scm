@@ -1,5 +1,6 @@
 #lang eopl
 (require "exer8.10.lang.scm")
+(require "exer8.10.interp.scm")
 
 (require rackunit)
 (require "exer8.10.module-tests.scm")
@@ -23,6 +24,20 @@
                          (test-name test) v2 v1)))))
  tests-for-parse)
 
-(if (eq? passed (+ (length tests-for-parse)))
+(for-each
+ (lambda (test)
+   (let ((v1 (checked-run
+              (scan&parse (test-program test))))
+         (v2 (test-answer test)))
+     (if  (equal? v1 v2)
+          (begin
+            (set! passed (+ passed 1)))
+          (begin
+            (set! failed (+ failed 1))
+            (eopl:printf "test for evaluating ~a failed: expect ~a, actual ~a~%"
+                         (test-name test) v2 v1)))))
+ tests-for-run)
+
+(if (eq? passed (+ (length tests-for-run) (length tests-for-parse)))
     (eopl:printf "all tests passed!~%")
     (eopl:printf "~%~a tests failed!~%" failed))

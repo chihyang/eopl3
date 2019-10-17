@@ -383,7 +383,7 @@ module m
      int -1)
 
 
-    (module-depends-missing-1
+    (module-imports-missing-1
      "module m interface
                [ x : int
                  y : int ]
@@ -393,6 +393,20 @@ module m
                     y = y1 ]
      -(from m take x, from m take y)"
      error)
+
+    (module-import-prints
+     "module m1
+       interface [] body [x = print(1)]
+      module m2
+       interface [] body [x = print(2)]
+      module m3
+       interface []
+       body
+        import m2
+        [x = print(3)]
+      import m3, m1
+      33"
+     int 33)
     ))
 
 (define tests-for-run
