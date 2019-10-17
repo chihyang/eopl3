@@ -407,6 +407,20 @@ module m
       import m3, m1
       33"
      int 33)
+
+    (module-import-eval-diff
+     "module m1
+       interface [x : bool] body [x = print(1)]
+      module m2
+       interface [x : int] body [x = print(2)]
+      module m3
+       interface [x : int]
+       body
+        import m2
+        [x = print(3)]
+      import m3
+      from m3 take x"
+     error 33)
     ))
 
 (define tests-for-run
