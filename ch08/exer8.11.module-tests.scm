@@ -308,6 +308,12 @@ module m
          -(from m1 take u, from m2 take v)"
      error)
 
+    (module-infer-test1
+     "module m
+      interface [f : (int -> int)]
+      body [f = proc (x : ?) x]
+      (from m take f 3)"
+     int 3)
     ))
 
 (define tests-for-run
