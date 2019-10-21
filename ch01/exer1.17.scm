@@ -15,5 +15,5 @@
 (down '(a (more (complicated)) object))
 
 (down '((a 1) (a 2) (1 b) (2 b)))
-(invert '((a 1)))
-(invert '())
+(down '((a 1)))
+(down '())
