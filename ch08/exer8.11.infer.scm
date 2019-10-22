@@ -357,6 +357,7 @@
                (equations-of-exp rand result-type tenv))))
            )))
 
+;;; ---------------------- Module Infer ----------------------
 ;;; add-module-defns-to-tenv : Listof(ModuleDefn) x TypeEnv -> TypeEnv
 (define add-module-defns-to-tenv
   (lambda (m-defns env)
@@ -562,6 +563,7 @@
            'expected-type: exptected-iface
            'actual-type: actual-iface))))
 
+;;; ---------------------- Program Infer ----------------------
 (define type-of-program
   (lambda (prgm)
     (cases program prgm
