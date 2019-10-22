@@ -367,14 +367,61 @@
                 (m-name expected-iface m-body)
                 (let ((actual-iface (interface-of m-body env)))
                   (if (<:-iface actual-iface expected-iface env)
-                      (let ((new-tenv
-                             (extend-tenv-with-module
-                              m-name
-                              expected-iface
-                              env)))
-                        (add-module-defns-to-tenv (cdr m-defns) new-tenv))
+                      (let ((real-face
+                             (prune-iface actual-iface expected-iface)))
+                        (let ((new-tenv
+                               (extend-tenv-with-module
+                                m-name
+                                real-face
+                                env)))
+                          (add-module-defns-to-tenv (cdr m-defns) new-tenv)))
                       (report-module-doesnt-satisfy-iface
                        m-name expected-iface actual-iface))))))))
+
+;;; prune-iface : Interface x Interface -> Intreface
+(define prune-iface
+  (lambda (actual-iface expect-iface)
+    (cases interface actual-iface
+           (simple-iface
+            (actual-decls)
+            (cases interface expect-iface
+                   (simple-iface
+                    (expect-decls)
+                    (simple-iface
+                     (prune-bindings actual-decls expect-decls))))))))
+
+;;; prune-bindings : Listof(Decl) x Listof(Decl) -> Listof(Decl)
+(define prune-bindings
+  (lambda (actual-bindings expect-bindings)
+    (if (null? expect-bindings)
+        '()
+        (cases declaration (car expect-bindings)
+               (val-decl
+                (var opt)
+                (cons (search-binding var actual-bindings)
+                      (prune-bindings
+                       actual-bindings
+                       (cdr expect-bindings))))))))
+
+;;; search-binding : Sym x Listof(Decl) -> Decl
+(define search-binding
+  (lambda (var bindings)
+    (if (null? bindings)
+        (report-binding-not-found var bindings)
+        (cases declaration (car bindings)
+               (val-decl
+                (bound-var opt)
+                (if (equal? var bound-var)
+                    (car bindings)
+                    (search-binding var (cdr bindings))))))))
+
+(define report-binding-not-found
+  (lambda (var bindings)
+    (eopl:error
+     'search-binding
+     "Binding for ~a not found in ~a"
+     var
+     bindings)))
 
 ;;; interface-of : ModuleBody x TypeEnv -> Intreface
 (define interface-of
@@ -420,30 +467,30 @@
 
 ;;; <:-iface : Interface x Interface x TypeEnv -> Bool
 (define <:-iface
-  (lambda (iface1 iface2 tenv)
-    (cases interface iface1
+  (lambda (actual-face expect-face tenv)
+    (cases interface actual-face
            (simple-iface
             (decls1)
-            (cases interface iface2
+            (cases interface expect-face
                    (simple-iface
                     (decls2)
                     (<:-decls decls1 decls2 tenv)))))))
 
 ;;; <:-iface : Listof(Decl) x Listof(Decl) x TypeEnv -> Bool
 (define <:-decls
-  (lambda (decls1 decls2 tenv)
-    (cond [(null? decls2) #t]
-          [(null? decls1) #f]
+  (lambda (actual-decls expect-decls tenv)
+    (cond [(null? expect-decls) #t]
+          [(null? actual-decls) #f]
           [else
-           (let ((name1 (decl->name (car decls1)))
-                 (name2 (decl->name (car decls2))))
+           (let ((name1 (decl->name (car actual-decls)))
+                 (name2 (decl->name (car expect-decls))))
              (if (eqv? name1 name2)
                  (and
-                  (equal?
-                   (decl->type (car decls1))
-                   (decl->type (car decls2)))
-                  (<:-decls (cdr decls1) (cdr decls2) tenv))
-                 (<:-decls (cdr decls1) decls2 tenv)))])))
+                  (equal-type?
+                   (decl->type (car actual-decls))
+                   (decl->type (car expect-decls)))
+                  (<:-decls (cdr actual-decls) (cdr expect-decls) tenv))
+                 (<:-decls (cdr actual-decls) expect-decls tenv)))])))
 
 (define decl->name
   (lambda (decl)
@@ -457,7 +504,54 @@
     (cases declaration decl
            (val-decl
             (var-name var-type)
-            (optype->type var-type)))))
+            (cases optional-type var-type
+                   (no-type () (no-type))
+                   (a-type (ty) ty))))))
+
+;;; equal-type? : Type x Type -> Bool
+(define equal-type?
+  (lambda (actual-type expect-type)
+    (if (or (equal? actual-type (no-type))
+            (equal? expect-type (no-type)))
+        #t
+        (equal-with-tvar? actual-type
+                          expect-type
+                          '()
+                          (lambda (val bindings) val)))))
+
+;;; equal-with-tvar? : Type x Type x TypeEnv x Cont -> Bool
+;;; usage : ty1 might be a tvar, ty2 is never a tvar
+(define equal-with-tvar?
+  (lambda (ty1 ty2 bindings k)
+    (cases type ty1
+           (int-type
+            ()
+            (k (equal? ty1 ty2) bindings))
+           (bool-type
+            ()
+            (k (equal? ty1 ty2) bindings))
+           (proc-type
+            (arg-type result-type)
+            (if (proc-type? ty2)
+                (equal-with-tvar?
+                 arg-type
+                 (proc-type->arg-type ty2)
+                 bindings
+                 (lambda (val bindings)
+                   (if val
+                       (equal-with-tvar?
+                        result-type
+                        (proc-type->result-type ty2)
+                        bindings
+                        k)
+                       (k val bindings))))
+                (k #f bindings)))
+           (tvar-type
+            (sn)
+            (let ((bind (assoc ty1 bindings)))
+              (if bind
+                  (k (equal? (cdr bind) ty2) bindings)
+                  (k #t (cons (cons ty1 ty2) bindings))))))))
 
 (define report-module-doesnt-satisfy-iface
   (lambda (m-name exptected-iface actual-iface)
