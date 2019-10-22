@@ -56,48 +56,48 @@
     (check-shadowing-in-rhs "let x = 3 in let x = -(x,1) in x" int 2)
 
     ;; simple applications
-    (apply-proc-in-rator-pos "(proc(x : int) -(x,1)  30)" int 29)
+    (apply-proc-in-rator-pos "(proc(x : ?) -(x,1)  30)" int 29)
     (infer-doesnt-ignore-type-info-in-proc-but-interp-does
      "(proc(x : (int -> int)) -(x,1)  30)"
      error 29)
-    (apply-simple-proc "let f = proc (x : int) -(x,1) in (f 30)" int 29)
+    (apply-simple-proc "let f = proc (x : ?) -(x,1) in (f 30)" int 29)
     (let-to-proc-1
-     "(proc( f : (int -> int))(f 30)  proc(x : int)-(x,1))" int 29)
+     "(proc( f : (int -> int))(f 30)  proc(x : ?)-(x,1))" int 29)
 
-    (nested-procs "((proc (x : int) proc (y : int) -(x,y)  5) 6)" int -1)
+    (nested-procs "((proc (x : ?) proc (y : ?) -(x,y)  5) 6)" int -1)
     (nested-procs2
-     "let f = proc (x : int) proc (y : int) -(x,y) in ((f -(10,5)) 3)"
+     "let f = proc (x : ?) proc (y : ?) -(x,y) in ((f -(10,5)) 3)"
      int 2)
 
     ;; simple letrecs
-    (simple-letrec-1 "letrec int f(x : int) = -(x,1) in (f 33)" int 32)
+    (simple-letrec-1 "letrec int f(x : ?) = -(x,1) in (f 33)" int 32)
     (simple-letrec-2
-     "letrec int double(x : int) = if zero?(x) then 0 else -((double -(x,1)), -2) in (double 4)"
+     "letrec int double(x : ?) = if zero?(x) then 0 else -((double -(x,1)), -2) in (double 4)"
      int 8)
 
     (simple-letrec-3
      "let m = -5
- in letrec int f(x : int) = if zero?(x) then 0 else -((f -(x,1)), m) in (f 4)"
+ in letrec int f(x : ?) = if zero?(x) then 0 else -((f -(x,1)), m) in (f 4)"
      int 20)
 
     (double-it "
-letrec int double (n : int) = if zero?(n) then 0
+letrec int double (n : ?) = if zero?(n) then 0
                                   else -( (double -(n,1)), -2)
 in (double 3)"
                int 6)
 
     ;; tests of expressions that produce procedures
 
-    (build-a-proc-typed "proc (x : int) -(x,1)" (int -> int))
+    (build-a-proc-typed "proc (x : ?) -(x,1)" (int -> int))
 
-    (build-a-proc-typed-2 "proc (x : int) zero?(-(x,1))" (int -> bool))
+    (build-a-proc-typed-2 "proc (x : ?) zero?(-(x,1))" (int -> bool))
 
     (bind-a-proc-typed
-     "let f = proc (x : int) -(x,1) in (f 4)"
+     "let f = proc (x : ?) -(x,1) in (f 4)"
      int 3)
 
     (bind-a-proc-return-proc
-     "let f = proc (x : int) -(x,1) in f"
+     "let f = proc (x : ?) -(x,1) in f"
      (int -> int))
 
     (type-a-ho-proc-1
@@ -109,50 +109,50 @@ in (double 3)"
      error)
 
     (apply-a-ho-proc
-     "proc (x : int) proc ( f : (int -> bool)) (f x)"
+     "proc (x : ?) proc ( f : (int -> bool)) (f x)"
      (int -> ((int -> bool) -> bool)))
 
     (apply-a-ho-proc-2
-     "proc (x : int) proc ( f : (int -> (int -> bool))) (f x)"
+     "proc (x : ?) proc ( f : (int -> (int -> bool))) (f x)"
      (int -> ((int -> (int -> bool)) -> (int -> bool)))
      )
 
     (apply-a-ho-proc-3
-     "proc (x : int) proc ( f : (int -> (int -> bool))) (f zero?(x))"
+     "proc (x : ?) proc ( f : (int -> (int -> bool))) (f zero?(x))"
      error)
 
     (apply-curried-proc
-     "((proc(x : int) proc (y : int)-(x,y)  4) 3)"
+     "((proc(x : ?) proc (y : ?)-(x,y)  4) 3)"
      int 1)
 
     (apply-a-proc-2-typed
-     "(proc (x : int) -(x,1) 4)"
+     "(proc (x : ?) -(x,1) 4)"
      int 3)
 
     (apply-a-letrec "
-letrec int f(x : int) = -(x,1)
+letrec int f(x : ?) = -(x,1)
 in (f 40)"
                     int 39)
 
     (letrec-non-shadowing
-     "(proc (x : int)
-      letrec bool loop(x : bool) =(loop x)
+     "(proc (x : ?)
+      letrec bool loop(x : ?) =(loop x)
        in x
      1)"
      int 1)
 
 
     (letrec-return-fact "
-let times = proc (x : int) proc (y : int) -(x,y)    % not really times
+let times = proc (x : ?) proc (y : ?) -(x,y)    % not really times
 in letrec
-     int fact(x : int) = if zero?(x) then 1 else ((times x) (fact -(x,1)))
+     int fact(x : ?) = if zero?(x) then 1 else ((times x) (fact -(x,1)))
    in fact"
                         (int -> int))
 
     (letrec-apply-the-fcn "
-let f = proc (x : int) proc (y : int) -(x,y)
+let f = proc (x : ?) proc (y : ?) -(x,y)
 in letrec
-     int loop(x : int) = if zero?(x) then 1 else ((f x) (loop -(x,1)))
+     int loop(x : ?) = if zero?(x) then 1 else ((f x) (loop -(x,1)))
    in (loop 4)"
                           int 3)
 
@@ -160,7 +160,7 @@ in letrec
      "
 module m
  interface
-  [u : int]
+  [u : ?]
  body
   [u = 3]
 
@@ -171,7 +171,7 @@ module m
      "
 module m
  interface
-  [u : int]
+  [u : ?]
  body
   [u = 3]
 
@@ -181,7 +181,7 @@ from m take u"
     (modules-take-one-value-no-import
      "module m
           interface
-           [u : int]
+           [u : ?]
           body
            [u = 3]
          from m take u"
@@ -191,7 +191,7 @@ from m take u"
      "
 module m
  interface
-  ((m1 : []) => [u : int])
+  ((m1 : []) => [u : ?])
  body
   module-proc (m1 : []) [u = 3]
 
@@ -203,7 +203,7 @@ from m take u
      "
 module m
  interface
-  [u : int]
+  [u : ?]
  body
   [u = 3 v = 4]
 from m take u"
@@ -233,8 +233,8 @@ from m take u"
      "
 module m
  interface
-  [u : int
-   v : int]
+  [u : ?
+   v : ?]
  body
   [u = 44
    v = 33]
@@ -244,27 +244,27 @@ module m
 
 
     (modules-two-vals-bad-interface-1
-     "module m interface [u : int v : bool]
+     "module m interface [u : ? v : ?]
                   body [u = 44 v = 33]
          -(from m take u, from m take v)"
-     error 11)
+     int 11)
 
     (modules-extra-vals-are-ok-1
      "
-          module m interface [x : int] body [x = 3 y = 4]
+          module m interface [x : ?] body [x = 3 y = 4]
           from m take x"
      int 3)
 
     (module-extra-vals-are-ok-2
      "
-          module m interface [y : int] body [x = 3 y = 4]
+          module m interface [y : ?] body [x = 3 y = 4]
           from m take y"
      int)
 
     (modules-two-vals-bad-interface-14
      "module m interface
-            [v : int
-             u : bool]
+            [v : ?
+             u : ?]
           body
            [v = zero?(0) u = 33]
          -(from m take u, from m take v)"
@@ -272,39 +272,39 @@ module m
 
 
     (modules-check-let*-1
-     "module m interface      [u : int v : int]
+     "module m interface      [u : ? v : ?]
                   body [u = 44  v = -(u,11)]
          -(from m take u, from m take v)"
      int 11)
 
     (modules-check-let*-2.0
-     "module m1 interface [u : int] body [u = 44]
-         module m2 interface [v : int]
+     "module m1 interface [u : ?] body [u = 44]
+         module m2 interface [v : ?]
           body
            [v = -(from m1 take u,11)]
          -(from m1 take u, from m2 take v)"
      int 11)
 
     (modules-check-let*-2.05
-     "module m1 interface [u : int] body [u = 44]
-         module m2 interface [v : int] body [v = -(from m1 take u,11)]
+     "module m1 interface [u : ?] body [u = 44]
+         module m2 interface [v : ?] body [v = -(from m1 take u,11)]
          33"
      int 33)                       ; doesn't actually import anything
 
     (modules-check-let*-2.1
-     "module m1 interface [u : int] body [u = 44]
+     "module m1 interface [u : ?] body [u = 44]
          module m2
-          interface [v : int]
+          interface [v : ?]
           body [v = -(from m1 take u,11)]
          -(from m1 take u, from m2 take v)"
      int 11)
 
     (modules-check-let*-2.2
      "module m2
-          interface [v : int]
+          interface [v : ?]
           body
            [v = -(from m1 take u,11)]
-         module m1 interface [u : int] body [u = 44]
+         module m1 interface [u : ?] body [u = 44]
          -(from m1 take u, from m2 take v)"
      error)
 
@@ -314,6 +314,24 @@ module m
       body [f = proc (x : ?) x]
       (from m take f 3)"
      int 3)
+
+    (module-change-type-1
+     "module m
+      interface [ v : ? u : ?]
+      body [v = 3
+            v = zero? (3)
+            u = v]
+      from m take v "
+     bool #f)
+
+    (module-change-type-1
+     "module m
+      interface [ v : int u : ?]
+      body [v = 3
+            v = zero? (3)
+            u = v]
+      from m take v"
+     error)
     ))
 
 (define tests-for-run
