@@ -1,6 +1,6 @@
 #lang eopl
 
-(provide test-for-exer8.12-15)
+(provide tests-for-parse tests-for-check tests-for-run)
 
 (define test-for-exer8.12-15
   '(
@@ -28,8 +28,8 @@
                if (from mybool take bo-bool x)
                then (from mybool take bo-bool from mybool take false)
                else (from mybool take bo-bool from mybool take true)
- in (not (and (from mybool take true)
-              (from mybool take false)))
+ in (not ((and from mybool take true)
+          from mybool take false))
 "
      bool #t)
 
@@ -47,7 +47,7 @@
    zero = 3
    succ = proc (x : t) -(x, -5)
    pred = proc (x : t) -(x, 5)
-   z? = proc (x : t) zero? -(x, 3)]
+   z? = proc (x : t) zero?(-(x, 3))]
  let a = (from myint take succ from myint take zero)
  in (from myint take z? (from myint take pred a))
 "
@@ -74,9 +74,9 @@
                if zero?(x)
                then false else true
    to-bool = proc (x : t) zero? (x)]
- in (from mybool take and
-     from my bool take true
-     from my bool take true)
+ ((from mybool take and
+   from mybool take true)
+  from mybool take true)
 "
      int 0)
 
@@ -100,9 +100,9 @@
                if zero?(x)
                then true else false
    to-bool = proc (x : t) zero? (x)]
- in (from mybool take and
-     from my bool take true
-     from my bool take true)
+ ((from mybool take and
+   from mybool take true)
+  from mybool take true)
 "
      int 1)
 
@@ -127,7 +127,6 @@
      proc (x : int)
       proc (t :table)
        (t x)]
- in
  let empty = from tables take empty
  in let add-binding = from tables take add-to-table
  in let lookup = from tables take lookup-in-table
@@ -140,3 +139,41 @@
 "
      int 100)
     ))
+
+(define tests-for-run
+  (let loop ((lst test-for-exer8.12-15))
+    (cond
+     ((null? lst) '())
+     ((= (length (car lst)) 4)
+      ;; (printf "creating item: ~s~%" (caar lst))
+      (cons
+       (list
+        (list-ref (car lst) 0)
+        (list-ref (car lst) 1)
+        (list-ref (car lst) 3))
+       (loop (cdr lst))))
+     (else (loop (cdr lst))))))
+
+(define tests-for-parse
+  (let loop ((lst test-for-exer8.12-15))
+    (cond
+     ((null? lst) '())
+     ((> (length (car lst)) 4)
+      (cons
+       (list
+        (list-ref (car lst) 0)
+        (list-ref (car lst) 1)
+        (list-ref (car lst) 4))
+       (loop (cdr lst))))
+     (else
+      ;; (printf "creating item: ~s~%" (caar lst))
+      (cons
+       (list
+        (list-ref (car lst) 0)
+        (list-ref (car lst) 1)
+        #t)
+       (loop (cdr lst)))))))
+
+;; ok to have extra members in a test-item.
+
+(define tests-for-check test-for-exer8.12-15)
