@@ -22,14 +22,14 @@
  let and = proc (x : from mybool take t)
             proc (y : from mybool take t)
              if (from mybool take to-bool x)
-             then (from mybool take to-bool y)
-             else (from mybool take to-bool from mybool take false)
+             then y else false
  in let not = proc (x : from mybool take t)
-               if (from mybool take bo-bool x)
-               then (from mybool take bo-bool from mybool take false)
-               else (from mybool take bo-bool from mybool take true)
- in (not ((and from mybool take true)
-          from mybool take false))
+               if (from mybool take to-bool x)
+               then from mybool take false
+               else from mybool take true
+ in (from mybool take to-bool
+     (not ((and from mybool take true)
+           from mybool take false)))
 "
      bool #t)
 
