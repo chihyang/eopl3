@@ -367,7 +367,7 @@
                   (transparent-type-decl
                    (t-name t-type)
                    (let ((expanded-type
-                          (expand-type t-name tenv)))
+                          (expand-type t-type tenv)))
                      (let ((new-tenv
                             (extend-tenv-with-type t-name expanded-type tenv)))
                        (cons (transparent-type-decl t-name expanded-type)
@@ -429,8 +429,9 @@
               ty2))
            (proc-exp
             (var ty body)
-            (let ((result-type (type-of-exp body (extend-tenv var (expand-type ty tenv) tenv))))
-              (proc-type ty result-type)))
+            (let ((arg-type (expand-type ty tenv)))
+              (let ((result-type (type-of-exp body (extend-tenv var arg-type tenv))))
+                (proc-type arg-type result-type))))
            (let-exp
             (b-var b-exp let-body)
             (let ((b-type (type-of-exp b-exp tenv)))
