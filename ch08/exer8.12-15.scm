@@ -22,7 +22,7 @@
  let and = proc (x : from mybool take t)
             proc (y : from mybool take t)
              if (from mybool take to-bool x)
-             then y else false
+             then y else from mybool take false
  in let not = proc (x : from mybool take t)
                if (from mybool take to-bool x)
                then from mybool take false
@@ -78,7 +78,7 @@
    from mybool take true)
   from mybool take true)
 "
-     int 0)
+     (mybool t) 0)
 
     (mybool-definition-2
      "module mybool
@@ -104,7 +104,7 @@
    from mybool take true)
   from mybool take true)
 "
-     int 1)
+     (mybool t) 1)
 
     ;; exercise 8.15
     (table-1
