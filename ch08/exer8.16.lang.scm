@@ -82,7 +82,7 @@
                 let-exp)
     (expression ("proc" "(" (arbno identifier ":" type) ")" expression)
                 proc-exp)
-    (expression ("letrec" (arbno type identifier "(" identifier ":" type ")" "=" expression) "in" expression)
+    (expression ("letrec" (arbno type identifier "(" (arbno identifier ":" type) ")" "=" expression) "in" expression)
                 letrec-exp)
     (expression ("(" expression (arbno expression) ")")
                 call-exp)
