@@ -1,5 +1,5 @@
 #lang eopl
-(require "chap08.s02.lang.scm")
+(require "exer8.16.lang.scm")
 (provide checked-type-of type-of type-of-program type-of-exp)
 
 ;;; ---------------------- Type Environment ----------------------
@@ -17,6 +17,48 @@
    (name identifier?)
    (type type?)
    (saved-tenv tenv?)))
+
+;;; extend-env* : Listof(Id) x Listof(Type) -> TypeEnv
+(define extend-tenv*
+  (lambda (vars types tenv)
+    (check-duplicate-identifier! vars)
+    (check-var-type-number! vars types)
+    (let loop ((vars vars)
+               (types types)
+               (tenv tenv))
+      (if (null? vars)
+          tenv
+          (loop (cdr vars)
+                (cdr types)
+                (extend-tenv (car vars) (car types) tenv))))))
+
+;;; check-duplicate-identifier! : Listof(Id) -> Bool | Unspecified
+(define check-duplicate-identifier!
+  (lambda (vars)
+    (let loop ((vs vars))
+      (cond [(null? vs) #t]
+            [(member? (car vs) (cdr vs))
+             (report-duplicate-id (car vs) vars)]
+            [else
+             (loop (cdr vs))]))))
+
+;;; member? : Sym x Listof(Sym) -> Bool
+(define member?
+  (lambda (sym lst)
+    (cond [(null? lst) #f]
+          [(eqv? sym (car lst)) #t]
+          [else (member? sym (cdr lst))])))
+
+;;; check-var-type-number! : Listof(Sym) x Listof(Type) -> Bool | Unspecified
+(define check-var-type-number!
+  (lambda (vars types)
+    (let ((var-len (length vars))
+          (val-len (length types)))
+      (cond [(< var-len val-len)
+             (report-type-mismatch 'more vars types)]
+            [(> var-len val-len)
+             (report-type-mismatch 'less vars types)]
+            [else #t]))))
 
 (define apply-tenv
   (lambda (env var)
@@ -40,6 +82,14 @@
                 t-type
                 (apply-tenv saved-tenv var))))))
 
+;;; expand-types : Listof(Type) x TypeEnv -> Listof(ExpandedType)
+(define expand-types
+  (lambda (tys tenv)
+    (if (null? tys)
+        '()
+        (cons (expand-type (car tys) tenv)
+              (expand-types (cdr tys) tenv)))))
+
 ;;; expand-type : Type x TypeEnv -> ExpandedType
 (define expand-type
   (lambda (ty tenv)
@@ -47,8 +97,8 @@
            (int-type () (int-type))
            (bool-type () (bool-type))
            (proc-type
-            (arg-type result-types)
-            (proc-type (expand-type arg-type tenv)
+            (arg-types result-type)
+            (proc-type (map (lambda (t) (expand-type t tenv)) arg-types)
                        (expand-type result-type tenv)))
            (named-type
             (name)
@@ -104,6 +154,17 @@
           ty
           (report-no-binding-type-module-found m-name)))))
 
+(define report-duplicate-id
+  (lambda (sym syms)
+    (eopl:error 'extend-tenv* "Duplicate identifier ~s in ~a"
+                sym syms)))
+
+(define report-type-mismatch
+  (lambda (symp vars types)
+    (eopl:error 'extend-tenv*
+                "Argument number is ~s than parameter number: ~a, ~a"
+                symp vars (map type-to-external-form types))))
+
 (define report-no-binding-type-found
   (lambda (search-var)
     (eopl:error 'apply-tenv "No binding for ~s" search-var)))
@@ -118,6 +179,14 @@
   (lambda (ty1 ty2 exp)
     (when (not (equal? ty1 ty2))
       (report-unequal-types ty1 ty2 exp))))
+;;; check-equal-types! : Listof(Type) x Listof(Type) x Expression -> Unspecified
+(define check-equal-types!
+  (lambda (tys1 tys2 exp)
+    (if (null? tys1)
+        #t
+        (if (equal? (car tys1) (car tys2))
+            (check-equal-types! (cdr tys1) (cdr tys2) exp)
+            (report-unequal-types (car tys1) (car tys2) exp)))))
 ;;; report-unequal-types : Type x Type x Expression -> Unspecified
 (define report-unequal-types
   (lambda (ty1 ty2 exp)
@@ -131,10 +200,11 @@
     (cases type ty
            (int-type () 'int)
            (bool-type () 'bool)
-           (proc-type (arg-type result-types)
-                      (list (type-to-external-form arg-type)
-                            '->
-                            (type-to-external-form result-type)))
+           (proc-type (arg-types result-type)
+                      (append (map type-to-external-form arg-types)
+                              (list
+                               '->
+                               (type-to-external-form result-type))))
            (named-type
             (name)
             name)
@@ -429,34 +499,46 @@
               ty2))
            (proc-exp
             (vars tys body)
-            (let ((arg-type (expand-type ty tenv)))
-              (let ((result-type (type-of-exp body (extend-tenv var arg-type tenv))))
-                (proc-type arg-type result-type))))
+            (let ((arg-types (expand-types tys tenv)))
+              (let ((result-type (type-of-exp body (extend-tenv* vars arg-types tenv))))
+                (proc-type arg-types result-type))))
            (let-exp
             (b-vars b-exps let-body)
-            (let ((b-type (type-of-exp b-exp tenv)))
-              (type-of-exp let-body (extend-tenv b-var (expand-type b-type tenv) tenv))))
+            (let ((b-types (type-of-exps b-exps tenv)))
+              (let ((b-e-types (expand-types b-types tenv)))
+                (type-of-exp let-body (extend-tenv* b-vars b-e-types tenv)))))
            (letrec-exp
             (result-types p-names b-vars arg-types b-bodies letrec-body)
-            (let ((letrec-tenv (extend-tenv p-name
-                                            (expand-type (proc-type arg-type result-type) tenv)
-                                            tenv)))
-              (let ((checked-type (type-of-exp
-                                   b-body
-                                   (extend-tenv b-var (expand-type arg-type letrec-tenv) letrec-tenv))))
-                (check-equal-type! checked-type result-type exp)
-                (type-of-exp letrec-body letrec-tenv))))
+            (let ((p-tys (expand-types (map proc-type arg-types result-types) tenv)))
+              (let ((letrec-tenv (extend-tenv* p-names p-tys tenv)))
+                (let ((checked-types
+                       (map (lambda (e vs as)
+                              (expand-type (type-of-exp e (extend-tenv* vs as letrec-tenv))
+                                           letrec-tenv))
+                            b-bodies
+                            b-vars
+                            arg-types)))
+                  (check-equal-types! checked-types result-types exp)
+                  (type-of-exp letrec-body letrec-tenv)))))
            (call-exp
             (rator rands)
             (let ((rator-type (type-of-exp rator tenv))
-                  (rand-type (type-of-exp rand tenv)))
+                  (rand-types (map (lambda (e) (type-of-exp e tenv)) rands)))
               (cases type rator-type
                      (proc-type
-                      (arg-type result-type)
-                      (check-equal-type! arg-type rand-type exp)
+                      (arg-types result-type)
+                      (check-equal-types! arg-types rand-types exp)
                       result-type)
                      (else
                       (report-rator-not-a-proc-type rator-type rator))))))))
+
+;;; type-of-exps : Listof(Exp) x Tenv -> Listof(Type)
+(define type-of-exps
+  (lambda (exps tenv)
+    (if (null? exps)
+        '()
+        (cons (type-of-exp (car exps) tenv)
+              (type-of-exps (cdr exps) tenv)))))
 
 (define report-rator-not-a-proc-type
   (lambda (ty1 exp)
