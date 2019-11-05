@@ -47,3 +47,58 @@ module m3
 import m3
 from m3 take x
 ```
+
+# Exercise 8.17
+
+> As you did in exercise 8.8, remove the restriction that a module must produce
+> the values in the same order as the interface. Remember, however, that the
+> definition must respect scoping rules, especially for types.
+
+This one is quite subtle, consider the following case:
+
+``` racket
+module m1
+ interface
+  [
+   opaque u
+   transparent t = u
+  ]
+ body
+  [
+   type t = bool
+   type u = t
+  ]
+% something that uses type u and t
+...
+```
+
+Should it fail or pass? In the declaration, `t` is a type that depends on `u`;
+in the definition, `t` is a type depended on by `u`. Even though it does not
+seem to make any damage to the module user, it does cause an inconsistency
+between the implementation and declaration. Worse is when the declared type is
+used by some other variable definitions:
+
+``` racket
+module m1
+ interface
+  [
+   opaque u
+   transparent t = u
+   foo = (u -> t)
+  ]
+ body
+  [
+   type t = bool
+   foo = proc (a : u)  % some definitions
+   type u = t
+  ]
+% something that uses type u and t
+...
+```
+
+According to declarations, `foo` is a procedure that takes an argument of `u`,
+but in the definition, because `u` is defined after `foo`, `foo` cannot see
+it. This make the program fail to pass type checking directly. Maybe this is the
+reason why *the definition must respect scoping rules, especially for
+types*. Surprisingly, my modification behaves this way naturally, even before I
+find it out why.
