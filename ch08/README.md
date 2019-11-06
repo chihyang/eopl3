@@ -102,3 +102,17 @@ it. This make the program fail to pass type checking directly. Maybe this is the
 reason why *the definition must respect scoping rules, especially for
 types*. Surprisingly, my modification behaves this way naturally, even before I
 find it out why.
+
+# Exercise 8.18
+
+> Our code depends on the invariant that every type in a type environment is
+> already expanded. We enforce this invariant by calling `expand-type` in many
+> places in the code. On the other hand, it would be easy to break the system by
+> forgetting to call `expand-type`. Refactor the code so that there are fewer
+> calls to `expand-type`, and the invariant is maintained more robustly.
+
+Since most of time `expand-type` is used to maintain the invariant in a type
+environment, the action of `expand-type` can be bound together with the action
+of adding type an environment. So some functions that call `expand-type` can be
+provided to replace `extend-tenv` and `extend-tenv-with-type`. Thus the
+invariant can be maintained more robustly.
