@@ -113,6 +113,7 @@ find it out why.
 
 Since most of time `expand-type` is used to maintain the invariant in a type
 environment, the action of `expand-type` can be bound together with the action
-of adding type an environment. So some functions that call `expand-type` can be
-provided to replace `extend-tenv` and `extend-tenv-with-type`. Thus the
+of adding a type to an environment. Some functions that call `expand-type` can
+be provided to replace `extend-tenv` and `extend-tenv-with-type`. Each call to
+`extend-tenv` and `extend-tenv-with-type` can be replaced with them. Thus the
 invariant can be maintained more robustly.
