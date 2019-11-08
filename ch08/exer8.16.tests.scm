@@ -30,7 +30,7 @@
 (for-each
  (lambda (test)
    (let ((v1 (checked-run
-              (scan&parse (test-program test))))
+              (checked-scan&parse (test-program test))))
          (v2 (test-answer test)))
      (if  (equal? v1 v2)
           (begin

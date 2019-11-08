@@ -1403,7 +1403,7 @@ from m2 take foo"
   (let loop ((lst the-test-suite))
     (cond
      ((null? lst) '())
-     ((= (length (car lst)) 4)
+     ((>= (length (car lst)) 4)
       ;; (printf "creating item: ~s~%" (caar lst))
       (cons
        (list

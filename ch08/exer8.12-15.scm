@@ -144,7 +144,7 @@
   (let loop ((lst test-for-exer8.12-15))
     (cond
      ((null? lst) '())
-     ((= (length (car lst)) 4)
+     ((>= (length (car lst)) 4)
       ;; (printf "creating item: ~s~%" (caar lst))
       (cons
        (list
