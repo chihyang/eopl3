@@ -1,5 +1,7 @@
 #lang eopl
 
+(provide tests-for-parse tests-for-check tests-for-run)
+
 (define test-for-exer8.19-23
   '(
     ;; exercise 8.19
@@ -71,7 +73,7 @@ module from-int-maker
                        pred : (t -> t)
                        is-zero : (t -> bool)])
    [from-int =
-             letrec t from-int (n : int)
+             letrec t from-int (n : int) =
               if zero?(t)
               then zero
               else (succ (from-int -(n, 1)))
@@ -95,8 +97,8 @@ module int-to-ints2
 % convert between ints1, ints2 and int
 let n1 = (from int-to-ints1 take to-int1 39)
 in let n2 = (from int-to-ints2 take to-int2 39)
-   in zero?(-((from to-int-ints1 n1),
-              (from to-int-ints2 n2)))
+   in zero?(-(from to-int-ints1 take n1,
+              from to-int-ints2 take n2))
 "
      bool #t)
 
@@ -142,7 +144,7 @@ module from-int-maker
                        pred : (t -> t)
                        is-zero : (t -> bool)])
    [from-int =
-             letrec t from-int (n : int)
+             letrec t from-int (n : int) =
               if zero?(t)
               then zero
               else (succ (from-int -(n, 1)))
@@ -326,8 +328,8 @@ module ints2-to-int
  interface [to-int : (from ints2 take t -> int)]
  body (to-int-maker ints1)
 
-let n1 = (from ints2 take succ (from ints2 take zero))
-in let n2 = (from ints1 take succ (from ints1 take zero))
+let n1 = (from ints2 take succ from ints2 take zero)
+in let n2 = (from ints1 take succ from ints1 take zero)
 in let n3 = (from ints1-to-int take to-int n1)
 in let n4 = (from ints2-to-int take to-int n2)
 in zero?(-(n3, n4))
@@ -375,7 +377,7 @@ module from-int-maker
                        pred : (t -> t)
                        is-zero : (t -> bool)])
    [from-int =
-             letrec t from-int (n : int)
+             letrec t from-int (n : int) =
               if zero?(t)
               then zero
               else (succ (from-int -(n, 1)))
@@ -460,7 +462,7 @@ module mybool-tables
  interface
  [opaque table
   empty : table
-  add-to-table : (int -> from mybool take t
+  add-to-table : (int ->
                   (from mybool take t ->
                    (table -> table)))
   lookup-in-table : (int ->
@@ -482,3 +484,41 @@ in ((lookup 4) table1)
 "
      t 13)
     ))
+
+(define tests-for-run
+  (let loop ((lst test-for-exer8.19-23))
+    (cond
+     ((null? lst) '())
+     ((>= (length (car lst)) 4)
+      ;; (printf "creating item: ~s~%" (caar lst))
+      (cons
+       (list
+        (list-ref (car lst) 0)
+        (list-ref (car lst) 1)
+        (list-ref (car lst) 3))
+       (loop (cdr lst))))
+     (else (loop (cdr lst))))))
+
+(define tests-for-parse
+  (let loop ((lst test-for-exer8.19-23))
+    (cond
+     ((null? lst) '())
+     ((> (length (car lst)) 4)
+      (cons
+       (list
+        (list-ref (car lst) 0)
+        (list-ref (car lst) 1)
+        (list-ref (car lst) 4))
+       (loop (cdr lst))))
+     (else
+      ;; (printf "creating item: ~s~%" (caar lst))
+      (cons
+       (list
+        (list-ref (car lst) 0)
+        (list-ref (car lst) 1)
+        #t)
+       (loop (cdr lst)))))))
+
+;; ok to have extra members in a test-item.
+
+(define tests-for-check test-for-exer8.19-23)
