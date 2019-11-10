@@ -73,17 +73,17 @@ module from-int-maker
                        pred : (t -> t)
                        is-zero : (t -> bool)])
    [from-int =
-             letrec t from-int (n : int) =
-              if zero?(t)
-              then zero
-              else (succ (from-int -(n, 1)))
+             letrec from ints take t from-int (n : int) =
+              if zero?(n)
+              then from ints take zero
+              else (from ints take succ (from-int -(n, 1)))
              in from-int]
 module ints1-to-int
  interface [to-int : (from ints1 take t -> int)]
  body (to-int-maker ints1)
 
 module int-to-ints1
- interface [to-int1 : (int -> from ints1 take t)]
+ interface [from-int : (int -> from ints1 take t)]
  body (from-int-maker ints1)
 
 module ints2-to-int
@@ -91,14 +91,14 @@ module ints2-to-int
  body (to-int-maker ints2)
 
 module int-to-ints2
- interface [to-int2 : (int -> from ints2 take t)]
+ interface [from-int : (int -> from ints2 take t)]
  body (from-int-maker ints2)
 
 % convert between ints1, ints2 and int
-let n1 = (from int-to-ints1 take to-int1 39)
-in let n2 = (from int-to-ints2 take to-int2 39)
-   in zero?(-(from to-int-ints1 take n1,
-              from to-int-ints2 take n2))
+let n1 = (from int-to-ints1 take from-int 3)
+in let n2 = (from int-to-ints2 take from-int 3)
+   in zero?(-((from ints1-to-int take to-int n1),
+              (from ints2-to-int take to-int n2)))
 "
      bool #t)
 
@@ -144,10 +144,10 @@ module from-int-maker
                        pred : (t -> t)
                        is-zero : (t -> bool)])
    [from-int =
-             letrec t from-int (n : int) =
-              if zero?(t)
-              then zero
-              else (succ (from-int -(n, 1)))
+             letrec from ints take t from-int (n : int) =
+              if zero?(n)
+              then from ints take zero
+              else (from ints take succ (from-int -(n, 1)))
              in from-int]
 
 module sum-prod-marker
@@ -169,17 +169,17 @@ module sum-prod-marker
                        succ : (t -> t)
                        pred : (t -> t)
                        is-zero : (t -> bool)])
-   [plus = proc (y : from ints take t)
-            letrec from ints take t plus(x : from ints take t) =
+   [plus = letrec from ints take t plus(x : from ints take t) =
+            proc (y : from ints take t)
              if (from ints take is-zero x)
              then y
-             else (from ints take succ ((plus y) (from ints take pred x)))
+             else (from ints take succ ((plus (from ints take pred x)) y))
             in plus
-    times = proc (y : from ints take t)
-             letrec from ints take t times(x : from ints take t) =
+    times = letrec from ints take t times(x : from ints take t) =
+             proc (y : from ints take t)
               if (from ints take is-zero x)
-              then y
-              else ((plus y) ((times y) (from ints take pred x)))
+              then from ints take zero
+              else ((plus y) ((times (from ints take pred x)) y))
              in times]
 module ints1
  interface
@@ -214,7 +214,7 @@ module ints1-to-int
  body (to-int-maker ints1)
 
 module int-to-ints1
- interface [to-int1 : (int -> from ints1 take t)]
+ interface [from-int : (int -> from ints1 take t)]
  body (from-int-maker ints1)
 
 module ints1-arithmetic
@@ -227,7 +227,7 @@ module ints2-to-int
  body (to-int-maker ints2)
 
 module int-to-ints2
- interface [to-int2 : (int -> from ints2 take t)]
+ interface [from-int : (int -> from ints2 take t)]
  body (from-int-maker ints2)
 
 module ints2-arithmetic
@@ -235,16 +235,16 @@ module ints2-arithmetic
             times : (from ints2 take t -> from ints2 take t)]
  body (sum-prod-marker ints2)
 
-let n1-8 = (from int-to-ints1 take to-int1 8)
-in let n1-2 = (from int-to-ints1 take to-int1 2)
+let n1-8 = (from int-to-ints1 take from-int 8)
+in let n1-2 = (from int-to-ints1 take from-int 2)
 in let n1-plus = ((from ints1-arithmetic take plus n1-8) n1-2)
-in let n1-times =  ((from ints1-arithmetic take plus n1-8) n1-2)
-in let n2-8 = (from int-to-ints2 take to-int2 8)
-in let n2-2 = (from int-to-ints2 take to-int2 2)
+in let n1-times =  ((from ints1-arithmetic take times n1-8) n1-2)
+in let n2-8 = (from int-to-ints2 take from-int 8)
+in let n2-2 = (from int-to-ints2 take from-int 2)
 in let n2-plus = ((from ints2-arithmetic take plus n2-8) n2-2)
-in let n2-times =  ((from ints1-arithmetic take plus n2-8) n2-2)
+in let n2-times =  ((from ints2-arithmetic take times n2-8) n2-2)
 in zero?(-((from ints1-to-int take to-int n1-plus),
-           (from ints1-to-int take to-int n2-plus)))
+           (from ints2-to-int take to-int n2-plus)))
 "
      bool #t)
 
@@ -273,7 +273,7 @@ module to-int-maker
                        else - ((to-int (p x)), -1)
       in to-int]
 
-module ints-marker
+module ints-maker
  interface
   ((ints : [opaque t
             zero : t
@@ -321,15 +321,15 @@ module ints2
  interface [opaque t
             zero : t
             succ : (t -> t)
-            is-zero : (t -> boolean?)]
+            is-zero : (t -> bool)]
  body (ints-maker ints1)
 
 module ints2-to-int
  interface [to-int : (from ints2 take t -> int)]
- body (to-int-maker ints1)
+ body (to-int-maker ints2)
 
-let n1 = (from ints2 take succ from ints2 take zero)
-in let n2 = (from ints1 take succ from ints1 take zero)
+let n1 = (from ints1 take succ from ints1 take zero)
+in let n2 = (from ints2 take succ from ints2 take zero)
 in let n3 = (from ints1-to-int take to-int n1)
 in let n4 = (from ints2-to-int take to-int n2)
 in zero?(-(n3, n4))
@@ -339,7 +339,7 @@ in zero?(-(n3, n4))
 
     (exer-8.22
      "
-module equlify-make
+module equalify-maker
  interface
   ((ints : [opaque t
             zero : t
@@ -357,8 +357,8 @@ module equlify-make
                        is-zero : (t -> bool)])
   [equal = letrec bool equal(x : from ints take t) =
             proc (y : from ints take t)
-             if (from ints take zero x)
-             then (from ints take zero y)
+             if (from ints take is-zero x)
+             then (from ints take is-zero y)
              else ((equal (from ints take pred x)) (from ints take pred y))
             in equal]
 
@@ -377,10 +377,10 @@ module from-int-maker
                        pred : (t -> t)
                        is-zero : (t -> bool)])
    [from-int =
-             letrec t from-int (n : int) =
-              if zero?(t)
-              then zero
-              else (succ (from-int -(n, 1)))
+             letrec from ints take t from-int (n : int) =
+              if zero?(n)
+              then from ints take zero
+              else (from ints take succ (from-int -(n, 1)))
              in from-int]
 
 module ints1
@@ -398,17 +398,17 @@ module ints1
    is-zero = proc (x : t) zero?(x)]
 
 module int-to-ints1
- interface [to-int1 : (int -> from ints1 take t)]
+ interface [from-int : (int -> from ints1 take t)]
  body (from-int-maker ints1)
 
 module ints1-equal
  interface [equal : (from ints1 take t
                           -> (from ints1 take t
                               -> bool))]
- body (equlify-make ints1)
+ body (equalify-maker ints1)
 
-let n1 = (from int-to-ints1 take to-int1 2)
-in let n2 = (from int-to-ints1 take to-int1 3)
+let n1 = (from int-to-ints1 take from-int 2)
+in let n2 = (from int-to-ints1 take from-int 2)
 in ((from ints1-equal take equal n1) n2)
 "
      bool #t)
