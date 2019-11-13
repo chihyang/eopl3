@@ -186,17 +186,17 @@
                   (proc-iface m-name var-iface result-iface)))))
            (var-module-body
             (m-name)
-            (lookup-module-name-in-tenv m-name env))
+            (lookup-module-name-in-tenv env m-name))
            (app-module-body
             (rator rand)
-            (let ((rator-iface (lookup-module-name-in-tenv rator env)))
-              (let ((rand-iface (lookup-module-name-in-tenv rand env)))
+            (let ((rator-iface (lookup-module-name-in-tenv env rator)))
+              (let ((rand-iface (lookup-module-name-in-tenv env rand)))
                 (cases interface rator-iface
                        (proc-iface
                         (var var-iface result-iface)
                         (if (<:-iface rand-iface var-iface env)
                             ;; replace var with rand in result-iface and return
-                            (rename-in-face result-iface var rand)
+                            (rename-in-iface result-iface var rand)
                             (report-module-doesnt-satisfy-iface
                              rand var-iface rand-iface)))
                        (else
@@ -241,8 +241,86 @@
                     (<:-decls decls1 decls2 tenv))
                    (else #f)))
            (proc-iface
-            (m-name bound-iface returned-iface)
-            ))))
+            (param-name1 param-iface1 result-iface1)
+            (cases interface iface2
+                   (simple-iface
+                    (decls2)
+                    #f)
+                   (proc-iface
+                    (param-name2 param-iface2 result-iface2)
+                    (let ((new-name (fresh-module-name param-name1)))
+                      (let ((result-iface1
+                             (rename-in-iface
+                              result-iface1 param-name1 new-name))
+                            (result-iface2
+                             (rename-in-iface
+                              result-iface2 param-name2 new-name)))
+                        (and (<:-iface param-iface2 param-iface1 tenv)
+                             (<:-iface result-iface1 result-iface2
+                                       (extend-tenv-with-module
+                                        new-name
+                                        (expand-iface new-name param-iface1 tenv)
+                                        tenv)))))))))))
+
+;;; rename-in-iface : Interface x Sym x Sym -> Iface
+(define rename-in-iface
+  (lambda (iface old-name new-name)
+    (cases interface iface
+           (simple-iface
+            (decls)
+            (simple-iface (rename-in-decls decls old-name new-name)))
+           (proc-iface
+            (param-name1 param-iface1 result-iface1)
+            (if (eq? param-name1 old-name)
+                (proc-iface new-name param-iface1 result-iface1)
+                (proc-iface param-name1
+                            param-iface1
+                            (rename-in-iface result-iface1 old-name new-name)))))))
+
+;;; rename-in-decls : Listof(Decl) x Sym x Sym -> Listof(Decl)
+(define rename-in-decls
+  (lambda (decls old new)
+    (if (null? decls)
+        '()
+        (let ((decl (car decls))
+              (decls (cdr decls)))
+          (cases declaration decl
+                 (val-decl
+                  (name ty)
+                  (cons (val-decl name (rename-in-type ty old new))
+                        (rename-in-decls decls old new)))
+                 (opaque-type-decl
+                  (name)
+                  (if (eq? name old)
+                      (cons decl decls)
+                      (cons decl
+                            (rename-in-decls decls old new))))
+                 (transparent-type-decl
+                  (name ty)
+                  (let ((t (rename-in-type ty old new)))
+                    (if (eq? name old)
+                        (cons (transparent-type-decl name t)
+                              decls)
+                        (cons (transparent-type-decl name t)
+                              (rename-in-decls decls old new))))))))))
+
+;;; rename-in-type : Type x Sym x Sym -> Type
+(define rename-in-type
+  (lambda (ty old new)
+    (cases type ty
+           (int-type () ty)
+           (bool-type () ty)
+           (proc-type
+            (arg-type result-type)
+            (proc-type (rename-in-type arg-type old new)
+                       (rename-in-type result-type old new)))
+           ;; should this be replaced?
+           (named-type (name) ty)
+           (qualified-type
+            (m-name name)
+            (if (eq? old m-name)
+                (qualified-type new name)
+                (qualified-type old name))))))
 
 ;;; <:-iface : Listof(Decl) x Listof(Decl) x TypeEnv -> Bool
 (define <:-decls
