@@ -7,10 +7,13 @@
                   [tests-for-parse tests-for-parse-exer8.19-23]
                   [tests-for-run tests-for-run-exer8.19-23]
                   [tests-for-check tests-for-check-exer8.19-23]))
-
-(define tests-for-parse (append tests-for-parse-exer8.19-23))
-(define tests-for-run (append tests-for-run-exer8.19-23))
-(define tests-for-check (append tests-for-check-exer8.19-23))
+(require (only-in "chap08.s03.module-tests.scm"
+                  [tests-for-parse tests-for-parse-s03]
+                  [tests-for-run tests-for-run-s03]
+                  [tests-for-check tests-for-check-s03]))
+(define tests-for-parse (append tests-for-parse-exer8.19-23 tests-for-parse-s03))
+(define tests-for-run (append tests-for-run-exer8.19-23 tests-for-run-s03))
+(define tests-for-check (append tests-for-check-exer8.19-23 tests-for-check-s03))
 
 (define test-name car)
 (define test-program cadr)
@@ -41,7 +44,7 @@
             (set! passed (+ passed 1)))
           (begin
             (set! failed (+ failed 1))
-            (eopl:printf "test for ~a failed: expect ~a, actual ~a~%"
+            (eopl:printf "test for running ~a failed: expect ~a, actual ~a~%"
                          (test-name test) v2 v1)))))
  tests-for-run)
 
