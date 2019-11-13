@@ -169,13 +169,13 @@ module sum-prod-marker
                        succ : (t -> t)
                        pred : (t -> t)
                        is-zero : (t -> bool)])
-   [plus = letrec from ints take t plus(x : from ints take t) =
+   [plus = letrec (from ints take t -> from ints take t) plus(x : from ints take t) =
             proc (y : from ints take t)
              if (from ints take is-zero x)
              then y
              else (from ints take succ ((plus (from ints take pred x)) y))
             in plus
-    times = letrec from ints take t times(x : from ints take t) =
+    times = letrec (from ints take t -> from ints take t) times(x : from ints take t) =
              proc (y : from ints take t)
               if (from ints take is-zero x)
               then from ints take zero
@@ -218,8 +218,8 @@ module int-to-ints1
  body (from-int-maker ints1)
 
 module ints1-arithmetic
- interface [plus : (from ints1 take t -> from ints1 take t)
-            times : (from ints1 take t -> from ints1 take t)]
+ interface [plus : (from ints1 take t -> (from ints1 take t -> from ints1 take t))
+            times : (from ints1 take t -> (from ints1 take t -> from ints1 take t))]
  body (sum-prod-marker ints1)
 
 module ints2-to-int
@@ -231,8 +231,8 @@ module int-to-ints2
  body (from-int-maker ints2)
 
 module ints2-arithmetic
- interface [plus : (from ints2 take t -> from ints2 take t)
-            times : (from ints2 take t -> from ints2 take t)]
+ interface [plus : (from ints2 take t -> (from ints2 take t -> from ints2 take t))
+            times : (from ints2 take t -> (from ints2 take t -> from ints2 take t))]
  body (sum-prod-marker ints2)
 
 let n1-8 = (from int-to-ints1 take from-int 8)
@@ -321,6 +321,7 @@ module ints2
  interface [opaque t
             zero : t
             succ : (t -> t)
+            pred : (t -> t)
             is-zero : (t -> bool)]
  body (ints-maker ints1)
 
@@ -355,7 +356,7 @@ module equalify-maker
                        succ : (t -> t)
                        pred : (t -> t)
                        is-zero : (t -> bool)])
-  [equal = letrec bool equal(x : from ints take t) =
+  [equal = letrec (from ints take t -> bool) equal(x : from ints take t) =
             proc (y : from ints take t)
              if (from ints take is-zero x)
              then (from ints take is-zero y)
@@ -417,15 +418,17 @@ in ((from ints1-equal take equal n1) n2)
      "
 module table-of
  interface
-  ((m : [opaque t])
+  ((m : [opaque t
+         invalid-val : t])
    => [opaque table
        empty : table
        add-to-table : (int -> (from m take t -> (table -> table)))
        lookup-in-table : (int -> (table -> from m take t))])
  body
-  module-proc (m : [opaque t])
+  module-proc (m : [opaque t
+                    invalid-val : t])
   [type table = (int -> from m take t)
-   empty = proc (x : int) 0
+   empty = proc (x : int) from m take invalid-val
    add-to-table =
     proc (k : int)
      proc (v : from m take t)
@@ -439,12 +442,14 @@ module table-of
 
 module mybool
  interface [opaque t
+            invalid-val : t
             true : t
             false : t
             and : (t -> (t -> t))
             not : (t -> t)
             to-bool : (t -> bool)]
  body [type t = int
+       invalid-val = -1
        true = 0
        false = 13
        and = proc (x : t)
@@ -482,7 +487,7 @@ in let table1 = (((add-binding 3) true)
                    empty)))
 in ((lookup 4) table1)
 "
-     t 13)
+     (mybool t) 13)
     ))
 
 (define tests-for-run
