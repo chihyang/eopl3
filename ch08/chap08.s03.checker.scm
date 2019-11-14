@@ -183,6 +183,8 @@
             (let ((expand-var-iface (expand-iface m-name var-iface env)))
               (let ((new-env (extend-tenv-with-module m-name expand-var-iface env)))
                 (let ((result-iface (interface-of m-body new-env)))
+                  ;; it is worth noting that proc-iface does not have a similar
+                  ;; closure to procedure
                   (proc-iface m-name var-iface result-iface)))))
            (var-module-body
             (m-name)
@@ -272,9 +274,11 @@
            (proc-iface
             (param-name1 param-iface1 result-iface1)
             (if (eq? param-name1 old-name)
-                (proc-iface new-name param-iface1 result-iface1)
                 (proc-iface param-name1
-                            param-iface1
+                            (rename-in-iface param-iface1 old-name new-name)
+                            result-iface1)
+                (proc-iface param-name1
+                            (rename-in-iface param-iface1 old-name new-name)
                             (rename-in-iface result-iface1 old-name new-name)))))))
 
 ;;; rename-in-decls : Listof(Decl) x Sym x Sym -> Listof(Decl)
@@ -320,9 +324,9 @@
             (m-name name)
             (if (eq? old m-name)
                 (qualified-type new name)
-                (qualified-type old name))))))
+                (qualified-type m-name name))))))
 
-;;; <:-iface : Listof(Decl) x Listof(Decl) x TypeEnv -> Bool
+;;; <:-decls : Listof(Decl) x Listof(Decl) x TypeEnv -> Bool
 (define <:-decls
   (lambda (decls1 decls2 tenv)
     (cond [(null? decls2) #t]
