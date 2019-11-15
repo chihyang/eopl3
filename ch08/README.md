@@ -117,3 +117,17 @@ of adding a type to an environment. Some functions that call `expand-type` can
 be provided to replace `extend-tenv` and `extend-tenv-with-type`. Each call to
 `extend-tenv` and `extend-tenv-with-type` can be replaced with them. Thus the
 invariant can be maintained more robustly.
+
+# Exercise 8.24
+
+Application of modules is currently allowed only for identifiers. What goes
+wrong with the type rule for application if we try to check an application like
+`(m1 (m2 m3))`?
+
+Let's try to write down the inference for `(m1 (m2 m3))` using rules on page
+320:
+
+![type rule for exercise 8.24](./exer8.24.png)
+
+It's easy to see `(m1 (m2 m3))` has not result, because `(m2 m3)` is not an
+identifier. So I can only use a `?` in the final conclusion.
