@@ -120,9 +120,9 @@ invariant can be maintained more robustly.
 
 # Exercise 8.24
 
-Application of modules is currently allowed only for identifiers. What goes
-wrong with the type rule for application if we try to check an application like
-`(m1 (m2 m3))`?
+> Application of modules is currently allowed only for identifiers. What goes
+> wrong with the type rule for application if we try to check an application
+> like `(m1 (m2 m3))`?
 
 Let's try to write down the inference for `(m1 (m2 m3))` using rules on page
 320:
