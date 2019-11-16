@@ -129,5 +129,5 @@ Let's try to write down the inference for `(m1 (m2 m3))` using rules on page
 
 ![type rule for exercise 8.24](./exer8.24.png)
 
-It's easy to see `(m1 (m2 m3))` has not result, because `(m2 m3)` is not an
+It's easy to see `(m1 (m2 m3))` has no result, because `(m2 m3)` is not an
 identifier. So I can only use a `?` in the final conclusion.
