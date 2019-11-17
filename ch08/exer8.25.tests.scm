@@ -11,9 +11,14 @@
                   [tests-for-parse tests-for-parse-s03]
                   [tests-for-run tests-for-run-s03]
                   [tests-for-check tests-for-check-s03]))
-(define tests-for-parse (append tests-for-parse-exer8.19-23 tests-for-parse-s03))
-(define tests-for-run (append tests-for-run-exer8.19-23 tests-for-run-s03))
-(define tests-for-check (append tests-for-check-exer8.19-23 tests-for-check-s03))
+(require (only-in "exer8.25.module-tests.scm"
+                  [tests-for-parse tests-for-parse-exer8.25]
+                  [tests-for-run tests-for-run-exer8.25]
+                  [tests-for-check tests-for-check-exer8.25]))
+
+(define tests-for-parse (append tests-for-parse-exer8.19-23 tests-for-parse-s03 tests-for-parse-exer8.25))
+(define tests-for-run (append tests-for-run-exer8.19-23 tests-for-run-s03 tests-for-run-exer8.25))
+(define tests-for-check (append tests-for-check-exer8.19-23 tests-for-check-s03 tests-for-check-exer8.25))
 
 (define test-name car)
 (define test-program cadr)
