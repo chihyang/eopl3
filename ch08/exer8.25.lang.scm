@@ -8,7 +8,7 @@
 ;;;                a-module-definition (m-name expected-iface m-body)
 ;;; Iface      ::= [ {Decl}* ]
 ;;;                simple-iface (decls)
-;;; Iface      ::= ((Identifier : Iface {Identifier : Iface}*) => Iface)
+;;; Iface      ::= (({Identifier : Iface}*) => Iface)
 ;;;                proc-iface (m-name iface m-names ifaces iface)
 ;;; Decl       ::= Identifier : Type
 ;;;                val-decl (var-name ty)
@@ -18,12 +18,12 @@
 ;;;                transparent-type-decl (t-name ty)
 ;;; ModuleBody ::= [ {Defn}* ]
 ;;;                defns-module-body (defns)
-;;; ModuleBody ::= module-proc (Identifier: Iface ) ModuleBody
+;;; ModuleBody ::= module-proc ({Identifier : Iface}*) ModuleBody
 ;;;                proc-module-body (m-name iface defns)
 ;;; ModuleBody ::= Identifier
 ;;;                var-module-body (m-name)
-;;; ModuleBody ::= (Identifier Identifier Identifier*)
-;;;                app-module-body (rator rand rands)
+;;; ModuleBody ::= (Identifier {Identifier}*)
+;;;                app-module-body (rator rands)
 ;;; Defn       ::= Identifier = Expression
 ;;;                val-defn (var-name exp)
 ;;; Defn       ::= type Identifier = Type
@@ -64,7 +64,7 @@
     (module-defn ("module" identifier "interface" interface "body" module-body)
                  a-module-definition)
     (interface ("[" (arbno declaration) "]") simple-iface)
-    (interface ("(" "(" identifier ":" interface ")" "=>" interface ")") proc-iface)
+    (interface ("(" "(" (arbno identifier ":" interface) ")" "=>" interface ")") proc-iface)
     (declaration (identifier ":" type)
                  val-decl)
     (declaration ("opaque" identifier)
@@ -73,11 +73,11 @@
                  transparent-type-decl)
     (module-body ("[" (arbno definition) "]")
                  defns-module-body)
-    (module-body ("module-proc" "(" identifier ":" interface (arbno identifier ":" interface) ")" module-body)
+    (module-body ("module-proc" "(" (arbno identifier ":" interface) ")" module-body)
                  proc-module-body)
     (module-body (identifier)
                  var-module-body)
-    (module-body ("(" identifier identifier (arbno identifier) ")")
+    (module-body ("(" identifier (arbno identifier) ")")
                  app-module-body)
     (definition (identifier "=" expression) val-defn)
     (definition ("type" identifier "=" type) type-defn)
