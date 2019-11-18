@@ -2173,60 +2173,6 @@ from m2 take foo"
     ;; "
     ;;         (ints-1 t) 5)
 
-
-
-    ;; Here are some possible tests for named interfaces (Ex. 8.27)
-
-    ;;       (modules-named-interfaces-1 "
-    ;;         interface i1 = [u : int v: bool]
-    ;;         module m1
-    ;;          interface i1
-    ;;          body [u = 3 v = zero?(0)]
-    ;;         import m1
-    ;;         from m1 take u"
-    ;;         int)
-
-    ;;       (modules-named-interfaces-2 "
-    ;;         interface i1 = [u : int v: bool]
-    ;;         module m1
-    ;;          interface i1
-    ;;          body [u = 3 v = zero?(0)]
-    ;;         module m2
-    ;;          interface ((m3 : i1) => [u : int])
-    ;;          body
-    ;;           module-proc (m4 : i1) [u = from m4 take u]
-    ;;         module builder
-    ;;          interface [u:int]
-    ;;          body
-    ;;          import m1
-    ;;          import m2
-    ;;          (m2 m1)
-
-    ;;         import builder
-    ;;         from builder take u"
-    ;;         int)
-
-    ;;       (modules-named-interfaces-3 "
-    ;;         interface i1 = [u : int v: bool]
-    ;;         interface i2 = ((m3 : i1) => [u : int])
-    ;;         module m1
-    ;;          interface i1
-    ;;          body [u = 3 v = zero?(0)]
-    ;;         module m2
-    ;;          interface i2
-    ;;          body
-    ;;           module-proc (m4 : i1) [u = from m4 take u]
-    ;;         module builder
-    ;;          interface [u:int]
-    ;;          body
-    ;;          import m1
-    ;;          import m2
-    ;;          (m2 m1)
-
-    ;;         import builder
-    ;;         from builder take u"
-    ;;         int)
-
     )
   )
 
