@@ -1174,11 +1174,17 @@ module m
      ((m t) -> (m t)))
 
     ;; in exercise 8.27, this fails because the program body depends on ints-2,
-    ;; which depends on ints-1. This makes the program body implicitly depends
-    ;; on ints-1. But the checker does not resolve this implicit
-    ;; dependencies. The program just fails to pass the type checking. To solve
-    ;; this problem, one way is to allow implicit dependency. But this might
-    ;; require a whole traverse of 'dependency graph'.
+    ;; which depends on ints-1. This makes the program body implicitly depend on
+    ;; ints-1. But the checker does not resolve implicit dependencies. The
+    ;; program just fails to pass the type checking. To solve this problem, one
+    ;; possible way is to allow implicit dependency, just like '#include' in
+    ;; C/C++: you include one header, ending up with a bunch of unexpected
+    ;; dependencies.  But this might require a whole traverse of 'dependency
+    ;; graph'. Another way is to force the user write down all the dependencies
+    ;; explicitly. But this is even more annoying: I don't even want to use that
+    ;; type depending on another module, which in turn depends on another, which
+    ;; in turn depends on another... but I have to write an import for them all!
+    ;; Maybe this is the reason why C allows implicit dependency.
     (modules-check-shadowing-1
      "
       module ints-1
