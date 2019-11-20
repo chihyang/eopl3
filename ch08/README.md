@@ -161,8 +161,10 @@ identifier. So I can only use a `?` in the final conclusion.
 >    ...
 > ```
 
-In the example given from the official repository, `import` like [exercise
-7.10](#exercise-810) is used:
+In the commented out
+[example](https://github.com/mwand/eopl3/blob/2648675ca8e8ee804701a31f6198838d2c7a04f5/chapter8/full-system/test-suite.scm#L1555)
+given from official repository, `import` like [exercise 7.10](#exercise-810) is
+used:
 
 ``` racket
 interface i1 = [u : int v: bool]
@@ -173,9 +175,9 @@ import m1
 from m1 take u
 ```
 
-The checker uses `remove-non-dependency-from-tenv` from exercise 8.10 to remove
-modules not depended on from environment. However, this results in a problem in
-the following program:
+The checker uses `remove-non-dependency-from-tenv` from [exercise
+8.10](exer8.10.checker.scm) to remove modules not depended from
+environment. However, this results in a problem in the following program:
 
 ``` racket
 module ints-1
@@ -209,16 +211,17 @@ in (z? (s z))
 
 In the interface of `ints-2`, types from `ints-1` is used. In the body of the
 program, only variables from `ints-2` is used. From the perspective of the
-program body, only `ints-2` is used, so it should not be unnecessary for the
-program body to import `ints-1`. As a result, `ints-1` is removed from the its
-environment. On the other hand, the type of `ints-2` is also checked in this
-environment. Because it cannot find `ints-1` from the environment, type checking
-just fails. The key problem is the inconsistency between type dependency and
-value dependency. One possible way to solve this problem is to allow *implicit
-dependency*: all the modules depended by one module in the interface are
-automatically imported to the place where the latter is imported. This requires
-traverse through the module `dependency graph`. (I don't like this approach,
-maybe a better way?) Another simpler way is to ignore the imports in type
-checker (what I do now), but this will cause inconsistency between type checker
-and interpreter and make the program unsafe. Or, maybe, simply discard `import`
-from this exercise! ;)
+program body, only `ints-2` is used, so it should be unnecessary for the program
+body to import `ints-1`. As a result, `ints-1` is removed from its
+environment. On the other hand, the interface of `ints-2` is also checked in
+this environment. Because it cannot find `ints-1` from the environment, type
+checking fails.
+
+The key problem is the inconsistency between type dependency and value
+dependency. One possible way to solve it is to allow *implicit dependency*: all
+the modules depended by one module in the interface are automatically imported
+to where the latter is imported. This requires traverse through the module
+'dependency graph'. (I don't like this approach, maybe a better way?)  Another
+simpler way is to ignore the imports in type checker (what I do now), but this
+will also cause inconsistency between type checker and interpreter. Or, maybe,
+simply discard `import` from this exercise! ;)
