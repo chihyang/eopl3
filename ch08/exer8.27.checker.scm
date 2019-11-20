@@ -290,11 +290,11 @@
     (cases module-spec m-spec
            (simple-module-body
             (m-body)
-            (let ((new-env (remove-non-dependency-from-tenv '() env)))
+            (let ((new-env env))
               (interface-of m-body new-env)))
            (imports-module-body
             (m-imports m-body)
-            (let ((new-env (remove-non-dependency env m-imports)))
+            (let ((new-env env))
               (interface-of m-body new-env))))))
 
 ;;; interface-of : ModuleBody x TypeEnv -> Intreface
@@ -680,12 +680,12 @@
             (exp)
             (type-of-exp
              exp
-             (remove-non-dependency-from-tenv '() env)))
+             env))
            (imports-program-spec
             (imports exp)
             (type-of-exp
              exp
-             (remove-non-dependency env imports))))))
+             env)))))
 
 ;;; remove-non-dependency : TypeEnv x Listof(Sym) -> TypeEnv
 (define remove-non-dependency

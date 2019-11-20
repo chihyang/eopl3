@@ -131,3 +131,94 @@ Let's try to write down the inference for `(m1 (m2 m3))` using rules on page
 
 It's easy to see `(m1 (m2 m3))` has no result, because `(m2 m3)` is not an
 identifier. So I can only use a `?` in the final conclusion.
+
+# Exercise 8.27
+
+In PROC-MODULES,we wind up having to write interfaces like
+
+``` racket
+[opaque t
+ zero : t
+ succ : (t -> t)
+ pred : (t -> t)
+ is-zero : (t -> bool)]
+```
+
+over and over again. Add to the grammar for programs a facility for named interfaces,
+so we could write
+
+``` racket
+interface int-interface = [opaque t
+                           zero : t
+                           succ : (t -> t)
+                           pred : (t -> t)
+                           is-zero : (t -> bool)]
+ module make-to-int
+  interface
+   ((ints : int-interface)
+    => [to-int : from ints take t -> int])
+  body
+   ...
+```
+
+In the example given from the official repository, `import` like [exercise
+7.10](#exercise-810) is used:
+
+``` racket
+interface i1 = [u : int v: bool]
+module m1
+ interface i1
+ body [u = 3 v = zero?(0)]
+import m1
+from m1 take u
+```
+
+The checker uses `remove-non-dependency-from-tenv` from exercise 8.10 to remove
+modules not depended on from environment. However, this results in a problem in
+the following program:
+
+``` racket
+module ints-1
+ interface
+  [opaque t
+    zero : t
+    succ : (t -> t)
+    is-zero : (t -> bool)]
+ body
+  [type t = int
+   zero = 0
+   succ = proc(x : t) -(x,-1)
+   pred = proc(x : t) -(x,1)
+   is-zero = proc (x : t) zero?(x)]
+module ints-2
+ interface
+  [zero : from ints-1 take t
+   succ : (from ints-1 take t -> from ints-1 take t)
+   is-zero : (from ints-1 take t -> bool)]
+ body
+  import ints-1
+  [zero = from ints-1 take zero
+   succ = from ints-1 take succ
+   is-zero = from ints-1 take is-zero]
+import ints-2
+let s = from ints-2 take succ
+in let z? = from ints-2 take is-zero
+in let z = from ints-2 take zero
+in (z? (s z))
+```
+
+In the interface of `ints-2`, types from `ints-1` is used. In the body of the
+program, only variables from `ints-2` is used. From the perspective of the
+program body, only `ints-2` is used, so it should not be unnecessary for the
+program body to import `ints-1`. As a result, `ints-1` is removed from the its
+environment. On the other hand, the type of `ints-2` is also checked in this
+environment. Because it cannot find `ints-1` from the environment, type checking
+just fails. The key problem is the inconsistency between type dependency and
+value dependency. One possible way to solve this problem is to allow *implicit
+dependency*: all the modules depended by one module in the interface are
+automatically imported to the place where the latter is imported. This requires
+traverse through the module `dependency graph`. (I don't like this approach,
+maybe a better way?) Another simpler way is to ignore the imports in type
+checker (what I do now), but this will cause inconsistency between type checker
+and interpreter and make the program unsafe. Or, maybe, simply discard `import`
+from this exercise! ;)
