@@ -221,6 +221,6 @@ value (body) dependency. One possible way to solve it is to allow 'implicit
 dependency': all the modules depended by one module in the interface are
 automatically imported to where the latter is imported. This requires traverse
 through the module 'dependency graph'. (I don't like this approach, maybe a
-better way?)  Another simpler way is to ignore the imports in type checker (what
-I do now), but this will also cause inconsistency between type checker and
-interpreter. Or, maybe, simply discard `import` from this exercise? ;)
+better way?)  Another simpler way is to ignore the imports in type checker, but
+this will also cause inconsistency between type checker and interpreter. Or,
+maybe, simply discard `import` from this exercise? ;)
