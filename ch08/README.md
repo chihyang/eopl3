@@ -217,11 +217,11 @@ environment. On the other hand, the interface of `ints-2` is also checked in
 this environment. Because it cannot find `ints-1` from the environment, type
 checking fails.
 
-The key problem is the inconsistency between type dependency and value
-dependency. One possible way to solve it is to allow *implicit dependency*: all
-the modules depended by one module in the interface are automatically imported
-to where the latter is imported. This requires traverse through the module
-'dependency graph'. (I don't like this approach, maybe a better way?)  Another
-simpler way is to ignore the imports in type checker (what I do now), but this
-will also cause inconsistency between type checker and interpreter. Or, maybe,
-simply discard `import` from this exercise! ;)
+The key problem is the inconsistency between type (interface) dependency and
+value (body) dependency. One possible way to solve it is to allow 'implicit
+dependency': all the modules depended by one module in the interface are
+automatically imported to where the latter is imported. This requires traverse
+through the module 'dependency graph'. (I don't like this approach, maybe a
+better way?)  Another simpler way is to ignore the imports in type checker (what
+I do now), but this will also cause inconsistency between type checker and
+interpreter. Or, maybe, simply discard `import` from this exercise? ;)
