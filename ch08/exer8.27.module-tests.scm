@@ -1546,11 +1546,13 @@ module m
        module m1a
         interface ((m : [v : int]) => [u : int])
         body
+         import m1
          m1
 
        module m2a
          interface [v : int]
          body
+          import m2
           m2
 
         module m3
@@ -1935,6 +1937,7 @@ module m
        interface
         [foo : (from m1 take t -> int)]
        body
+        import m1
         [foo = proc (x : from m1 take t) x]
 
       import m2
