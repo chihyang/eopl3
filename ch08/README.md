@@ -209,13 +209,12 @@ in let z = from ints-2 take zero
 in (z? (s z))
 ```
 
-In the interface of `ints-2`, types from `ints-1` is used. In the body of the
-program, only variables from `ints-2` is used. From the perspective of the
-program body, only `ints-2` is used, so it should be unnecessary for the program
-body to import `ints-1`. As a result, `ints-1` is removed from its
-environment. On the other hand, the interface of `ints-2` is also checked in
-this environment. Because it cannot find `ints-1` from the environment, type
-checking fails.
+In the interface of `ints-2`, a type from `ints-1` is used. In the body of the
+program, only variables from `ints-2` are used. From the perspective of the
+program body, only `ints-2` is used, so it should be unnecessary for the body to
+import `ints-1`. `ints-1` is removed from its environment. On the other hand,
+the interface of `ints-2` is also checked in this environment. Because it cannot
+find `ints-1` from the environment, type checking fails.
 
 The key problem is the inconsistency between type (interface) dependency and
 value (body) dependency. One possible way to solve it is to allow 'implicit
