@@ -134,32 +134,32 @@ identifier. So I can only use a `?` in the final conclusion.
 
 # Exercise 8.27
 
-In PROC-MODULES,we wind up having to write interfaces like
-
-``` racket
-[opaque t
- zero : t
- succ : (t -> t)
- pred : (t -> t)
- is-zero : (t -> bool)]
-```
-
-over and over again. Add to the grammar for programs a facility for named interfaces,
-so we could write
-
-``` racket
-interface int-interface = [opaque t
-                           zero : t
-                           succ : (t -> t)
-                           pred : (t -> t)
-                           is-zero : (t -> bool)]
- module make-to-int
-  interface
-   ((ints : int-interface)
-    => [to-int : from ints take t -> int])
-  body
-   ...
-```
+> In PROC-MODULES,we wind up having to write interfaces like
+>
+> ``` racket
+> [opaque t
+>  zero : t
+>  succ : (t -> t)
+>  pred : (t -> t)
+>  is-zero : (t -> bool)]
+> ```
+>
+> over and over again. Add to the grammar for programs a facility for named
+> interfaces, so we could write
+>
+> ``` racket
+> interface int-interface = [opaque t
+>                            zero : t
+>                            succ : (t -> t)
+>                            pred : (t -> t)
+>                            is-zero : (t -> bool)]
+>  module make-to-int
+>   interface
+>    ((ints : int-interface)
+>     => [to-int : from ints take t -> int])
+>   body
+>    ...
+> ```
 
 In the example given from the official repository, `import` like [exercise
 7.10](#exercise-810) is used:
