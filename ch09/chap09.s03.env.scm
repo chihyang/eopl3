@@ -7,19 +7,15 @@
   (empty-env)
   (extend-env
    (var identifier?)
-   (val exp-val?)
+   (val reference?)
    (env environment?))
   (extend-env-rec
    (p-names (list-of identifier?))
    (b-vars (list-of (list-of identifier?)))
    (b-bodies (list-of expression?))
-   (saved-env environment?))
-  (extend-env-with-self-and-super
-   (self-obj identifier?)
-   (super-name identifier?)
    (saved-env environment?)))
 
-;;; extend-env* : Listof(Id) x Listof(ExpVal) -> Env
+;;; extend-env* : Listof(Id) x Listof(Ref) -> Env
 (define extend-env*
   (lambda (vars vals env)
     (check-duplicate-identifier! vars)
@@ -79,12 +75,7 @@
                   (let ((b-vars (list-ref b-vars idx))
                         (b-body (list-ref b-bodies idx)))
                     (proc-val (procedure b-vars b-body env)))
-                  (apply-env saved-env search-var))))
-           (extend-env-with-module
-            (m-name m-val saved-env)
-            (if (equal? search-var m-name)
-                m-val
-                (apply-env saved-env search-var))))))
+                  (apply-env saved-env search-var)))))))
 
 ;;; lookup-proc-name : Listof(Sym) x Sym -> Int | #f
 (define lookup-proc-name
@@ -94,26 +85,6 @@
       (cond [(null? p-names) #f]
             [(equal? search-var (car p-names)) idx]
             [else (loop (cdr p-names) (+ idx 1))]))))
-
-;;; lookup-qualified-var-in-env : Sym x Sym x Env -> ExpVal
-(define lookup-qualified-var-in-env
-  (lambda (m-name var-name env)
-    (let ((m-val (lookup-module-name-in-env m-name env)))
-      (cases typed-module m-val
-             (simple-module
-              (bindings)
-              (apply-env bindings var-name))
-             (proc-module
-              (b-var body saved-env)
-              (report-lookup-failed m-name var-name))))))
-
-;;; lookup-module-name-in-env : Sym x Env -> ExpVal
-(define lookup-module-name-in-env
-  (lambda (m-name env)
-    (let ((val (apply-env env m-name)))
-      (if (typed-module? val)
-          val
-          (report-no-module-found m-name)))))
 
 ;; init-env : () → Env
 ;; usage: (init-env) = []
@@ -135,40 +106,17 @@
                 "can't retrieve variable from ~s take ~s from proc module"
                 m-name var-name)))
 
-;;; ---------------------- Object ----------------------
-(define-datatype object object?
-  (an-object
-   (class-name identifier?)
-   (fields (list-of reference?))))
-
-;;; new-object : ClassName (= Sym) -> Obj
-(define new-object
-  (lambda (class-name)
-    (map (lambda (field-name)
-           (newref (list 'uninitialized-field field-name)))
-         (class->field-names (lookup-class class-name)))))
-
-(define-datatype method method?
-  (a-method
-   (vars (list-of identifier?))
-   (body expression?)
-   (super-name identifier?)
-   (field-names (list-of identifier?))))
-
-;;; apply-method : Method x Obj x Listof(ExpVal) -> ExpVal
-(define apply-method
-  (lambda (m self args)
-    (cases method m
-           (a-method
-            (vars body super-name field-names)
-            (value-of
-             body
-             (extend-env* vars (map newref args)
-                          (extend-env-with-self-and-super
-                           self super-name
-                           (extend-env field-names
-                                       (object->fields self)
-                                       (empty-env)))))))))
+(define report-invalid-env
+  (lambda (env)
+    (eopl:error 'apply-env "Bad environment: ~s" env)))
+(define report-argument-mismatch
+  (lambda (symp vars vals)
+    (eopl:error 'extend-env*
+                "Argument number is ~s than parameter number: ~a, ~a"
+                symp vars vals)))
+(define report-duplicate-id
+  (lambda (sym)
+    (eopl:error 'extend-env* "Duplicate identifier ~s" sym)))
 
 ;;; ---------------------- Expval ----------------------
 (define-datatype proc proc?
@@ -176,6 +124,27 @@
    (var identifier?)
    (body expression?)
    (saved-env environment?)))
+
+(define-datatype object object?
+  (an-object
+   (class-name identifier?)
+   (fields (list-of reference?))))
+
+;;; object->class-name : Object -> Sym
+(define object->class-name
+  (lambda (obj)
+    (cases object obj
+           (an-object
+            (c-name fields)
+            c-name))))
+
+;;; object->fields : Object -> Listof(Ref)
+(define object->fields
+  (lambda (obj)
+    (cases object obj
+           (an-object
+            (c-name fields)
+            fields))))
 
 (define-datatype exp-val exp-val?
   (num-val
@@ -216,7 +185,10 @@
               ,(expval->schemeval val2)))
            (obj-val
             (val)
-            ))))
+            (cases object val
+                   (an-object
+                    (c-name fields)
+                    (list c-name (map deref fields))))))))
 
 (define expval->num
   (lambda (value)
@@ -242,12 +214,12 @@
             proc1)
            (else
             (report-invalid-exp-value 'proc)))))
-(define expval->ref
+(define expval->obj
   (lambda (value)
     (cases exp-val value
-           (ref-val (ref) ref)
+           (obj-val (obj) obj)
            (else
-            (report-invalid-exp-value 'ref)))))
+            (report-invalid-exp-value 'object)))))
 (define expval->pair
   (lambda (value)
     (cases exp-val value
@@ -259,14 +231,14 @@
                     (bool-val (bool) bool)
                     (proc-val (proc1) proc1)
                     (null-val () '())
-                    (ref-val (ref) '(refto ,ref))
+                    (obj-val (val3) val3)
                     (pair-val (val3 val4) (expval->pair val1)))
              (cases exp-val val2
                     (num-val (num) num)
                     (bool-val (bool) bool)
                     (proc-val (proc1) proc1)
                     (null-val () '())
-                    (ref-val (ref) '(refto ,ref))
+                    (obj-val (val3) val3)
                     (pair-val (val3 val4) (expval->pair val2)))))
            (else
             (report-invalid-exp-value 'pair)))))

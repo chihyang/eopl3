@@ -2,6 +2,7 @@
 (require "chap09.s03.lang.scm")
 (require "chap09.s03.store.scm")
 (require "chap09.s03.env.scm")
+(require "chap09.s03.class.scm")
 (provide value-of-program value-of run checked-run)
 
 ;;; ---------------------- Evaluate expression ----------------------
@@ -11,6 +12,21 @@
            (procedure
             (vars body saved-env)
             (value-of body (extend-env* vars (map newref vals) saved-env))))))
+
+;;; apply-method : Method x Obj x Listof(ExpVal) -> ExpVal
+(define apply-method
+  (lambda (m self args)
+    (cases method m
+           (a-method
+            (vars body super-name field-names)
+            (value-of
+             body
+             (extend-env* vars (map newref args)
+                          (extend-env-with-self-and-super
+                           self super-name
+                           (extend-env* field-names
+                                        (object->fields self)
+                                        (empty-env)))))))))
 
 (define value-of
   (lambda (exp env)
@@ -47,7 +63,7 @@
                       rest)
                      (else
                       (report-invalid-exp-value 'list)))))
-           (null-exp
+           (null?-exp
             (exp1)
             (let ((val1 (value-of exp1 env)))
               (cases exp-val val1
@@ -83,10 +99,10 @@
             (let ((vals (map (lambda (e) (value-of e env)) exps)))
               (value-of body (extend-env* vars (map newref vals) env))))
            (letrec-exp
-            (p-result-types p-names p-vars p-arg-types p-bodies letrec-body)
+            (p-names p-vars p-bodies letrec-body)
             (value-of letrec-body (extend-env-rec p-names p-vars p-bodies env)))
            (proc-exp
-            (vars var-types body)
+            (vars body)
             (proc-val (procedure vars body env)))
            (call-exp
             (rator rands)
@@ -113,11 +129,12 @@
               (apply-method
                (find-method class-name 'initialize)
                obj
-               args)))
+               args)
+              (obj-val obj)))
            (method-call-exp
             (obj-exp method-name rands)
             (let ((args (value-of-exps rands env))
-                  (obj (value-of obj-exp env)))
+                  (obj (expval->obj (value-of obj-exp env))))
               (apply-method
                (find-method (object->class-name obj) method-name)
                obj
@@ -125,14 +142,18 @@
            (super-call-exp
             (method-name rands)
             (let ((args (value-of-exps rands env))
-                  (obj (apply-env env '%super)))
+                  (obj (expval->obj (deref (apply-env env '%super)))))
               (apply-method
                (find-method (object->class-name obj) method-name)
                obj
                args)))
            (self-exp
             ()
-            (apply-env env '%self)))))
+            (deref (apply-env env '%self))))))
+
+(define value-of-exps
+  (lambda (exps env)
+    (map (lambda (exp) (value-of exp env)) exps)))
 
 ;; value-of-program : Program -> SchemeVal
 (define value-of-program
