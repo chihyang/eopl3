@@ -74,7 +74,7 @@
               (if idx
                   (let ((b-vars (list-ref b-vars idx))
                         (b-body (list-ref b-bodies idx)))
-                    (proc-val (procedure b-vars b-body env)))
+                    (newref (proc-val (procedure b-vars b-body env))))
                   (apply-env saved-env search-var)))))))
 
 ;;; lookup-proc-name : Listof(Sym) x Sym -> Int | #f
@@ -121,7 +121,7 @@
 ;;; ---------------------- Expval ----------------------
 (define-datatype proc proc?
   (procedure
-   (var identifier?)
+   (var (list-of identifier?))
    (body expression?)
    (saved-env environment?)))
 

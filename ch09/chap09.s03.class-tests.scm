@@ -1,6 +1,6 @@
 #lang eopl
 
-(provide tests-for-run tests-for-check tests-for-parse)
+(provide tests-for-run tests-for-parse)
 
 (define the-test-suite
   '(
@@ -15,9 +15,9 @@
     (nested-arith-right "-(55, -(22,11))" 44)
 
     ;; simple variables
-    (test-var-1 "x" 10)
-    (test-var-2 "-(x,1)" 9)
-    (test-var-3 "-(1,x)" -9)
+    (test-var-1 "x" error)
+    (test-var-2 "-(x,1)" error)
+    (test-var-3 "-(1,x)" error)
 
     ;; simple unbound variables
     (test-unbound-var-1 "foo" error)
@@ -792,29 +792,26 @@ in send o3 m1(7,8)
   (let loop ((lst the-test-suite))
     (cond
      ((null? lst) '())
-     ((>= (length (car lst)) 4)
+     ((>= (length (car lst)) 3)
       ;; (printf "creating item: ~s~%" (caar lst))
       (cons
        (list
         (list-ref (car lst) 0)
         (list-ref (car lst) 1)
-        (list-ref (car lst) 3))
+        (list-ref (car lst) 2))
        (loop (cdr lst))))
      (else (loop (cdr lst))))))
-
-;; ok to have extra members in a test-item.
-(define tests-for-check the-test-suite)
 
 (define tests-for-parse
   (let loop ((lst the-test-suite))
     (cond
      ((null? lst) '())
-     ((> (length (car lst)) 4)
+     ((> (length (car lst)) 3)
       (cons
        (list
         (list-ref (car lst) 0)
         (list-ref (car lst) 1)
-        (list-ref (car lst) 4))
+        (list-ref (car lst) 3))
        (loop (cdr lst))))
      (else
       (cons
