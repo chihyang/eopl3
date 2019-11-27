@@ -126,6 +126,7 @@
             (class-name rands)
             (let ((args (value-of-exps rands env))
                   (obj (new-object class-name)))
+              ;; (eopl:printf "apply method ~s ~s~%" class-name 'initialize)
               (apply-method
                (find-method class-name 'initialize)
                obj
@@ -135,6 +136,7 @@
             (obj-exp method-name rands)
             (let ((args (value-of-exps rands env))
                   (obj (expval->obj (value-of obj-exp env))))
+              ;; (eopl:printf "apply method ~s ~s~%" (object->class-name obj) method-name)
               (apply-method
                (find-method (object->class-name obj) method-name)
                obj
@@ -142,9 +144,10 @@
            (super-call-exp
             (method-name rands)
             (let ((args (value-of-exps rands env))
-                  (obj (expval->obj (deref (apply-env env '%super)))))
+                  (obj (expval->obj (deref (apply-env env '%self)))))
+              ;; (eopl:printf "apply method ~s ~s~%" (object->class-name obj) method-name)
               (apply-method
-               (find-method (object->class-name obj) method-name)
+               (find-method (object->class-name (expval->obj (deref (apply-env env '%super)))) method-name)
                obj
                args)))
            (self-exp

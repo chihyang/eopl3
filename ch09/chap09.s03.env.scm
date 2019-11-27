@@ -19,7 +19,8 @@
 (define extend-env*
   (lambda (vars vals env)
     (check-duplicate-identifier! vars)
-    (check-var-val-number! vars vals)
+    ;; note this change, why is it necessary to exclude this check?
+    ;; (check-var-val-number! vars vals)
     (let loop ((vars vars)
                (vals vals)
                (env env))
