@@ -23,7 +23,7 @@
              body
              (extend-env* vars (map newref args)
                           (extend-env-with-self-and-super
-                           self super-name
+                           (newref (obj-val self)) super-name
                            (extend-env* field-names
                                         (object->fields self)
                                         (empty-env)))))))))
@@ -147,7 +147,7 @@
                   (obj (expval->obj (deref (apply-env env '%self)))))
               ;; (eopl:printf "apply method ~s ~s~%" (object->class-name obj) method-name)
               (apply-method
-               (find-method (object->class-name (expval->obj (deref (apply-env env '%super)))) method-name)
+               (find-method (apply-env env '%super) method-name)
                obj
                args)))
            (self-exp

@@ -13,6 +13,10 @@
    (p-names (list-of identifier?))
    (b-vars (list-of (list-of identifier?)))
    (b-bodies (list-of expression?))
+   (saved-env environment?))
+  (extend-env-with-self-and-super
+   (self-obj reference?)
+   (super-name identifier?)
    (saved-env environment?)))
 
 ;;; extend-env* : Listof(Id) x Listof(Ref) -> Env
@@ -76,7 +80,15 @@
                   (let ((b-vars (list-ref b-vars idx))
                         (b-body (list-ref b-bodies idx)))
                     (newref (proc-val (procedure b-vars b-body env))))
-                  (apply-env saved-env search-var)))))))
+                  (apply-env saved-env search-var))))
+           (extend-env-with-self-and-super
+            (self-obj super-name saved-env)
+            (cond [(eqv? search-var '%self)
+                   self-obj]
+                  [(eqv? search-var '%super)
+                   super-name]
+                  [else
+                   (apply-env saved-env search-var)])))))
 
 ;;; lookup-proc-name : Listof(Sym) x Sym -> Int | #f
 (define lookup-proc-name

@@ -13,15 +13,6 @@
             (newref (list 'uninitialized-field field-name)))
           (class->field-names (lookup-class class-name))))))
 
-;;; ---------------------- Self and Super Environment ----------------------
-;;; extend-env-with-self-and-super : Object x Sym x Env -> Env
-(define extend-env-with-self-and-super
-  (lambda (self-obj super-name env)
-    (extend-env
-     '%self (newref (obj-val self-obj))
-     (extend-env
-      '%super (newref (obj-val (new-object super-name))) env))))
-
 ;;; ---------------------- Method ----------------------
 (define-datatype method method?
   (a-method
