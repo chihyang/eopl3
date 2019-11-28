@@ -24,6 +24,14 @@
              (extend-env* vars (map newref args)
                           (extend-env-with-self-and-super
                            (newref (obj-val self)) super-name
+                           ;; Why doesn't this cause problem even if
+                           ;;
+                           ;; (< (length field-names) (length (object->fields self))
+                           ;;
+                           ;; Because fields corresponding to field-names are
+                           ;; always a subset of (object->fields self), IN
+                           ;; ORDER. This is why the fields in a class is
+                           ;; arranged in the order specified on page 341
                            (extend-env* field-names
                                         (object->fields self)
                                         (empty-env)))))))))

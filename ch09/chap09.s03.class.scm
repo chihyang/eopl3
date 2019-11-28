@@ -10,7 +10,10 @@
     (an-object
      class-name
      (map (lambda (field-name)
-            (newref (list 'uninitialized-field field-name)))
+            ;; in fact, this is surplus, just the code below is okay:
+            ;; (newref (list 'uninitialized-field field-name))
+            (newref 'uninitialized-field)
+            )
           (class->field-names (lookup-class class-name))))))
 
 ;;; ---------------------- Method ----------------------
