@@ -3,10 +3,10 @@
 (require "chap09.s03.interp.scm")
 (require rackunit)
 (require (only-in "exer9.01.scm"
-                  [tests-for-parse tests-for-parse-s03]
-                  [tests-for-run tests-for-run-s03]))
-(define tests-for-parse (append tests-for-parse-s03))
-(define tests-for-run (append tests-for-run-s03))
+                  [tests-for-parse tests-for-parse-ex01]
+                  [tests-for-run tests-for-run-ex01]))
+(define tests-for-parse (append tests-for-parse-ex01))
+(define tests-for-run (append tests-for-run-ex01))
 
 (define test-name car)
 (define test-program cadr)

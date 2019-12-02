@@ -6,13 +6,22 @@
   '(
     (queue
      "
+class counter extends object
+  field a_counter
+  method initialize() set a_counter = 0
+  method inc() set a_counter = -(a_counter, -1)
+  method get() a_counter
 class queue extends object
   field head
   field tail
-  method initialize ()
+  field my_count
+  field total_count
+  method initialize (cnt_ref)
     begin
       set head = emptylist;
-      set tail = emptylist
+      set tail = emptylist;
+      set my_count = 0;
+      set total_count = cnt_ref
     end
   method empty? ()
     if null? (head)
@@ -22,33 +31,47 @@ class queue extends object
       else zero?(1)
     else zero?(1)
   method enqueue (elem)
-    set tail = cons (elem, tail)
+    begin
+      send total_count inc();
+      set my_count = -(my_count, -1);
+      set tail = cons (elem, tail)
+    end
   method dequeue ()
-    if null? (head)
-    then
-      letrec reverse(lst, rst) =
-        if null?(lst)
-        then rst
-        else (reverse cdr(lst) cons(car(lst), rst))
-      in begin
-           set head = (reverse tail head);
-           set tail = emptylist;
-           car(head)
-         end
-    else
-      let fst = car(head)
-      in begin
-           set head = cdr(head);
-           fst
-         end
-let x = new queue() y = 0
+    begin
+      send total_count inc();
+      set my_count = -(my_count, -1);
+      if null? (head)
+      then
+        letrec reverse(lst, rst) =
+          if null?(lst)
+          then rst
+          else (reverse cdr(lst) cons(car(lst), rst))
+        in begin
+             set head = (reverse tail head);
+             set tail = emptylist;
+             car(head)
+           end
+      else
+        let fst = car(head)
+        in begin
+             set head = cdr(head);
+             fst
+           end
+    end
+  method get_my_count () my_count
+let global_cnt = new counter()
+in let x = new queue(global_cnt)
+       z = new queue(global_cnt)
+       y = 0
 in begin
      send x enqueue(3);
      set y = send x dequeue();
-     y
+     send z enqueue(5);
+     send z dequeue();
+     -(send global_cnt get(), send x get_my_count())
    end"
 
-     3
+     2
      )
     )
   )
