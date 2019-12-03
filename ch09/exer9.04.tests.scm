@@ -2,9 +2,7 @@
 (require "chap09.s03.lang.scm")
 (require "exer9.04.interp.scm")
 (require rackunit)
-(require (only-in "exer9.04.class-tests.scm" tests-for-parse tests-for-run))
-(define tests-for-parse tests-for-parse)
-(define tests-for-run tests-for-run)
+(require (only-in "chap09.s03.class-tests.scm" tests-for-parse tests-for-run))
 
 (define test-name car)
 (define test-program cadr)
