@@ -5,6 +5,19 @@
 (require "chap09.s03.class.scm")
 (provide value-of-program value-of run checked-run)
 
+;;; ---------------------- Object ----------------------
+;;; new-object : ClassName (= Sym) -> Obj
+(define new-object
+  (lambda (class-name)
+    (an-object
+     class-name
+     (map (lambda (field-name)
+            ;; in fact, this is surplus, just the code below is okay:
+            ;; (newref (list 'uninitialized-field field-name))
+            (newref 'uninitialized-field)
+            )
+          (class->field-names (lookup-class class-name))))))
+
 ;;; ---------------------- Evaluate expression ----------------------
 (define apply-procedure
   (lambda (proc1 vals)

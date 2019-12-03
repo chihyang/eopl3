@@ -1,21 +1,7 @@
 #lang eopl
 (require "chap09.s03.lang.scm")
 (require "chap09.s03.store.scm")
-(require "chap09.s03.env.scm")
 (provide (all-defined-out))
-;;; ---------------------- Object ----------------------
-;;; new-object : ClassName (= Sym) -> Obj
-(define new-object
-  (lambda (class-name)
-    (an-object
-     class-name
-     (map (lambda (field-name)
-            ;; in fact, this is surplus, just the code below is okay:
-            ;; (newref (list 'uninitialized-field field-name))
-            (newref 'uninitialized-field)
-            )
-          (class->field-names (lookup-class class-name))))))
-
 ;;; ---------------------- Method ----------------------
 (define-datatype method method?
   (a-method
