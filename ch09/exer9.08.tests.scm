@@ -18,7 +18,7 @@
  (lambda (test)
    (let ((v1 (test-scan&parse (test-program test)))
          (v2 (test-answer test)))
-     (if  (equal? v1 v2)
+     (if (equal? v1 v2)
           (begin
             (set! passed (+ passed 1)))
           (begin

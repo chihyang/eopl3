@@ -611,11 +611,11 @@ let p = new point(3, 4)
     cp = new colorpoint(10, 20, 30)
 in begin
      send p move(3, 4);
-     send cp set_color(87);
+     fieldset cp color = 87;
      send cp move(10, 20);
-     list(send p get_location(),    % returns (6 8)
-          send cp get_location(),   % returns (20 40)
-          send cp get_color())      % returns 87
+     list(send p get_location(),                % returns (6 8)
+          list(fieldref cp x, fieldref cp y),   % returns (20 40)
+          fieldref cp color)                    % returns 87
    end"
      ((6 8) (20 40) 87)
 
