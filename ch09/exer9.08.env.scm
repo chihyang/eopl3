@@ -217,7 +217,7 @@
             (cases object val
                    (an-object
                     (c-name fields)
-                    (list c-name (map (lambda (f) (expval->schemeval (deref f))) fields))))))))
+                    (list c-name (map (lambda (f) (expval->schemeval (deref (cadr f)))) fields))))))))
 
 (define expval->num
   (lambda (value)
