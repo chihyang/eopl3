@@ -743,6 +743,156 @@ let o3 = new c3()
 in send o3 m3()
 "
      12)
+
+    (named-send-1
+     "
+class c1 extends object
+  method initialize()1
+  method m1()1
+
+class c2 extends c1
+  method m1()super m1()
+  method m2()2
+
+class c3 extends c2
+  method m1()3
+  method m2()super m2()
+  method m3()super m1()
+
+let o = new c3 ()
+in list( named-send c2 o m1(),
+         send o m2(),
+         send o m3()
+        )
+"
+     (1 2 1))
+
+    (named-send-2
+     "
+class c1 extends object
+  method initialize()1
+  method m1()1
+
+class c2 extends c1
+  method m1()super m1()
+  method m2()2
+
+class c3 extends c2
+  method m1()3
+  method m2()super m2()
+  method m3()super m1()
+
+let o = new c3 ()
+in list( named-send c2 o m1(),
+         named-send c1 o m2(),
+         send o m3()
+        )
+"
+     error)
+
+    (named-send-2
+     "
+class c1 extends object
+  method initialize()1
+  method m1()1
+
+class c2 extends c1
+  method m1()super m1()
+  method m2()2
+
+class c3 extends c2
+  method m1()3
+  method m2()super m2()
+  method m3()super m1()
+
+let o = new c3 ()
+in list( named-send c2 o m1(),
+         named-send c1 o m2(),
+         send o m3()
+        )
+"
+     error)
+
+    (named-fieldref-1
+     "
+class c1 extends object
+  field x
+  field y
+  method initialize(v) begin set x = v; set y = 0 end
+  method m1() x
+
+class c2 extends c1
+  field x
+  method initialize(v1,v2) begin set x = v2;
+                                    super initialize(v1) end
+  method m2()list(x,y)
+
+class c3 extends c2
+  field x
+  method initialize(v1,v2,v3) begin set x = v3;
+                                       super initialize(v1,v2)
+                                 end
+  method m3()x
+
+let o = new c3(1,2,3)
+in list(named-fieldref c1 o x, named-fieldref c2 o x)
+"
+     (1 2))
+
+    (named-fieldref-2
+     "
+class c1 extends object
+  field x
+  field y
+  method initialize(v) begin set x = v; set y = 0 end
+  method m1() x
+
+class c2 extends c1
+  field x
+  method initialize(v1,v2) begin set x = v2;
+                                    super initialize(v1) end
+  method m2()list(x,y)
+
+class c3 extends c2
+  field x
+  method initialize(v1,v2,v3) begin set x = v3;
+                                       super initialize(v1,v2)
+                                 end
+  method m3()x
+
+let o = new c3(1,2,3)
+in named-fieldref c1 o y
+"
+     0)
+
+    (named-fieldset-1
+     "
+class c1 extends object
+  field x
+  field y
+  method initialize(v) begin set x = v; set y = 0 end
+  method m1() x
+
+class c2 extends c1
+  field x
+  method initialize(v1,v2) begin set x = v2;
+                                    super initialize(v1) end
+  method m2()list(x,y)
+
+class c3 extends c2
+  field x
+  method initialize(v1,v2,v3) begin set x = v3;
+                                       super initialize(v1,v2)
+                                 end
+  method m3()x
+
+let o = new c3(1,2,3)
+in begin
+     named-fieldset c1 o y = 8;
+     named-fieldref c1 o y
+   end
+"
+     8)
     )
   )
 

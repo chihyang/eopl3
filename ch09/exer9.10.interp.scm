@@ -201,7 +201,7 @@
                   (obj (expval->obj (value-of obj-exp env))))
               (if (is-subclass (object->class-name obj) class-name)
                   (apply-method
-                   (find-method (class->method-env class-name) method-name)
+                   (find-method class-name method-name)
                    obj
                    args)
                   (report-obj-not-instance-of-class obj class-name))))
