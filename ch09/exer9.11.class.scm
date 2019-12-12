@@ -7,15 +7,23 @@
   (a-method
    (vars (list-of identifier?))
    (body expression?)
+   (host-name identifier?)
    (super-name identifier?)
    (field-names (list-of identifier?))
    (prop property?)))
+
+(define method->host-name
+  (lambda (m)
+    (cases method m
+           (a-method
+            (vars body h-name s-name f-names prop)
+            h-name))))
 
 (define method->prop
   (lambda (m)
     (cases method m
            (a-method
-            (vars body s-name f-names prop)
+            (vars body h-name s-name f-names prop)
             prop))))
 
 (define public?
@@ -123,7 +131,7 @@
                         (merge-method-envs
                          (class->method-env (lookup-class s-name))
                          (method-decls->method-env
-                          m-decls s-name f-names)))))))))
+                          m-decls c-name s-name f-names)))))))))
 
 ;;; append-field-names : Listof(FieldName) x Listof(FieldName) -> Listof(FieldName)
 (define append-field-names
@@ -173,32 +181,20 @@
   (lambda (c-name m-name)
     (eopl:error 'find-method "Unknown method ~s in class ~s" m-name c-name)))
 
-;;; method-decls->method-env : Listof(MethodDecl) x ClassName x
+;;; method-decls->method-env : Listof(MethodDecl) x ClassName x ClassName
 ;;; Listof(FieldName) -> MethodEnv
 (define method-decls->method-env
-  (lambda (m-decls super-name field-names)
+  (lambda (m-decls host-name super-name field-names)
     (map
      (lambda (m-decl)
        (cases method-decl m-decl
               (a-method-decl
                (prop m-name vars body)
                (list m-name
-                     (a-method vars body super-name field-names prop)))))
+                     (a-method vars body host-name super-name field-names prop)))))
      m-decls)))
 
 ;;; merge-method-envs : MethodEnv x MethodEnv -> MethodEnv
 (define merge-method-envs
   (lambda (super-m-env self-m-env)
-    (append self-m-env
-            (get-accessible-method super-m-env))))
-
-(define get-accessible-method
-  (lambda (super-m-env)
-    (if (null? super-m-env)
-        super-m-env
-        (let ((method-proc (method->prop (cadr (car super-m-env)))))
-          (if (or (public? method-proc)
-                  (protected? method-proc))
-              (cons (car super-m-env)
-                    (get-accessible-method (cdr super-m-env)))
-              (get-accessible-method (cdr super-m-env)))))))
+    (append self-m-env super-m-env)))

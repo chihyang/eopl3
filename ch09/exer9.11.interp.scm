@@ -29,7 +29,7 @@
   (lambda (m self args)
     (cases method m
            (a-method
-            (vars body super-name field-names prop)
+            (vars body host-name super-name field-names prop)
             (value-of
              body
              (extend-env* vars (map newref args)
@@ -136,34 +136,64 @@
            (new-object-exp
             (class-name rands)
             (let ((args (value-of-exps rands env))
-                  (obj (new-object class-name)))
-              ;; (eopl:printf "apply method ~s ~s~%" class-name 'initialize)
-              (apply-method
-               (find-method class-name 'initialize)
-               obj
-               args)
-              (obj-val obj)))
+                  (obj (new-object class-name))
+                  (method (find-method class-name 'initialize))
+                  (current-class (current-class-name env)))
+              (if (method-accessible? method current-class)
+                  (begin
+                    (apply-method method obj args)
+                    (obj-val obj))
+                  (report-method-not-accessible class-name 'initialize))))
            (method-call-exp
             (obj-exp method-name rands)
             (let ((args (value-of-exps rands env))
                   (obj (expval->obj (value-of obj-exp env))))
-              ;; (eopl:printf "apply method ~s ~s~%" (object->class-name obj) method-name)
-              (apply-method
-               (find-method (object->class-name obj) method-name)
-               obj
-               args)))
+              (let ((method (find-method (object->class-name obj) method-name))
+                    (current-class (current-class-name env)))
+                (if (method-accessible? method current-class)
+                    (apply-method method obj args)
+                    (report-method-not-accessible (object->class-name obj) method-name)))))
            (super-call-exp
             (method-name rands)
             (let ((args (value-of-exps rands env))
                   (obj (expval->obj (deref (apply-env env '%self)))))
-              ;; (eopl:printf "apply method ~s ~s~%" (object->class-name obj) method-name)
-              (apply-method
-               (find-method (apply-env env '%super) method-name)
-               obj
-               args)))
+              (let ((method (find-method (apply-env env '%super) method-name))
+                    (current-class (current-class-name env)))
+                (if (method-accessible? method current-class)
+                    (apply-method method obj args)
+                    (report-method-not-accessible (object->class-name obj) method-name)))))
            (self-exp
             ()
             (deref (apply-env env '%self))))))
+
+;;; current-class-name : Env -> Symbol | Bool
+(define current-class-name
+  (lambda (env)
+    (cases environment env
+           (empty-env () #f)
+           (extend-env
+            (saved-var saved-val saved-env)
+            (current-class-name saved-env))
+           (extend-env-rec
+            (p-names b-vars b-bodies saved-env)
+            (current-class-name saved-env))
+           (extend-env-with-self-and-super
+            (self-obj super-name saved-env)
+            (object->class-name (expval->obj (deref self-obj)))))))
+
+;;; method-accessible? : Method x ClassName | Bool -> Bool
+(define method-accessible?
+  (lambda (method class-name)
+    (cases property (method->prop method)
+           (public-prop () #t)
+           (protected-prop
+            ()
+            (if class-name
+                (is-subclass class-name (method->host-name method))
+                #f))
+           (private-prop
+            ()
+            (eqv? class-name (method->host-name method))))))
 
 ;;; is-subclass : Sym x Sym -> Bool
 (define is-subclass
@@ -227,6 +257,12 @@
     (eopl:error
      'value-of
      "~a is not an instance of class ~s" obj class-name)))
+
+(define report-method-not-accessible
+  (lambda (class-name method-name)
+    (eopl:error
+     'value-of
+     "~a::~a is not accessible in current environment" class-name method-name)))
 
 ;; value-of-program : Program -> SchemeVal
 (define value-of-program
