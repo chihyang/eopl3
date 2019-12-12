@@ -143,7 +143,7 @@
                   (begin
                     (apply-method method obj args)
                     (obj-val obj))
-                  (report-method-not-accessible class-name 'initialize))))
+                  (report-method-not-accessible (method->host-name method) 'initialize))))
            (method-call-exp
             (obj-exp method-name rands)
             (let ((args (value-of-exps rands env))
@@ -152,7 +152,7 @@
                     (current-class (current-class-name env)))
                 (if (method-accessible? method current-class)
                     (apply-method method obj args)
-                    (report-method-not-accessible (object->class-name obj) method-name)))))
+                    (report-method-not-accessible (method->host-name method) method-name)))))
            (super-call-exp
             (method-name rands)
             (let ((args (value-of-exps rands env))
@@ -161,7 +161,7 @@
                     (current-class (current-class-name env)))
                 (if (method-accessible? method current-class)
                     (apply-method method obj args)
-                    (report-method-not-accessible (object->class-name obj) method-name)))))
+                    (report-method-not-accessible (method->host-name method) method-name)))))
            (self-exp
             ()
             (deref (apply-env env '%self))))))

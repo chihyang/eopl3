@@ -188,6 +188,10 @@
     (map
      (lambda (m-decl)
        (cases method-decl m-decl
+              (default-method-decl
+                (m-name vars body)
+                (list m-name
+                      (a-method vars body host-name super-name field-names (public-prop))))
               (a-method-decl
                (prop m-name vars body)
                (list m-name

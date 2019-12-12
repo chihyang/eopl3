@@ -75,6 +75,8 @@
                  (arbno "field" identifier)
                  (arbno method-decl))
                 a-class-decl)
+    (method-decl ("method" identifier "(" (separated-list identifier ",") ")" expression)
+                 default-method-decl)
     (method-decl (property "method" identifier "(" (separated-list identifier ",") ")" expression)
                  a-method-decl)
     (property ("private")
