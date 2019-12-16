@@ -175,18 +175,12 @@
            (fieldref-exp
             (obj-exp field-name)
             (let ((obj (expval->obj (value-of obj-exp env))))
-              (let ((ref (field->ref (object-search-field obj field-name))))
-                (if ref
-                    (deref ref)
-                    (report-filed-not-found obj field-name)))))
+              (field-ref obj (object->class-name obj) field-name)))
            (fieldset-exp
             (obj-exp field-name exp1)
             (let ((obj (expval->obj (value-of obj-exp env)))
                   (val (value-of exp1 env)))
-              (let ((ref (field->ref (object-search-field obj field-name))))
-                (if ref
-                    (setref! ref val)
-                    (report-filed-not-found obj field-name)))))
+              (field-set! obj (object->class-name obj) field-name exp1 env)))
            (superfieldref-exp
             (field-name)
             (let ((obj (expval->obj (deref (apply-env env '%self)))))

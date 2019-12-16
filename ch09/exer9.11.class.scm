@@ -26,29 +26,6 @@
             (vars body h-name s-name f-names prop)
             prop))))
 
-(define public?
-  (lambda (prop)
-    (cases property prop
-           (public-prop
-            ()
-            #t)
-           (else #f))))
-
-(define protected?
-  (lambda (prop)
-    (cases property prop
-           (protected-prop
-            ()
-            #t)
-           (else #f))))
-
-(define private?
-  (lambda (prop)
-    (cases property prop
-           (private-prop
-            ()
-            #t)
-           (else #f))))
 ;;; ---------------------- Class Environment ----------------------
 ;;; ClassEnv = Listof(Listof(ClassName, Class))
 ;;; the-class-env : ClassEnv
