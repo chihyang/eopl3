@@ -651,6 +651,35 @@ in list( send o m1()
         )
 "
       error)
+
+    (final-check
+     "
+class tree extends object
+  final method initialize()1
+
+class interior_node extends tree
+  field left
+  field right
+  final method initialize(l,r)
+   begin
+    set left = l; set right = r
+   end
+  method sum() -(send left sum(), -(0, send right sum()))
+
+class leaf_node extends tree
+  field value
+  method initialize(v)set value = v
+  method sum()value
+
+let o1 = new interior_node (
+          new interior_node (
+            new leaf_node(3),
+            new leaf_node(4)),
+          new leaf_node(5))
+in send o1 sum()
+"
+     error)
+
     )
 
   )
