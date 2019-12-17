@@ -12,10 +12,13 @@
     (an-object
      class-name
      (map (lambda (field-decl)
-            (a-field (class-field-decl->name field-decl)
-                     (newref 'uninitialized-field)
-                     (class-field-decl->prop field-decl)
-                     (class-field-decl->host-name field-decl)))
+            (cases class-field-decl field-decl
+                   (a-class-field-decl
+                    (c-name f-name f-prop)
+                    (a-field f-name
+                             (newref 'uninitialized-field)
+                             f-prop
+                             c-name))))
           (class->field-decls (lookup-class class-name))))))
 
 ;;; ---------------------- Evaluate expression ----------------------
