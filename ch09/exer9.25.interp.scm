@@ -177,7 +177,22 @@
                args)))
            (self-exp
             ()
-            (deref (apply-env env '%self))))))
+            (deref (apply-env env '%self)))
+           (instanceof-exp
+            (obj-exp class-name)
+            (let ((obj (expval->obj (value-of obj-exp env))))
+              (let ((host-name (object->class-name obj)))
+                (bool-val (is-subclass host-name class-name))))))))
+
+;;; is-subclass : Sym x Sym -> Bool
+(define is-subclass
+  (lambda (sub-class super-class)
+    (if (eqv? sub-class super-class)
+        #t
+        (let ((super-name (class->super-name (lookup-class sub-class))))
+          (cond [(eqv? super-name #f) #f]
+                [(eqv? super-name sub-class) #t]
+                [else (is-subclass super-name super-class)])))))
 
 (define value-of-exps
   (lambda (exps env)

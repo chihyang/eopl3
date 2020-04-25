@@ -40,6 +40,13 @@
    (field-names (list-of identifier?))
    (method-env method-environment?)))
 
+;;; class->field-names : Class -> Sym
+(define class->super-name
+  (lambda (c)
+    (cases class c
+           (a-class
+            (s-name f-names m-env) s-name))))
+
 ;;; class->field-names : Class -> Listof(Sym)
 (define class->field-names
   (lambda (c)

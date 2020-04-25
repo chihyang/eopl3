@@ -54,6 +54,8 @@
 ;;;                super-call-exp (method-name rands)
 ;;; Expression ::= self
 ;;;                self-exp ()
+;;; Expression ::= instanceof exp class-name
+;;;                instanceof-exp (obj-exp class-name)
 ;;; Parse Expression
 (define let-scanner-spec
   '((white-sp (whitespace) skip)
@@ -118,7 +120,9 @@
     (expression ("super" identifier "(" (separated-list expression ",") ")")
                 super-call-exp)
     (expression ("self")
-                self-exp)))
+                self-exp)
+    (expression ("instanceof" expression identifier)
+                instanceof-exp)))
 
 ;;; ---------------------- Sllgen operations ----------------------
 (sllgen:make-define-datatypes let-scanner-spec let-grammar)
