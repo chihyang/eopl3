@@ -287,26 +287,27 @@
 
 ;;; ---------------------- Test ----------------------
 ;; lexical scoping
-(eqv?
+(require rackunit)
+(check-eqv?
  (run "let fact = proc (n) add1(n)
        in let fact = proc (n)
                      if zero?(n) then 1
                      else *(n, (fact -(n,1)))
           in (fact 5)")
  25)
-(eqv?
+(check-eqv?
  (run "letrec fact(n) = add1(n)
        in letrec fact(n) = if zero?(n) then 1
                            else *(n, (fact -(n,1)))
           in (fact 5)")
  120)
-(eqv?
+(check-eqv?
  (run "letrec
          even(x) = if zero?(x) then 1 else (odd -(x,1))
          odd(x)  = if zero?(x) then 0 else (even -(x,1))
        in (odd 13)")
  1)
-(eqv?
+(check-eqv?
  (run "let x = 3 in
        letrec
          even(x) = if zero?(x) then 1 else (odd -(x,1))

@@ -251,7 +251,7 @@
             (body)
             (proc-val (procedure body nameless-env)))
            (else
-            (report-invalid-tranlated-expression exp)))))
+            (report-invalid-translated-expression exp)))))
 (define value-of-program
   (lambda (prog)
     (cases program prog
@@ -268,7 +268,7 @@
                      (proc-val
                       (val)
                       val)))))))
-(define report-invalid-tranlated-expression
+(define report-invalid-translated-expression
   (lambda (exp)
     (eopl:error
      'expression
